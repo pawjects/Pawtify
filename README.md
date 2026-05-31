@@ -1,4 +1,4 @@
-<div align="center"><img src="assets/pawtify-logo.png" width="150" alt="Pawtify Logo"/>🎵 Pawtify
+<div align="center"><img src="assets/pawtify.png" width="150" alt="Pawtify Logo"/>🎵 Pawtify
 
 Ad-Free Music Streaming, Reimagined 🐾
 
