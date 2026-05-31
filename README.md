@@ -4,16 +4,11 @@ Ad-Free Music Streaming, Reimagined 🐾
 
 A modern Spotify-inspired music streaming web app focused on speed, simplicity, and uninterrupted listening.
 
-""Website" (https://img.shields.io/badge/Live-Pawtify-1DB954?style=for-the-badge&logo=spotify&logoColor=white)" (https://pawtify-meow.netlify.app)
-
-"Status" (https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
-"Platform" (https://img.shields.io/badge/Platform-Web-blue?style=for-the-badge)
-"Music" (https://img.shields.io/badge/Music-Streaming-1DB954?style=for-the-badge&logo=spotify&logoColor=white)
-"Ads" (https://img.shields.io/badge/Ads-Free-red?style=for-the-badge)
-"Frontend" (https://img.shields.io/badge/Frontend-Only-orange?style=for-the-badge)
-"Maintained" (https://img.shields.io/badge/Maintained-Yes-success?style=for-the-badge)
-"Made By" (https://img.shields.io/badge/Made%20By-PawDevs-ffb300?style=for-the-badge)
-
+![Stars](https://img.shields.io/github/stars/pawjects/Pawtify?style=for-the-badge)
+![Forks](https://img.shields.io/github/forks/pawjects/Pawtify?style=for-the-badge)
+![Issues](https://img.shields.io/github/issues/pawjects/Pawtify?style=for-the-badge)
+![License](https://img.shields.io/github/license/pawjects/Pawtify?style=for-the-badge)
+![Last Commit](https://img.shields.io/github/last-commit/pawjects/Pawtify?style=for-the-badge)
 ---
 
 🌐 Live Demo
