@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Pawtify - Spotify-style music experience. Stream millions of songs, create playlists, and discover new artists." />
+  <meta name="theme-color" content="#1db954" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pawtify" />
+  <meta name="application-name" content="Pawtify" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png" type="image/png" />
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png" />
+  <title>Pawtify</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- PWA Install Prompt (hidden by default) -->
+  <div class="pwa-install-banner" id="pwa-install-banner" style="display:none;">
+    <div class="pwa-install-content">
+      <img src="https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png" alt="" class="pwa-install-icon" />
+      <div class="pwa-install-text">
+        <strong>Install Pawtify</strong>
+        <span>Add to home screen for the best experience</span>
+      </div>
+      <button class="pwa-install-btn" id="pwa-install-btn" type="button">Install</button>
+      <button class="pwa-install-close" id="pwa-install-close" type="button" aria-label="Close">&times;</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Sidebar (Desktop) -->
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="sidebar-brand">
+        <img src="https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png" alt="Pawtify" class="sidebar-logo" />
+        <span class="sidebar-brand-text">Pawtify</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-link active" data-route="/" type="button">
+          <i class="fa-solid fa-house"></i>
+          <span>Home</span>
+        </button>
+        <button class="nav-link" data-route="/search" type="button">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <span>Search</span>
+        </button>
+        <button class="nav-link" data-route="/library" type="button">
+          <i class="fa-solid fa-book-open"></i>
+          <span>Your Library</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-playlists-header">
+        <span>Playlists</span>
+        <button class="icon-btn small" data-action="open-create-playlist" type="button" aria-label="Create playlist">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      </div>
+
+      <div class="sidebar-playlists" id="sidebar-playlists"></div>
+    </aside>
+
+    <!-- Main Stage -->
+    <main class="main-stage" id="app-main" aria-live="polite"></main>
+
+    <!-- Desktop Player Bar -->
+    <footer class="player-bar" id="player-bar" aria-label="Now playing"></footer>
+
+    <!-- Mobile Mini Player (Chin Bar) -->
+    <div class="mini-player" id="mini-player" aria-label="Mini player"></div>
+
+    <!-- Mobile Bottom Nav -->
+    <nav class="mobile-nav" aria-label="Mobile navigation">
+      <button class="mobile-nav-item active" data-route="/" type="button">
+        <i class="fa-solid fa-house"></i>
+        <span>Home</span>
+      </button>
+      <button class="mobile-nav-item" data-route="/search" type="button">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span>Search</span>
+      </button>
+      <button class="mobile-nav-item" data-route="/library" type="button">
+        <i class="fa-solid fa-book-open"></i>
+        <span>Library</span>
+      </button>
+    </nav>
+  </div>
+
+  <div class="fullscreen-player" id="fullscreen-player"></div>
+  <div class="lyrics-panel" id="lyrics-panel"></div>
+  <div class="artist-profile" id="artist-profile"></div>
+  <div class="queue-panel" id="queue-panel"></div>
+  <div id="overlay-root"></div>
+
+  <script>
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then((reg) => {
+          console.log('🐾 SW registered:', reg.scope);
+        }).catch((err) => {
+          console.warn('🐾 SW registration failed:', err);
+        });
+      });
+    }
+
+    // PWA Install Prompt Handler
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.style.display = 'block';
+    });
+
+    document.addEventListener('click', (e) => {
+      const installBtn = e.target.closest('#pwa-install-btn');
+      const closeBtn = e.target.closest('#pwa-install-close');
+      const banner = document.getElementById('pwa-install-banner');
+      
+      if (installBtn && deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+        if (banner) banner.style.display = 'none';
+      }
+      if (closeBtn && banner) {
+        banner.style.display = 'none';
+      }
+    });
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
