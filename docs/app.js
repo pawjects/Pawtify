@@ -1,5 +1,5 @@
 (() => {
-  const API_BASE = "https://saavn.dev/api";
+  const API_BASE = "https://jiosavanapiryden.vercel.app/api";
   const LOGO_URL = "https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png";
 
   const STORAGE = {
