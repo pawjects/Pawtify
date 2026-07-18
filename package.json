@@ -1,0 +1,31 @@
+{
+  "name": "pawtify",
+  "version": "1.0.0",
+  "description": "A privacy-friendly, browser-based static music player featuring local playlist controls and distraction-free streaming.",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "format": "prettier --write \"**/*.{html,css,js}\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pawjects/Pawtify.git"
+  },
+  "keywords": [
+    "music-player",
+    "audio-streaming",
+    "privacy-first",
+    "material-design-3",
+    "amoled-dark",
+    "pawdevs"
+  ],
+  "author": "Sky <PawDevs>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pawjects/Pawtify/issues"
+  },
+  "homepage": "https://github.com/pawjects/Pawtify#readme",
+  "devDependencies": {
+    "prettier": "^3.0.0"
+  }
+}
