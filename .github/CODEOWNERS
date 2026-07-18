@@ -1,0 +1,10 @@
+# Default owners for everything in the repo
+*       @pawjects/core-team
+
+# Specific ownership for critical music player logic
+/js/player.js           @Sky
+/js/playlist.js         @Sky
+
+# UI and Styling oversight (Enforcing MD3 / AMOLED standards)
+/css/                   @Sky
+/index.html             @Sky
