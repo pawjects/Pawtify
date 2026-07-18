@@ -1,0 +1,10 @@
+# Enforce consistent line endings
+* text=auto eol=lf
+
+# Explicitly define language routing for GitHub statistics
+*.js linguist-language=JavaScript
+*.css linguist-language=CSS
+*.html linguist-language=HTML
+
+# Ignore compiled or vendor assets from language stats
+/assets/* linguist-vendored
