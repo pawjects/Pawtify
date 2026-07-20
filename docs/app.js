@@ -30,6 +30,9 @@
  const audio = new Audio();
  audio.preload = "metadata";
 
+ const storedVol = loadJSON(STORAGE.VOLUME, 0.7);
+ const initialVol = typeof storedVol === "number" && !isNaN(storedVol) ? storedVol : 0.7;
+
  const state = {
    route: { name: "home", playlistId: null },
    theme: loadJSON(STORAGE.THEME, "dark"),
@@ -48,10 +51,12 @@
    isLoading: false,
    progress: 0,
    duration: 0,
-   volume: Math.max(0, Math.min(1, Number(loadJSON(STORAGE.VOLUME, 0.7)) || 0.7)),
+   volume: Math.max(0, Math.min(1, initialVol)),
    favorites: dedupeSongs(loadJSON(STORAGE.FAVORITES, [])),
    playlists: normalizePlaylists(loadJSON(STORAGE.PLAYLISTS, [{ id: "default", name: "My Playlist", songs: [] }])),
    trendingSongs: [],
+   indieSongs: [],
+   englishSongs: [],
    recommendedSongs: [],
    recentlyPlayed: loadJSON(STORAGE.RECENT_PLAYED, []),
    pendingSearchQuery: "",
@@ -634,13 +639,10 @@
  function renderHomePage() {
    const greeting = getGreeting();
    const rec = state.recommendedSongs.slice(0, 10);
+   
    const trending = state.trendingSongs.slice(0, 10);
-   const indieSongs = state.trendingSongs.filter(s => 
-     /anuv|prateek|gini|local.train|aviverse|ritviz|when.chai.met.toast|indie/i.test(s.artist)
-   ).slice(0, 10);
-   const englishSongs = state.trendingSongs.filter(s =>
-     /charlie.puth|lauv|lany|paper.kites|novo.amor|taylor.swift|ed.sheeran|justin.bieber/i.test(s.artist)
-   ).slice(0, 10);
+   const indie = state.indieSongs.slice(0, 10);
+   const english = state.englishSongs.slice(0, 10);
    const featured = trending.slice(0, 6);
 
    return `
@@ -654,7 +656,7 @@
 
        <div class="home-grid">
          ${state.favorites.length ? renderHomeGridCard(state.favorites[0], "favorites") : ""}
-         ${state.playlists[0]?.songs.length ? renderHomeGridCard(state.playlists[0].songs[0], "playlist") : ""}
+         ${state.playlists[0]?.songs?.length ? renderHomeGridCard(state.playlists[0].songs[0], "playlist") : ""}
          ${featured[0] ? renderHomeGridCard(featured[0], "trending") : ""}
          ${featured[1] ? renderHomeGridCard(featured[1], "trending") : ""}
          ${featured[2] ? renderHomeGridCard(featured[2], "trending") : ""}
@@ -664,23 +666,23 @@
        <div class="home-section">
          <h2 class="home-section-title"><i class="fa-solid fa-fire" style="margin-right:8px; color:var(--green);"></i>Trending Now</h2>
          <div class="home-scroll">
-           ${trending.length ? trending.map((s, i) => renderHomeScrollCard(s, i, "trending")).join("") : '<div class="empty-state"><div class="spinner" style="margin:0 auto 16px;"></div><h2>Loading songs...</h2></div>'}
+           ${trending.length ? trending.map((s, i) => renderHomeScrollCard(s, i, "trending")).join("") : '<div class="empty-state">No songs available right now.</div>'}
          </div>
        </div>
 
-       ${indieSongs.length ? `
+       ${indie.length ? `
        <div class="home-section">
          <h2 class="home-section-title"><i class="fa-solid fa-indian-rupee-sign" style="margin-right:8px; color:var(--green);"></i>Indie Favourites</h2>
          <div class="home-scroll">
-           ${indieSongs.map((s, i) => renderHomeScrollCard(s, i, "trending")).join("")}
+           ${indie.map((s, i) => renderHomeScrollCard(s, i, "indie")).join("")}
          </div>
        </div>` : ""}
 
-       ${englishSongs.length ? `
+       ${english.length ? `
        <div class="home-section">
-         <h2 class="home-section-title"><i class="fa-solid fa-globe" style="margin-right:8px; color:var(--green);"></i>English Aesthetic</h2>
+         <h2 class="home-section-title"><i class="fa-solid fa-globe" style="margin-right:8px; color:var(--green);"></i>Global Pop</h2>
          <div class="home-scroll">
-           ${englishSongs.map((s, i) => renderHomeScrollCard(s, i, "trending")).join("")}
+           ${english.map((s, i) => renderHomeScrollCard(s, i, "english")).join("")}
          </div>
        </div>` : ""}
 
@@ -688,13 +690,6 @@
          <h2 class="home-section-title"><i class="fa-solid fa-radio" style="margin-right:8px; color:var(--green);"></i>Just For You</h2>
          <div class="home-scroll">
            ${rec.length ? rec.map((s, i) => renderHomeScrollCard(s, i, "recommended")).join("") : '<div class="empty-state">Play more songs to get personalised recommendations</div>'}
-         </div>
-       </div>
-
-       <div class="home-section">
-         <h2 class="home-section-title"><i class="fa-solid fa-compact-disc" style="margin-right:8px; color:var(--green);"></i>Explore More</h2>
-         <div class="explore-scroll">
-           ${trending.length ? trending.map((s, i) => renderCard(s, i, "trending")).join("") : '<div class="empty-state"><div class="spinner" style="margin:0 auto 16px;"></div><h2>Loading songs...</h2></div>'}
          </div>
        </div>
      </section>
@@ -872,22 +867,6 @@
  /* ================================================================
     RENDER: CARDS & ROWS
  ================================================================ */
- function renderCard(song, index, source) {
-   const active = state.currentSong?.id === song.id;
-   return `
-     <article class="card" data-action="play-song" data-song-id="${escapeHTML(song.id)}" data-source="${escapeHTML(source)}" type="button">
-       <div class="card-cover-wrap">
-         <img class="card-cover" src="${escapeHTML(song.coverUrl)}" alt="${escapeHTML(song.title)}" />
-         <button class="card-play-btn" data-action="play-song" data-song-id="${escapeHTML(song.id)}" data-source="${escapeHTML(source)}" type="button">
-           <i class="fa-solid fa-play"></i>
-         </button>
-       </div>
-       <h3 class="card-title">${escapeHTML(song.title)}</h3>
-       <p class="card-meta">${escapeHTML(song.artist)}</p>
-     </article>
-   `;
- }
-
  function renderArtistSearchCard(artist, index) {
    return `
      <article class="card" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" type="button">
@@ -916,6 +895,7 @@
  }
 
  function renderSongRow(song, index, source, playlistId = "") {
+   if (!song) return "";
    const active = state.currentSong?.id === song.id;
    const isFav = state.favorites.some((item) => item.id === song.id);
    return `
@@ -1147,8 +1127,13 @@
      await togglePlay();
      return;
    }
-   if (!state.queue.length) await loadTrendingSongs();
-   if (state.queue.length) await play(state.queue[0], state.queue, true);
+   
+   let defaultQueue = state.queue.length ? state.queue : state.trendingSongs;
+   if (!defaultQueue.length) {
+      await loadTrendingSongs();
+      defaultQueue = state.trendingSongs;
+   }
+   if (defaultQueue.length) await play(defaultQueue[0], defaultQueue, true);
  }
 
  async function play(song, queue = null, autoplay = true) {
@@ -1237,7 +1222,6 @@
    }
 
    if (state.shuffleMode && state.queue.length > 1) {
-     const current = state.queue[state.currentSongIndex];
      const remaining = state.queue.filter((_, i) => i !== state.currentSongIndex);
      const next = remaining[Math.floor(Math.random() * remaining.length)];
      const nextIndex = state.queue.findIndex((s) => s.id === next.id);
@@ -1361,18 +1345,30 @@
  ================================================================ */
  async function loadTrendingSongs() {
    try {
-     state.isLoading = true;
-     const songs = await getTrendingSongs(20);
-     state.trendingSongs = songs;
-     rememberSongs(songs);
-     if (!state.currentSong && songs.length && !state.queue.length) {
-       state.queue = dedupeSongs(songs);
+     const [trendingReq, indieReq, englishReq] = await Promise.all([
+       apiGet("/search/songs", { query: "top charts hindi", page: 0, limit: 12 }),
+       apiGet("/search/songs", { query: "indie acoustic", page: 0, limit: 12 }),
+       apiGet("/search/songs", { query: "global top 50 pop", page: 0, limit: 12 })
+     ]);
+     
+     const parseSafe = (res) => (res.success && res.data?.results) 
+       ? res.data.results.map(transformSong).filter(s => s && s.id) 
+       : [];
+     
+     state.trendingSongs = parseSafe(trendingReq);
+     state.indieSongs = parseSafe(indieReq);
+     state.englishSongs = parseSafe(englishReq);
+     
+     const all = dedupeSongs([...state.trendingSongs, ...state.indieSongs, ...state.englishSongs]);
+     rememberSongs(all);
+
+     if (!state.currentSong && all.length && !state.queue.length) {
+       state.queue = dedupeSongs(all);
+       saveJSON(STORAGE.QUEUE, state.queue);
      }
-     saveJSON(STORAGE.QUEUE, state.queue);
    } catch (error) {
      console.error("Unable to load trending songs:", error);
    } finally {
-     state.isLoading = false;
      renderCurrentRoute();
    }
  }
@@ -1492,13 +1488,16 @@
  function seedCatalog() {
    rememberSongs(state.queue);
    rememberSongs(state.favorites);
-   rememberSongs(state.playlists.flatMap((playlist) => playlist.songs));
+   rememberSongs(state.playlists.flatMap((playlist) => Array.isArray(playlist.songs) ? playlist.songs : []));
    rememberSongs(state.trendingSongs);
+   rememberSongs(state.indieSongs);
+   rememberSongs(state.englishSongs);
    rememberSongs(state.recommendedSongs);
    if (state.currentSong) rememberSongs([state.currentSong]);
  }
 
  function rememberSongs(songs) {
+   if (!Array.isArray(songs)) return;
    songs.forEach((song) => {
      if (!song?.id) return;
      songCatalog.set(String(song.id), song);
@@ -1506,8 +1505,9 @@
  }
 
  function dedupeSongs(songs) {
+   if (!Array.isArray(songs)) return [];
    const seen = new Set();
-   return (songs || []).filter((song) => {
+   return songs.filter((song) => {
      if (!song?.id) return false;
      if (seen.has(song.id)) return false;
      seen.add(song.id);
@@ -1733,7 +1733,13 @@
        if (value === undefined || value === null || value === "") return;
        url.searchParams.set(key, String(value));
      });
-     const response = await fetch(url.toString(), { signal: AbortSignal.timeout(15000) });
+     
+     const controller = new AbortController();
+     const timeoutId = setTimeout(() => controller.abort(), 15000);
+     
+     const response = await fetch(url.toString(), { signal: controller.signal });
+     clearTimeout(timeoutId);
+     
      if (!response.ok) return { success: false, data: null };
      const payload = await response.json();
      return payload;
@@ -1744,53 +1750,78 @@
  }
 
  function transformSong(raw) {
-   // Support both search results (primaryArtists string) and detail results (artists.primary array)
-   const artist = raw.primaryArtists || raw.artists?.primary?.map((entry) => entry.name).join(", ") || (raw.description?.split("·")?.[1]?.trim()) || "Unknown Artist";
-   const cover = raw.image?.[2]?.url || raw.image?.[1]?.url || raw.image?.[0]?.url || LOGO_URL;
-   const audioUrl = raw.downloadUrl?.[4]?.url || raw.downloadUrl?.[3]?.url || raw.downloadUrl?.[2]?.url || raw.downloadUrl?.[1]?.url || raw.downloadUrl?.[0]?.url || "";
+   if (!raw) return null;
+   
+   let artist = "Unknown Artist";
+   if (raw.artists?.primary && Array.isArray(raw.artists.primary)) {
+     artist = raw.artists.primary.map((a) => a.name).join(", ");
+   } else if (raw.primaryArtists) {
+     artist = raw.primaryArtists;
+   } else if (typeof raw.subtitle === 'string') {
+     artist = raw.subtitle;
+   } else if (typeof raw.description === 'string' && raw.description.includes('·')) {
+     artist = raw.description.split('·')[1]?.trim() || "Unknown Artist";
+   }
+
+   const img = raw.image;
+   const coverUrl = Array.isArray(img) && img.length > 0
+     ? (img.find(i => i.quality === '500x500')?.url || img[img.length - 1].url)
+     : (typeof img === 'string' ? img : LOGO_URL);
+
+   const dl = raw.downloadUrl;
+   let audioUrl = Array.isArray(dl) && dl.length > 0 
+     ? (dl.find(d => d.quality === '320kbps' || d.quality === '320')?.url || dl[dl.length - 1].url) 
+     : (typeof dl === 'string' ? dl : "");
+   if (!audioUrl && raw.url) audioUrl = raw.url; 
+
    const durationSec = Number(raw.duration) || 0;
+
    return {
      id: String(raw.id),
-     title: raw.title || raw.name || "Unknown Song",
-     artist,
+     title: raw.name || raw.title || "Unknown Song",
+     artist: artist,
      album: raw.album?.name || raw.album || "",
-     coverUrl: cover,
-     audioUrl,
-     durationSec,
+     coverUrl: coverUrl,
+     audioUrl: audioUrl,
+     durationSec: durationSec,
      duration: formatTime(durationSec),
-     releaseDate: raw.releaseDate || raw.year || "",
+     releaseDate: raw.year || raw.releaseDate || "",
      genre: raw.language || "",
-     description: `Song by ${artist}`,
-     hasLyrics: Boolean(raw.hasLyrics),
-     lyricsId: raw.lyricsId || null
+     description: `Song by ${artist}`
    };
  }
 
  function transformArtist(raw) {
+   if (!raw) return null;
+   const img = raw.image;
+   const imageUrl = Array.isArray(img) && img.length > 0
+     ? (img.find(i => i.quality === '500x500')?.url || img[img.length - 1].url)
+     : (typeof img === 'string' ? img : LOGO_URL);
+
    return {
      id: String(raw.id),
-     name: raw.title || raw.name || "Unknown Artist",
-     imageUrl: raw.image?.[2]?.url || raw.image?.[1]?.url || raw.image?.[0]?.url || LOGO_URL,
-     type: raw.type || raw.description || raw.role || "Artist",
-     bio: raw.bio?.[0]?.text || ""
+     name: raw.name || raw.title || "Unknown Artist",
+     imageUrl: imageUrl,
+     type: raw.type || raw.role || raw.description || "Artist",
+     bio: Array.isArray(raw.bio) ? raw.bio[0]?.text : (typeof raw.bio === 'string' ? raw.bio : "")
    };
  }
 
  async function searchSongs(query, page = 0, limit = 10) {
    const payload = await apiGet("/search/songs", { query, page, limit });
-   if (!payload.success) return [];
-   return (payload.data?.results || []).map(transformSong);
+   if (!payload.success || !payload.data?.results) return [];
+   return payload.data.results.map(transformSong).filter(s => s && s.id);
  }
 
  async function searchArtists(query, page = 0, limit = 10) {
    const payload = await apiGet("/search/artists", { query, page, limit });
-   if (!payload.success) return [];
-   return (payload.data?.results || []).map(transformArtist);
+   if (!payload.success || !payload.data?.results) return [];
+   return payload.data.results.map(transformArtist).filter(a => a && a.id);
  }
 
  async function getSongDetails(id) {
    const payload = await apiGet(`/songs/${id}`);
-   if (!payload.success) return null;
+   if (!payload.success || !payload.data) return null;
    const song = Array.isArray(payload.data) ? payload.data[0] : payload.data;
    return song ? transformSong(song) : null;
  }
@@ -1799,65 +1830,17 @@
    const payload = await apiGet(`/songs/${id}/suggestions`, { limit });
    if (!payload.success) return [];
    const results = Array.isArray(payload.data) ? payload.data : (payload.data?.results || []);
-   return results.slice(0, limit).map(transformSong);
+   return results.slice(0, limit).map(transformSong).filter(s => s && s.id);
  }
 
  async function getSongLyrics(id) {
-   const payload = await apiGet(`/songs/${id}/lyrics`);
-   if (!payload.success || !payload.data) return null;
-   return parseLyricsText(payload.data.lyrics || payload.data.snippet || "");
- }
-
- function parseLyricsText(text) {
-   if (!text) return [];
-   return text
-     .split("\n")
-     .map((line) => line.trim())
-     .filter((line) => line.length > 0);
- }
-
- async function getTrendingSongs(limit = 10) {
-   // Featured indie & aesthetic artists for personalized suggestions
-   const featuredArtists = [
-     "Anuv Jain", "Prateek Kuhad", "Gini", "The Local Train", "Aviverse",
-     "Charlie Puth", "Lauv", "LANY", "The Paper Kites", "Novo Amor",
-     "Ritviz", "When Chai Met Toast", "Karan Aujla", "Diljit Dosanjh",
-     "Taylor Swift", "Ed Sheeran", "Justin Bieber", "Arijit Singh"
-   ];
-   const allSongs = [];
-   
-   // Search by featured artists
-   for (const artist of featuredArtists) {
-     try {
-       const payload = await apiGet("/search/songs", { query: artist, page: 0, limit: 3 });
-       if (payload.success) {
-         const results = payload.data?.results || [];
-         allSongs.push(...results.map(transformSong));
-       }
-     } catch (err) {
-       console.warn("Artist search failed:", artist, err);
-     }
-   }
-   
-   // Also search genre/mood queries
-   const moodQueries = ["indie", "aesthetic", "chill vibes", "feel good", "sad songs", "party"];
-   for (const q of moodQueries) {
-     try {
-       const payload = await apiGet("/search/songs", { query: q, page: 0, limit: 4 });
-       if (payload.success) {
-         const results = payload.data?.results || [];
-         allSongs.push(...results.map(transformSong));
-       }
-     } catch (err) {
-       console.warn("Mood search failed:", q, err);
-     }
-   }
-   return dedupeSongs(allSongs).slice(0, limit);
+   // API endpoint for lyrics was deprecated, returning null to trigger smooth UI fallback
+   return null;
  }
 
  async function getNextSong(currentSongId) {
    if (!currentSongId) {
-     const trending = await getTrendingSongs(20);
+     const trending = state.trendingSongs.length ? state.trendingSongs : await getTrendingSongsFallback();
      if (!trending.length) return null;
      return trending[Math.floor(Math.random() * trending.length)];
    }
@@ -1870,9 +1853,18 @@
    } catch (error) {
      console.error("Suggestion lookup failed:", error);
    }
-   const trending = await getTrendingSongs(20);
+   
+   const trending = state.trendingSongs.length ? state.trendingSongs : await getTrendingSongsFallback();
    if (!trending.length) return null;
    return trending.find((song) => !state.recentlyPlayed.includes(song.id)) || trending[0];
+ }
+
+ async function getTrendingSongsFallback() {
+   const payload = await apiGet("/search/songs", { query: "trending", page: 0, limit: 15 });
+   if (payload.success && payload.data?.results) {
+     return dedupeSongs(payload.data.results.map(transformSong).filter(s => s && s.id));
+   }
+   return [];
  }
 
  /* ================================================================
@@ -2044,9 +2036,8 @@
  function toggleShuffle() {
    state.shuffleMode = !state.shuffleMode;
    if (state.shuffleMode && state.queue.length > 1) {
-     const current = state.queue[state.currentSongIndex];
-     const upcoming = state.queue.slice(state.currentSongIndex + 1);
-     const shuffled = upcoming.sort(() => Math.random() - 0.5);
+     const remaining = state.queue.filter((_, i) => i !== state.currentSongIndex);
+     const shuffled = remaining.sort(() => Math.random() - 0.5);
      state.queue = [...state.queue.slice(0, state.currentSongIndex + 1), ...shuffled];
    }
    saveJSON(STORAGE.SHUFFLE, state.shuffleMode);
@@ -2294,14 +2285,14 @@
        ${upcoming.length ? `
          <div class="queue-section-title">Next Up</div>
          ${upcoming.map((s, i) => `
-           <div class="queue-item" data-action="play-song" data-song-id="${escapeHTML(s.id)}" data-source="queue" type="button">
+           <div class="queue-item" data-action="play-song" data-song-id="${escapeHTML(s?.id || "")}" data-source="queue" type="button">
              <div class="queue-item-index">${currentIdx + i + 2}</div>
-             <img class="queue-item-cover" src="${escapeHTML(s.coverUrl)}" alt="" />
+             <img class="queue-item-cover" src="${escapeHTML(s?.coverUrl || "")}" alt="" />
              <div class="queue-item-info">
-               <div class="queue-item-title">${escapeHTML(s.title)}</div>
-               <div class="queue-item-artist">${escapeHTML(s.artist)}</div>
+               <div class="queue-item-title">${escapeHTML(s?.title || "")}</div>
+               <div class="queue-item-artist">${escapeHTML(s?.artist || "")}</div>
              </div>
-             <button class="queue-item-remove" data-action="remove-from-queue" data-song-id="${escapeHTML(s.id)}" type="button" onclick="event.stopPropagation();" aria-label="Remove">
+             <button class="queue-item-remove" data-action="remove-from-queue" data-song-id="${escapeHTML(s?.id || "")}" type="button" onclick="event.stopPropagation();" aria-label="Remove">
                <i class="fa-solid fa-xmark"></i>
              </button>
            </div>
@@ -2311,12 +2302,12 @@
        ${previous.length ? `
          <div class="queue-section-title">Previous</div>
          ${previous.map((s, i) => `
-           <div class="queue-item" data-action="play-song" data-song-id="${escapeHTML(s.id)}" data-source="queue" type="button">
+           <div class="queue-item" data-action="play-song" data-song-id="${escapeHTML(s?.id || "")}" data-source="queue" type="button">
              <div class="queue-item-index">${i + 1}</div>
-             <img class="queue-item-cover" src="${escapeHTML(s.coverUrl)}" alt="" />
+             <img class="queue-item-cover" src="${escapeHTML(s?.coverUrl || "")}" alt="" />
              <div class="queue-item-info">
-               <div class="queue-item-title">${escapeHTML(s.title)}</div>
-               <div class="queue-item-artist">${escapeHTML(s.artist)}</div>
+               <div class="queue-item-title">${escapeHTML(s?.title || "")}</div>
+               <div class="queue-item-artist">${escapeHTML(s?.artist || "")}</div>
              </div>
            </div>
          `).join("")}
