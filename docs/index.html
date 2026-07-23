@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- PWA Install Prompt (hidden by default) -->
+  <!-- PWA Install Prompt -->
   <div class="pwa-install-banner" id="pwa-install-banner" style="display:none;">
     <div class="pwa-install-content">
       <img src="https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png" alt="" class="pwa-install-icon" />
@@ -101,20 +101,16 @@
   <div class="artist-profile" id="artist-profile"></div>
   <div class="queue-panel" id="queue-panel"></div>
   <div id="overlay-root"></div>
+  
+  <!-- Hidden Background YouTube Audio Host Engine -->
+  <div id="yt-player-host" style="position:fixed; width:1px; height:1px; bottom:0; right:0; opacity:0.01; pointer-events:none; z-index:-1;"></div>
 
   <script>
-    // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').then((reg) => {
-          console.log('🐾 SW registered:', reg.scope);
-        }).catch((err) => {
-          console.warn('🐾 SW registration failed:', err);
-        });
+        navigator.serviceWorker.register('sw.js').catch((err) => console.warn('SW error:', err));
       });
     }
-
-    // PWA Install Prompt Handler
     let deferredPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -122,20 +118,16 @@
       const banner = document.getElementById('pwa-install-banner');
       if (banner) banner.style.display = 'block';
     });
-
     document.addEventListener('click', (e) => {
       const installBtn = e.target.closest('#pwa-install-btn');
       const closeBtn = e.target.closest('#pwa-install-close');
       const banner = document.getElementById('pwa-install-banner');
-      
       if (installBtn && deferredPrompt) {
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
         if (banner) banner.style.display = 'none';
       }
-      if (closeBtn && banner) {
-        banner.style.display = 'none';
-      }
+      if (closeBtn && banner) banner.style.display = 'none';
     });
   </script>
   <script src="app.js"></script>
