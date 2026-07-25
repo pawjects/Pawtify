@@ -186,6 +186,11 @@
 
  initApp();
 
+
+ function syncLyricsWithPlayback() {
+   // Placeholder - live lyrics sync not available in YouTube audio mode
+ }
+
  /* ================================================================
     PIPED API NETWORK LAYER
  ================================================================ */
@@ -505,7 +510,7 @@
      renderOverlay();
      renderSidebarPlaylists();
      refreshPlaybackUI();
-   } catch (e) {}
+   } catch (e) { console.error('renderCurrentRoute error:', e); }
  }
 
  /* ================================================================
@@ -1106,6 +1111,28 @@ function renderSongRow(song, index, source, playlistId = "") {
    renderFullscreenPlayer();
  }
 
+ function toggleRepeat() {
+   const modes = ['none', 'all', 'one'];
+   const currentIdx = modes.indexOf(state.repeatMode);
+   state.repeatMode = modes[(currentIdx + 1) % modes.length];
+   saveJSON(STORAGE.REPEAT, state.repeatMode);
+   refreshPlaybackUI();
+ }
+
+ function toggleShuffle() {
+   state.shuffleMode = !state.shuffleMode;
+   saveJSON(STORAGE.SHUFFLE, state.shuffleMode);
+   if (state.shuffleMode && state.queue.length > 1) {
+     const current = state.queue[state.currentSongIndex];
+     const rest = state.queue.filter((s, i) => i !== state.currentSongIndex);
+     const shuffled = rest.sort(() => Math.random() - 0.5);
+     state.queue = [current, ...shuffled];
+     state.currentSongIndex = 0;
+     saveJSON(STORAGE.QUEUE, state.queue);
+   }
+   refreshPlaybackUI();
+ }
+
  function addToPlaylist(song, playlistId) {
    state.playlists = state.playlists.map((playlist) => {
      if (playlist.id !== playlistId) return playlist;
@@ -1503,7 +1530,8 @@ function normalizePlaylists(playlists) {
  }
 
  function escapeHTML(text) {
-   return String(text ?? "").replaceAll("&", "&").replaceAll("<", "<").replaceAll(">", ">").replaceAll('"', """").replaceAll("'", "'");
+   const s = String(text ?? '');
+   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
  }
 
  function loadJSON(key, fallback) {
@@ -1524,6 +1552,32 @@ function normalizePlaylists(playlists) {
  
  async function openLyrics() {
    alert("Live lyrics sync functionality is currently unavailable in the YouTube No-Cookie environment.");
+ }
+
+
+ /* ================================================================
+    RENDER: LYRICS PANEL (placeholder)
+ ================================================================ */
+ function renderLyricsPanel() {
+   if (!lyricsPanel) return;
+   if (!state.lyricsPanel) {
+     lyricsPanel.classList.remove('active');
+     lyricsPanel.innerHTML = '';
+     return;
+   }
+   lyricsPanel.classList.add('active');
+   lyricsPanel.innerHTML = `
+     <div class="lyrics-header">
+       <button class="icon-btn" data-action="close-lyrics" type="button" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+     </div>
+     <div class="lyrics-body">
+       <div class="empty-state">
+         <i class="fa-solid fa-microphone"></i>
+         <h2>Lyrics not available</h2>
+         <p>Live lyrics sync is not supported in the YouTube audio mode.</p>
+       </div>
+     </div>
+   `;
  }
 
  /* ================================================================
