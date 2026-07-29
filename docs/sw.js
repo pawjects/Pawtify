@@ -1,6 +1,7 @@
 /* =============================================
-   Pawtify Service Worker v1.0
+   Pawtify Service Worker v1.1
    Static PWA — caches app shell for offline use
+   + Background media keepalive
    ============================================= */
 const CACHE_NAME = "pawtify-cache-v1";
 const ASSETS = [
@@ -35,6 +36,13 @@ self.addEventListener("activate", (event) => {
     })
   );
   self.clients.claim();
+});
+
+// Message: keepalive + media control relay
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "ping") {
+    event.source.postMessage({ type: "pong" });
+  }
 });
 
 // Fetch: network-first, fallback to cache
