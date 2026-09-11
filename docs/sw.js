@@ -3,7 +3,7 @@
    Static PWA — caches app shell for offline use
    + Background media keepalive
    ============================================= */
-const CACHE_NAME = "pawtify-cache-v1";
+const CACHE_NAME = "pawtify-cache-v11";
 const ASSETS = [
   "/",
   "/index.html",

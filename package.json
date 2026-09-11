@@ -4,7 +4,9 @@
   "description": "A privacy-friendly, browser-based static music player featuring local playlist controls and distraction-free streaming.",
   "main": "index.html",
   "scripts": {
-    "start": "npx serve .",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "echo 'No build required'",
     "format": "prettier --write \"**/*.{html,css,js}\""
   },
   "repository": {
@@ -27,5 +29,9 @@
   "homepage": "https://github.com/pawjects/Pawtify#readme",
   "devDependencies": {
     "prettier": "^3.0.0"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "ytmusic-api": "^5.3.1"
   }
 }
