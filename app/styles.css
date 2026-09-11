@@ -3412,3 +3412,72 @@ button:active, .nav-link:active, .mobile-nav-item:active, .card:active {
 .fade-in {
   animation: fadeIn 0.3s ease-in-out;
 }
+
+/* ============ YOUTUBE ENGINE CONTAINER ============ */
+.yt-player-container {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  width: 280px;
+  height: 158px;
+  opacity: 0.001;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: #000;
+  transition: opacity 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.yt-player-container .yt-player-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(18, 18, 18, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.yt-player-container .yt-player-close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.yt-player-container.video-visible {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1200;
+  bottom: 88px;
+  right: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  height: 196px;
+}
+
+.yt-player-container.video-visible .yt-player-header {
+  display: flex;
+}
+
+.yt-player-container iframe,
+#yt-player-host {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  border: 0;
+}
+
+@media (max-width: 768px) {
+  .yt-player-container.video-visible {
+    bottom: 128px;
+    right: 12px;
+    width: 220px;
+    height: 156px;
+  }
+}

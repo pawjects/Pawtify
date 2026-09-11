@@ -1,0 +1,30 @@
+{
+  "name": "Pawtify",
+  "short_name": "Pawtify",
+  "description": "A Spotify-style music streaming experience.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#1db954",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false,
+  "lang": "en",
+  "dir": "auto"
+}

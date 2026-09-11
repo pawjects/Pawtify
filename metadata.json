@@ -1,0 +1,6 @@
+{
+  "name": "Pawtify",
+  "description": "Privacy-friendly music streaming app featuring modern Hindi indie, acoustic, and lofi music.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

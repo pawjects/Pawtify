@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "build": "echo 'No build required'",
+    "build": "node scripts/build.js",
+    "lint": "node --check server.js && node --check api/search.js && node --check app/app.js",
     "format": "prettier --write \"**/*.{html,css,js}\""
   },
   "repository": {

@@ -1,23 +1,26 @@
-const express = require('express');
 const YTMusic = require("ytmusic-api");
 
-const router = express.Router();
 const ytmusic = new YTMusic();
 let isYtMusicInitialized = false;
+let ytMusicInitPromise = null;
 
 async function initYtMusic() {
-  if (!isYtMusicInitialized) {
-    try {
-      await ytmusic.initialize({ gl: 'IN' });
-      isYtMusicInitialized = true;
-      console.log('YTMusic API initialized in search service');
-    } catch (e) {
-      console.error('Failed to initialize YTMusic API:', e);
-    }
+  if (isYtMusicInitialized) return;
+  if (!ytMusicInitPromise) {
+    ytMusicInitPromise = ytmusic.initialize({ gl: 'IN' })
+      .then(() => {
+        isYtMusicInitialized = true;
+        console.log('YTMusic API initialized in search service');
+      })
+      .catch((e) => {
+        ytMusicInitPromise = null;
+        console.error('Failed to initialize YTMusic API:', e);
+      });
   }
+  return ytMusicInitPromise;
 }
 
-// Initialize on startup
+// Background initialization
 initYtMusic();
 
 function formatDurationString(seconds) {
@@ -27,12 +30,25 @@ function formatDurationString(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-router.get('/', async (req, res) => {
-  const query = req.query.q || '';
-  if (!query) return res.json({ items: [] });
-  
+async function searchHandler(req, res) {
+  // Add CORS headers for Vercel / cross-domain preview hosting
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  const rawQuery = req.query?.q || (req.url ? new URL(req.url, 'http://localhost').searchParams.get('q') : '') || '';
+  const query = typeof rawQuery === 'string' ? rawQuery.trim() : '';
+
+  if (!query) {
+    return res.status(200).json({ items: [] });
+  }
+
   await initYtMusic();
-  
+
   try {
     const [songs, videos, artists] = await Promise.all([
       ytmusic.searchSongs(query).catch(() => []),
@@ -41,16 +57,17 @@ router.get('/', async (req, res) => {
     ]);
 
     const combined = [];
-    
-    // Add the top artist match first
-    if (artists.length > 0) {
+
+    // Add top artist match first
+    if (artists && artists.length > 0) {
       combined.push(artists[0]);
     }
 
-    const maxLen = Math.max(songs.length, videos.length);
+    // Interleave videos first (official videos and audios have full third-party embed permission)
+    const maxLen = Math.max(songs?.length || 0, videos?.length || 0);
     for (let i = 0; i < maxLen; i++) {
-      if (songs[i]) combined.push(songs[i]);
-      if (videos[i]) combined.push(videos[i]);
+      if (videos && videos[i]) combined.push(videos[i]);
+      if (songs && songs[i]) combined.push(songs[i]);
     }
 
     const mapped = combined.map(item => {
@@ -59,11 +76,8 @@ router.get('/', async (req, res) => {
       if (item.type === "SONG") resultType = "song";
       if (item.type === "ALBUM") resultType = "album";
       if (item.type === "ARTIST") resultType = "artist";
-      
-      let tags = [];
-      if (item.type === "VIDEO") {
-         tags.push("official release"); // Ensure YT Music videos pass the frontend filter
-      }
+
+      let tags = ["official release"];
 
       return {
         id: item.videoId || item.albumId || item.artistId,
@@ -73,18 +87,19 @@ router.get('/', async (req, res) => {
         duration: durationSec,
         durationString: formatDurationString(durationSec),
         resultType: resultType,
-        isVerified: true, 
+        isVerified: true,
         isOfficialArtist: true,
         isTopic: true,
         tags: tags
       };
     }).filter(i => i.id);
-    
-    res.json({ items: mapped });
+
+    return res.status(200).json({ items: mapped });
   } catch (e) {
     console.error('Search error:', e);
-    res.status(500).json({ items: [] });
+    return res.status(500).json({ items: [] });
   }
-});
+}
 
-module.exports = router;
+module.exports = searchHandler;
+

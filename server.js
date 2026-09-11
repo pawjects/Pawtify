@@ -1,24 +1,52 @@
 const express = require('express');
 const path = require('path');
-const searchRoute = require('./api/search');
+const fs = require('fs');
+const searchHandler = require('./api/search');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, 'docs')));
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
-
-// Mount the modular search service
-app.use('/api/search', searchRoute);
-
-app.get('*all', (req, res) => {
-  res.sendFile(path.join(__dirname, 'docs', 'index.html'));
+// Enable CORS for all incoming requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
 });
 
-if (process.env.NODE_ENV !== "production") {
-  app.listen(PORT, "0.0.0.0", () => {
+// Serve static assets from both public/ and app/ directories
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'app')));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
+
+// Search API endpoint
+app.all('/api/search', searchHandler);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime(), timestamp: Date.now() });
+});
+
+// SPA catch-all for any non-static route
+app.use((req, res) => {
+  const publicIndex = path.join(__dirname, 'public', 'index.html');
+  const appIndex = path.join(__dirname, 'app', 'index.html');
+  if (fs.existsSync(publicIndex)) {
+    return res.sendFile(publicIndex);
+  }
+  return res.sendFile(appIndex);
+});
+
+// Run server only when executed directly (node server.js)
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
   });
 }
 
 module.exports = app;
+

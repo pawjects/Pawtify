@@ -54,24 +54,72 @@ function clearYtLoadTimeout() {
   }
 }
 
+let isFallingBack = false;
+
 function startYtLoadTimeout() {
   clearYtLoadTimeout();
   state.isLoading = true;
   refreshPlaybackUI();
   ytLoadTimeout = setTimeout(() => {
     console.warn("YouTube Player timed out loading video");
-    handlePlaybackError();
-  }, 10000);
+    handlePlaybackError('TIMEOUT');
+  }, 20000);
 }
 
-function handlePlaybackError() {
+async function handlePlaybackError(errorCode) {
   clearYtLoadTimeout();
+  console.warn("handlePlaybackError triggered. Code:", errorCode, "Song:", state.currentSong?.title);
+
+  if (isFallingBack) return;
+
+  const current = state.currentSong;
+  if (current && !current._triedFallback) {
+    current._triedFallback = true;
+    isFallingBack = true;
+    showToast(`Finding alternative stream for "${current.title}"...`);
+    try {
+      const cleanTitle = (current.title || '').replace(/\s*\(.*?\)\s*/g, '').replace(/\s*\[.*?\]\s*/g, '').trim();
+      const cleanArtist = (current.artist || '').trim();
+      const query = `${cleanTitle} ${cleanArtist} official`;
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      
+      const alternatives = (data?.items || []).filter(item => 
+        item.id && 
+        item.id !== current.id && 
+        item.resultType !== 'artist'
+      );
+
+      if (alternatives.length > 0) {
+        const altSong = alternatives[0];
+        console.log(`Switching to alternative playable stream: ${altSong.id} (${altSong.title})`);
+        current.id = altSong.id;
+        if (altSong.thumbnail) current.coverUrl = altSong.thumbnail;
+        rememberSongs([current]);
+        persistPlayer();
+
+        if (ytPlayerReady && ytPlayer && typeof ytPlayer.loadVideoById === "function") {
+          startYtLoadTimeout();
+          ytPlayer.loadVideoById(current.id);
+          isFallingBack = false;
+          refreshPlaybackUI();
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Alternative stream search failed:", err);
+    }
+    isFallingBack = false;
+  }
+
   state.isLoading = false;
   state.isPlaying = false;
   refreshPlaybackUI();
-  showToast("Track unavailable or timed out. Skipping...");
+  showToast("Track unavailable on embed. Skipping to next song...");
   setTimeout(() => {
-    nextTrack();
+    if (state.queue.length > 1) {
+      nextTrack();
+    }
   }, 1500);
 }
 
@@ -106,6 +154,13 @@ let pendingVideoId = null;
    favorites: dedupeSongs(loadJSON(STORAGE.FAVORITES, [])),
    playlists: normalizePlaylists(loadJSON(STORAGE.PLAYLISTS, [{ id: "default", name: "My Playlist", songs: [] }])),
    trendingSongs: [],
+   indieBandsSongs: [],
+   acousticSongs: [],
+   melodicIndieSongs: [],
+   lofiSongs: [],
+   classicalSongs: [],
+   anuvSongs: [],
+   prateekSongs: [],
    indieSongs: [],
    englishSongs: [],
    recommendedSongs: [],
@@ -117,7 +172,8 @@ let pendingVideoId = null;
    lyricsData: null,
    lyricsLoading: false,
    artistProfile: null,
-   queuePanel: false
+   queuePanel: false,
+   videoVisible: false
  };
 
  let searchTimer = null;
@@ -164,37 +220,53 @@ let pendingVideoId = null;
     YOUTUBE AUDIO ENGINE
  ================================================================ */
  function loadYTApi() {
-   const tag = document.createElement('script');
-   tag.src = "https://www.youtube.com/iframe_api";
-   const firstScriptTag = document.getElementsByTagName('script')[0];
-   firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+   if (ytPlayer) return;
+   if (window.YT && window.YT.Player) {
+     window.onYouTubeIframeAPIReady();
+     return;
+   }
+   if (!document.getElementById('yt-iframe-api-script')) {
+     const tag = document.createElement('script');
+     tag.id = 'yt-iframe-api-script';
+     tag.src = "https://www.youtube.com/iframe_api";
+     const firstScriptTag = document.getElementsByTagName('script')[0];
+     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+   }
  }
 
-  /* ================================================================
-     DIRECT AUDIO ENGINE (for background playback via <audio> element)
-  ================================================================ */
-  
-
-  
-
-  
-
-  
-
   window.onYouTubeIframeAPIReady = function() {
-    ytPlayer = new YT.Player('yt-player-host', {
-      height: '200', width: '200',
-      host: 'https://www.youtube-nocookie.com',
-      playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1, 'playsinline': 1, 'fs': 0, 'rel': 0, 'origin': window.location.origin, 'enablejsapi': 1 },
-      events: {
-        'onReady': onPlayerReady,
-        'onStateChange': onPlayerStateChange,
-        'onError': (e) => { 
-          console.warn("YouTube Player Error:", e.data); 
-          handlePlaybackError();
+    if (ytPlayer) return;
+    const hostElem = document.getElementById('yt-player-host');
+    if (!hostElem) return;
+
+    try {
+      ytPlayer = new YT.Player('yt-player-host', {
+        height: '158',
+        width: '280',
+        host: 'https://www.youtube.com',
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          disablekb: 1,
+          playsinline: 1,
+          fs: 0,
+          rel: 0,
+          enablejsapi: 1,
+          iv_load_policy: 3,
+          modestbranding: 1
+        },
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange,
+          'onError': (e) => { 
+            console.warn("YouTube Player Error:", e.data); 
+            handlePlaybackError(e.data);
+          }
         }
-      }
-    });
+      });
+    } catch (err) {
+      console.error("Failed to create YT.Player:", err);
+    }
   };
 
   /* ================================================================
@@ -313,8 +385,10 @@ let pendingVideoId = null;
   function onPlayerStateChange(event) {
     if (event.data === 1) { // PLAYING
       clearYtLoadTimeout();
+      isFallingBack = false;
       state.isPlaying = true;
       state.isLoading = false;
+      if (state.currentSong) state.currentSong._triedFallback = false;
       if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing';
       startYTPoll();
     } else if (event.data === 3) { // BUFFERING
@@ -349,10 +423,15 @@ let pendingVideoId = null;
    API NETWORK LAYER
 ================================================================ */
 function isValidMusicContent(item) {
-  const isSongOrAlbum = item.resultType === 'song' || item.resultType === 'album';
+  if (!item || !item.id) return false;
+  // Exclude artist entries from song feeds to ensure all items are playable videos/tracks
+  if (item.resultType === 'artist') return false;
   const isOfficial = item.isVerified || item.isOfficialArtist || item.isTopic || item.isVevo;
   const tags = item.tags || [];
-  
+
+  const title = (item.title || '').toLowerCase();
+  if (title.includes('karaoke') || title.includes('tribute version') || title.includes('instrumental version')) return false;
+
   // Explicitly excluding results tagged as 'Shorts' or 'podcast'
   if (tags.includes('Shorts') || tags.includes('podcast')) return false;
   
@@ -366,10 +445,12 @@ function isValidMusicContent(item) {
 }
 
 function prioritizeMusic(a, b) {
-  const isA = a.resultType === 'song' || a.resultType === 'album';
-  const isB = b.resultType === 'song' || b.resultType === 'album';
-  if (isA && !isB) return -1;
-  if (!isA && isB) return 1;
+  // Prefer individual single songs (< 12 min) over marathon non-stop mix videos (> 45 min)
+  const aLong = (a.duration || 0) > 2700;
+  const bLong = (b.duration || 0) > 2700;
+  if (!aLong && bLong) return -1;
+  if (aLong && !bLong) return 1;
+
   return 0;
 }
 
@@ -450,6 +531,19 @@ function bindGlobalEvents() {
        
        if (action === "open-fullscreen-player") { event.preventDefault(); state.fullscreenPlayer = true; renderFullscreenPlayer(); return; }
        if (action === "close-fullscreen-player") { event.preventDefault(); state.fullscreenPlayer = false; renderFullscreenPlayer(); return; }
+       if (action === "toggle-video") {
+         event.preventDefault();
+         state.videoVisible = !state.videoVisible;
+         const container = document.getElementById("yt-player-container");
+         if (container) {
+           if (state.videoVisible) container.classList.add("video-visible");
+           else container.classList.remove("video-visible");
+         }
+         refreshPlaybackUI();
+         renderPlayerBar();
+         renderFullscreenPlayer();
+         return;
+       }
        
        if (action === "toggle-repeat") { event.preventDefault(); toggleRepeat(); return; }
        if (action === "toggle-shuffle") { event.preventDefault(); toggleShuffle(); return; }
@@ -698,10 +792,22 @@ function bindGlobalEvents() {
  function renderHomePage() {
    const greeting = getGreeting();
    const rec = Array.isArray(state.recommendedSongs) ? state.recommendedSongs.slice(0, 10) : [];
-   const trending = Array.isArray(state.trendingSongs) ? state.trendingSongs.slice(0, 10) : [];
-   const indie = Array.isArray(state.indieSongs) ? state.indieSongs.slice(0, 10) : [];
-   const english = Array.isArray(state.englishSongs) ? state.englishSongs.slice(0, 10) : [];
-   const featured = trending.slice(0, 6);
+   const trending = Array.isArray(state.trendingSongs) ? state.trendingSongs.slice(0, 12) : [];
+   const bands = Array.isArray(state.indieBandsSongs) ? state.indieBandsSongs.slice(0, 12) : [];
+   const acoustic = Array.isArray(state.acousticSongs) ? state.acousticSongs.slice(0, 12) : [];
+   const melodic = Array.isArray(state.melodicIndieSongs) ? state.melodicIndieSongs.slice(0, 12) : [];
+   const lofi = Array.isArray(state.lofiSongs) ? state.lofiSongs.slice(0, 12) : [];
+   const classical = Array.isArray(state.classicalSongs) ? state.classicalSongs.slice(0, 12) : [];
+
+   // Diverse hero cards representing different indie artists and subgenres
+   const heroCandidates = [
+     trending[0] ? { song: trending[0], source: "trending" } : null,
+     bands[0] ? { song: bands[0], source: "bands" } : null,
+     acoustic[0] ? { song: acoustic[0], source: "acoustic" } : null,
+     melodic[0] ? { song: melodic[0], source: "melodic" } : null,
+     trending[1] ? { song: trending[1], source: "trending" } : null,
+     bands[1] ? { song: bands[1], source: "bands" } : null
+   ].filter(Boolean);
 
    const loaderHTML = `<div class="empty-state"><div class="spinner" style="margin:0 auto 16px;"></div><h2>Loading Music...</h2></div>`;
 
@@ -717,32 +823,53 @@ function bindGlobalEvents() {
        <div class="home-grid">
          ${state.favorites.length ? renderHomeGridCard(state.favorites[0], "favorites") : ""}
          ${state.playlists[0]?.songs?.length ? renderHomeGridCard(state.playlists[0].songs[0], "playlist") : ""}
-         ${featured[0] ? renderHomeGridCard(featured[0], "trending") : ""}
-         ${featured[1] ? renderHomeGridCard(featured[1], "trending") : ""}
-         ${featured[2] ? renderHomeGridCard(featured[2], "trending") : ""}
-         ${featured[3] ? renderHomeGridCard(featured[3], "trending") : ""}
+         ${heroCandidates.slice(0, 4).map(h => renderHomeGridCard(h.song, h.source)).join("")}
        </div>
 
        <div class="home-section">
-         <h2 class="home-section-title"><i class="fa-solid fa-om" style="margin-right:8px; color:var(--green);"></i>Classical & Semi Classical</h2>
+         <h2 class="home-section-title"><i class="fa-solid fa-fire" style="margin-right:8px; color:var(--green);"></i>Modern Hindi Indie Hits</h2>
          <div class="home-scroll">
            ${state.isLoading ? loaderHTML : (trending.length ? trending.map((s, i) => renderHomeScrollCard(s, i, "trending")).join("") : '<div class="empty-state">No songs available right now.</div>')}
          </div>
        </div>
 
-       ${(!state.isLoading && indie.length) ? `
+       ${(!state.isLoading && bands.length) ? `
        <div class="home-section">
-         <h2 class="home-section-title"><i class="fa-solid fa-guitar" style="margin-right:8px; color:var(--green);"></i>Indian Indie</h2>
+         <h2 class="home-section-title"><i class="fa-solid fa-guitar" style="margin-right:8px; color:var(--green);"></i>Indie Bands & Anthems</h2>
          <div class="home-scroll">
-           ${indie.map((s, i) => renderHomeScrollCard(s, i, "indie")).join("")}
+           ${bands.map((s, i) => renderHomeScrollCard(s, i, "bands")).join("")}
          </div>
        </div>` : ""}
 
-       ${(!state.isLoading && english.length) ? `
+       ${(!state.isLoading && acoustic.length) ? `
        <div class="home-section">
-         <h2 class="home-section-title"><i class="fa-solid fa-headphones" style="margin-right:8px; color:var(--green);"></i>Lofi Bollywood</h2>
+         <h2 class="home-section-title"><i class="fa-solid fa-mug-hot" style="margin-right:8px; color:var(--green);"></i>Acoustic & Singer-Songwriters</h2>
          <div class="home-scroll">
-           ${english.map((s, i) => renderHomeScrollCard(s, i, "english")).join("")}
+           ${acoustic.map((s, i) => renderHomeScrollCard(s, i, "acoustic")).join("")}
+         </div>
+       </div>` : ""}
+
+       ${(!state.isLoading && melodic.length) ? `
+       <div class="home-section">
+         <h2 class="home-section-title"><i class="fa-solid fa-compact-disc" style="margin-right:8px; color:var(--green);"></i>Vibes & Melodic Indie</h2>
+         <div class="home-scroll">
+           ${melodic.map((s, i) => renderHomeScrollCard(s, i, "melodic")).join("")}
+         </div>
+       </div>` : ""}
+
+       ${(!state.isLoading && lofi.length) ? `
+       <div class="home-section">
+         <h2 class="home-section-title"><i class="fa-solid fa-headphones" style="margin-right:8px; color:var(--green);"></i>Lofi Bollywood & Chill</h2>
+         <div class="home-scroll">
+           ${lofi.map((s, i) => renderHomeScrollCard(s, i, "lofi")).join("")}
+         </div>
+       </div>` : ""}
+
+       ${(!state.isLoading && classical.length) ? `
+       <div class="home-section">
+         <h2 class="home-section-title"><i class="fa-solid fa-om" style="margin-right:8px; color:var(--green);"></i>Classical & Semi-Classical Hindi</h2>
+         <div class="home-scroll">
+           ${classical.map((s, i) => renderHomeScrollCard(s, i, "classical")).join("")}
          </div>
        </div>` : ""}
 
@@ -797,7 +924,7 @@ function bindGlobalEvents() {
        </div>
        <div class="search-bar">
          <i class="fa-solid fa-magnifying-glass search-icon"></i>
-         <input id="search-input" class="search-input" placeholder="What do you want to listen to?" autocomplete="off" />
+         <input id="search-input" class="search-input" placeholder="Search Hindi indie, The Local Train, Anuv, Prateek, Mitraz..." autocomplete="off" />
          ${state.searchLoading ? '<div class="spinner" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);"></div>' : ""}
        </div>
 
@@ -850,12 +977,12 @@ function bindGlobalEvents() {
 
 function renderSearchHistory() {
   const moods = [
-    { name: 'Bollywood', color: '#ff4b4b' },
-    { name: 'Desi Hip Hop', color: '#f59e0b' },
-    { name: 'Ghazals', color: '#10b981' },
-    { name: 'Punjabi Hits', color: '#3b82f6' },
-    { name: 'Classical', color: '#8b5cf6' },
-    { name: 'Sufi', color: '#ec4899' }
+    { name: 'Hindi Indie', color: '#10b981' },
+    { name: 'The Local Train', color: '#f59e0b' },
+    { name: 'Acoustic Folk', color: '#ec4899' },
+    { name: 'Mitraz & Zaeden', color: '#3b82f6' },
+    { name: 'Lofi Bollywood', color: '#8b5cf6' },
+    { name: 'Classical Hindi', color: '#ff4b4b' }
   ];
 
   const moodGrid = `
@@ -1067,6 +1194,7 @@ function renderSongRow(song, index, source, playlistId = "") {
      </div>
 
      <div class="player-bar-right">
+       <button class="control-btn ${state.videoVisible ? 'active' : ''}" data-action="toggle-video" type="button" aria-label="Toggle Video Mode" title="Watch Video"><i class="fa-solid fa-tv"></i></button>
        <button class="control-btn" data-action="open-queue" type="button" aria-label="Queue"><i class="fa-solid fa-list-ul"></i></button>
        <button class="control-btn" data-action="open-playlist-picker" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Add to playlist"><i class="fa-solid fa-plus"></i></button>
        <button class="control-btn" data-action="open-song-details" type="button" aria-label="Details"><i class="fa-solid fa-circle-info"></i></button>
@@ -1233,12 +1361,18 @@ function renderSongRow(song, index, source, playlistId = "") {
   if (navigator.mediaSession) navigator.mediaSession.playbackState = autoplay ? 'playing' : 'paused';
   
   if (autoplay) startYtLoadTimeout();
-  if (ytPlayerReady && ytPlayer) {
-    if (autoplay) ytPlayer.loadVideoById(playableSong.id);
-    else ytPlayer.cueVideoById(playableSong.id);
+  if (ytPlayerReady && ytPlayer && typeof ytPlayer.loadVideoById === "function") {
+    try {
+      if (autoplay) ytPlayer.loadVideoById(playableSong.id);
+      else ytPlayer.cueVideoById(playableSong.id);
+    } catch (e) {
+      console.warn("loadVideoById error:", e);
+      handlePlaybackError(e);
+    }
   } else {
     pendingVideoId = playableSong.id;
     pendingAutoplay = autoplay;
+    loadYTApi();
   }
   
   addRecentlyPlayed(playableSong.id);
@@ -1248,10 +1382,10 @@ function renderSongRow(song, index, source, playlistId = "") {
 }
 
  function pause() {
-  if (ytPlayerReady && ytPlayer && ytPlayer.getIframe) {
+  if (ytPlayerReady && ytPlayer) {
     try {
-      ytPlayer.pauseVideo();
-      const iframe = ytPlayer.getIframe();
+      if (typeof ytPlayer.pauseVideo === "function") ytPlayer.pauseVideo();
+      const iframe = typeof ytPlayer.getIframe === "function" ? ytPlayer.getIframe() : null;
       if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*');
     } catch(e) {}
   }
@@ -1266,12 +1400,25 @@ function renderSongRow(song, index, source, playlistId = "") {
   if (state.isPlaying) pause();
   else {
     startYtLoadTimeout();
-    if (ytPlayerReady && ytPlayer && ytPlayer.getIframe) {
+    if (ytPlayerReady && ytPlayer) {
       try {
-        ytPlayer.playVideo();
-        const iframe = ytPlayer.getIframe();
+        const pState = typeof ytPlayer.getPlayerState === "function" ? ytPlayer.getPlayerState() : -1;
+        if (pState === -1 || pState === 5) {
+          if (typeof ytPlayer.loadVideoById === "function") {
+            ytPlayer.loadVideoById(state.currentSong.id);
+          }
+        } else if (typeof ytPlayer.playVideo === "function") {
+          ytPlayer.playVideo();
+        }
+        const iframe = typeof ytPlayer.getIframe === "function" ? ytPlayer.getIframe() : null;
         if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*');
-      } catch(e) {}
+      } catch(e) {
+        console.warn("playVideo error:", e);
+      }
+    } else {
+      pendingVideoId = state.currentSong.id;
+      pendingAutoplay = true;
+      loadYTApi();
     }
     state.isPlaying = true;
   }
@@ -1410,27 +1557,59 @@ function renderSongRow(song, index, source, playlistId = "") {
  ================================================================ */
  async function loadTrendingSongs() {
   try {
-    const results = await Promise.allSettled([
-      fetch(`/api/search?q=classical+semi+classical+hindi+music`),
-      fetch(`/api/search?q=indian+indie+bollywood+music`),
-      fetch(`/api/search?q=lofi+bollywood+mashup+music`)
-    ]);
     const parseSafe = (res) => {
       if (!res || !res.items) return [];
       return res.items.filter(isValidMusicContent).sort(prioritizeMusic).map(mapServerSong).filter(s => s && s.id);
     };
-    
-    state.trendingSongs = parseSafe(results[0].status === 'fulfilled' ? await results[0].value.json() : null);
-    state.indieSongs = parseSafe(results[1].status === 'fulfilled' ? await results[1].value.json() : null);
-    state.englishSongs = parseSafe(results[2].status === 'fulfilled' ? await results[2].value.json() : null);
-    
-    const all = dedupeSongs([...state.trendingSongs, ...state.indieSongs, ...state.englishSongs]);
+
+    const results = await Promise.allSettled([
+      fetch(`/api/search?q=modern+hindi+indie+anuv+jain+prateek+kuhad+zaeden+osho+jain+suzonn`),
+      fetch(`/api/search?q=modern+hindi+indie+hits+songs`),
+      fetch(`/api/search?q=The+Local+Train+songs+official`),
+      fetch(`/api/search?q=when+chai+met+toast+yellow+diary+songs`),
+      fetch(`/api/search?q=taba+chake+acoustic+indie+hindi+songs`),
+      fetch(`/api/search?q=hindi+indie+acoustic+folk+songs`),
+      fetch(`/api/search?q=mitraz+aditya+rikhari+abdul+hannan+songs`),
+      fetch(`/api/search?q=zaeden+indie+songs`),
+      fetch(`/api/search?q=lofi+bollywood+mashup+chill+hindi`),
+      fetch(`/api/search?q=classical+semi+classical+hindi+music`)
+    ]);
+
+    const getSafe = async (idx) => results[idx].status === 'fulfilled' ? parseSafe(await results[idx].value.json()) : [];
+
+    const [t1, t2, b1, b2, a1, a2, m1, m2, lofi, classical] = await Promise.all([
+      getSafe(0), getSafe(1), getSafe(2), getSafe(3),
+      getSafe(4), getSafe(5), getSafe(6), getSafe(7),
+      getSafe(8), getSafe(9)
+    ]);
+
+    state.trendingSongs = dedupeSongs([...t1, ...t2]);
+    state.indieBandsSongs = dedupeSongs([...b1, ...b2]);
+    state.acousticSongs = dedupeSongs([...a1, ...a2]);
+    state.melodicIndieSongs = dedupeSongs([...m1, ...m2]);
+    state.lofiSongs = dedupeSongs(lofi);
+    state.classicalSongs = dedupeSongs(classical);
+
+    // Compatibility aliases
+    state.indieSongs = state.acousticSongs;
+    state.englishSongs = state.lofiSongs;
+
+    const all = dedupeSongs([
+      ...state.trendingSongs,
+      ...state.indieBandsSongs,
+      ...state.acousticSongs,
+      ...state.melodicIndieSongs,
+      ...state.lofiSongs,
+      ...state.classicalSongs
+    ]);
     rememberSongs(all);
     if (!state.currentSong && all.length && !state.queue.length) {
       state.queue = dedupeSongs(all);
       saveJSON(STORAGE.QUEUE, state.queue);
     }
-  } catch (error) { console.error(error); } finally {
+  } catch (error) {
+    console.error("Error loading indie feeds:", error);
+  } finally {
     state.isLoading = false;
     renderCurrentRoute();
   }
@@ -1483,6 +1662,13 @@ function renderSongRow(song, index, source, playlistId = "") {
    if (source === "search") return state.searchResults.songs;
    if (source === "favorites") return state.favorites;
    if (source === "recommended") return state.recommendedSongs;
+   if (source === "trending") return state.trendingSongs;
+   if (source === "bands") return state.indieBandsSongs;
+   if (source === "acoustic") return state.acousticSongs;
+   if (source === "melodic") return state.melodicIndieSongs;
+   if (source === "lofi" || source === "english") return state.lofiSongs;
+   if (source === "classical") return state.classicalSongs;
+   if (source === "anuv" || source === "prateek" || source === "indie") return state.trendingSongs;
    if (source === "queue") return state.queue;
    if (source === "artist") return state.artistProfile?.songs?.length ? state.artistProfile.songs : [fallbackSong];
    if (source === "playlist" && playlistId) return state.playlists.find((playlist) => playlist.id === playlistId)?.songs || [fallbackSong];
@@ -1515,8 +1701,11 @@ function renderSongRow(song, index, source, playlistId = "") {
    rememberSongs(state.favorites);
    rememberSongs(state.playlists.flatMap((playlist) => Array.isArray(playlist.songs) ? playlist.songs : []));
    rememberSongs(state.trendingSongs);
-   rememberSongs(state.indieSongs);
-   rememberSongs(state.englishSongs);
+   rememberSongs(state.indieBandsSongs);
+   rememberSongs(state.acousticSongs);
+   rememberSongs(state.melodicIndieSongs);
+   rememberSongs(state.lofiSongs);
+   rememberSongs(state.classicalSongs);
    rememberSongs(state.recommendedSongs);
    if (state.currentSong) rememberSongs([state.currentSong]);
  }
@@ -1528,10 +1717,16 @@ function renderSongRow(song, index, source, playlistId = "") {
 
  function dedupeSongs(songs) {
    if (!Array.isArray(songs)) return [];
-   const seen = new Set();
+   const seenId = new Set();
+   const seenKey = new Set();
    return songs.filter((song) => {
-     if (!song?.id || seen.has(song.id)) return false;
-     seen.add(song.id);
+     if (!song?.id || seenId.has(song.id)) return false;
+     seenId.add(song.id);
+     const cleanTitle = (song.title || '').toLowerCase().replace(/\s*\(.*?\)\s*/g, '').replace(/\s*\[.*?\]\s*/g, '').replace(/\|.*$/g, '').trim();
+     const cleanArtist = (song.artist || '').toLowerCase().trim();
+     const key = `${cleanTitle}|${cleanArtist}`;
+     if (cleanTitle.length > 2 && seenKey.has(key)) return false;
+     seenKey.add(key);
      return true;
    });
  }
@@ -1744,9 +1939,9 @@ function normalizePlaylists(playlists) {
 
  async function getNextSong(currentSongId) {
   if (!currentSongId) {
-    const trending = state.trendingSongs.length ? state.trendingSongs : [];
-    if (!trending.length) return null;
-    return trending[Math.floor(Math.random() * trending.length)];
+    const pool = state.trendingSongs.length ? state.trendingSongs : (state.indieBandsSongs.length ? state.indieBandsSongs : state.acousticSongs);
+    if (!pool.length) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
   }
   const suggestions = await getSongRecommendations(currentSongId, 14);
   const next = suggestions.find(song => !state.recentlyPlayed.includes(song.id));
@@ -1785,7 +1980,8 @@ function normalizePlaylists(playlists) {
  }
  
  async function openLyrics() {
-   showToast("Live lyrics sync functionality is currently unavailable in the YouTube No-Cookie environment.");
+   state.lyricsPanel = true;
+   renderLyricsPanel();
  }
 
 
@@ -1800,15 +1996,17 @@ function normalizePlaylists(playlists) {
      return;
    }
    lyricsPanel.classList.add('active');
+   const song = state.currentSong;
    lyricsPanel.innerHTML = `
      <div class="lyrics-header">
        <button class="icon-btn" data-action="close-lyrics" type="button" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
      </div>
      <div class="lyrics-body">
-       <div class="empty-state">
-         <i class="fa-solid fa-microphone"></i>
-         <h2>Lyrics not available</h2>
-         <p>Live lyrics sync is not supported in the YouTube audio mode.</p>
+       <div class="empty-state" style="padding: 40px 20px; text-align: center;">
+         <i class="fa-solid fa-microphone" style="font-size: 2.5rem; margin-bottom: 16px; color: var(--green);"></i>
+         <h2 style="font-size: 1.4rem; margin-bottom: 8px;">${song ? escapeHTML(song.title) : 'Lyrics'}</h2>
+         <p style="color: var(--muted); margin-bottom: 16px;">${song ? escapeHTML(song.artist || song.uploaderName || '') : ''}</p>
+         <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 320px; margin: 0 auto; line-height: 1.5;">Live synchronized lyrics are currently not available for this stream.</p>
        </div>
      </div>
    `;
@@ -1864,6 +2062,7 @@ function normalizePlaylists(playlists) {
            </div>
          </div>
          <div class="fs-extra-controls">
+           <button class="fs-extra-btn ${state.videoVisible ? 'active' : ''}" data-action="toggle-video" type="button" aria-label="Toggle Video" title="Watch Video"><i class="fa-solid fa-tv"></i></button>
            <button class="fs-extra-btn ${shuffleActive}" data-action="toggle-shuffle" type="button" aria-label="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
            <button class="fs-extra-btn ${repeatActive}" data-action="toggle-repeat" type="button" aria-label="Repeat"><i class="${repeatIcon}"></i></button>
            <button class="fs-extra-btn" data-action="open-queue" type="button" aria-label="Queue"><i class="fa-solid fa-list-ul"></i></button>

@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="description" content="Pawtify - Spotify-style music experience. Stream millions of songs, create playlists, and discover new artists." />
+  <meta name="description" content="A privacy-friendly, browser-based static music player featuring local playlist controls and distraction-free streaming." />
+  <meta property="og:title" content="Pawtify" />
+  <meta property="og:description" content="A privacy-friendly, browser-based static music player featuring local playlist controls and distraction-free streaming." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png" />
   <meta name="theme-color" content="#1db954" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -103,8 +107,14 @@
   <div class="queue-panel" id="queue-panel"></div>
   <div id="overlay-root"></div>
   
-  <!-- Hidden Background YouTube Audio Host Engine -->
-  <div id="yt-player-host" style="position:fixed; width:1px; height:1px; bottom:0; right:0; opacity:0.01; pointer-events:none; z-index:-1;"></div>
+  <!-- Background & Floating YouTube Audio/Video Engine -->
+  <div id="yt-player-container" class="yt-player-container">
+    <div class="yt-player-header">
+      <span>Now Playing Video</span>
+      <button type="button" class="yt-player-close" data-action="toggle-video" aria-label="Minimize video">&times;</button>
+    </div>
+    <div id="yt-player-host"></div>
+  </div>
 
   <script>
     if ('serviceWorker' in navigator) {
