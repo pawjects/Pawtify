@@ -8,7 +8,7 @@ let isYtMusicInitialized = false;
 async function initYtMusic() {
   if (!isYtMusicInitialized) {
     try {
-      await ytmusic.initialize();
+      await ytmusic.initialize({ gl: 'IN' });
       isYtMusicInitialized = true;
       console.log('YTMusic API initialized in search service');
     } catch (e) {

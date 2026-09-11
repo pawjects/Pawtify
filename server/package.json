@@ -1,0 +1,14 @@
+{
+  "name": "pawtify-vercel-backend",
+  "version": "1.0.0",
+  "description": "Backend API for search via YTMusic, optimized for Vercel",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "ytmusic-api": "^5.3.1"
+  }
+}

@@ -392,10 +392,18 @@ function mapServerSong(x) {
  /* ================================================================
     GLOBAL EVENTS
  ================================================================ */
- function bindGlobalEvents() {
+ function vibrate() {
+  if (navigator.vibrate) {
+    try { navigator.vibrate(50); } catch(e) {}
+  }
+}
+
+function bindGlobalEvents() {
    window.addEventListener("hashchange", renderCurrentRoute);
 
    document.addEventListener("click", async (event) => {
+    const btn = event.target.closest("button, .song-row, .card, .home-scroll-card, .nav-link, .mobile-nav-item");
+    if (btn) vibrate();
      const routeButton = event.target.closest("[data-route]");
      if (routeButton) {
        event.preventDefault();
@@ -463,6 +471,20 @@ function mapServerSong(x) {
        if (action === "set-library-tab") { event.preventDefault(); state.libraryTab = actionNode.dataset.value || "favorites"; if (state.route.name === "library") renderCurrentRoute(); return; }
        
        if (action === "clear-search-history") { event.preventDefault(); state.recentSearches = []; saveJSON(STORAGE.RECENT_SEARCHES, []); if (state.route.name === "search") renderCurrentRoute(); return; }
+      if (action === "search-mood") {
+        event.preventDefault();
+        const mood = actionNode.dataset.mood;
+        state.searchQuery = mood;
+        state.searchLoading = true;
+        if (state.route.name === "search") {
+           renderCurrentRoute();
+           runSearch(mood);
+        } else {
+           state.pendingSearchQuery = mood;
+           navigate("/search");
+        }
+        return;
+      }
        if (action === "use-recent-search") {
          event.preventDefault();
          const query = actionNode.dataset.query || "";
@@ -591,6 +613,7 @@ function mapServerSong(x) {
    if (normalized === "/" || normalized === "") return { name: "home", playlistId: null };
    if (normalized === "/search") return { name: "search", playlistId: null };
    if (normalized === "/library") return { name: "library", playlistId: null };
+   if (normalized.startsWith("/song/")) return { name: "song", songId: normalized.split("/")[2] };
    if (normalized.startsWith("/playlist/")) {
      const id = decodeURIComponent(normalized.replace("/playlist/", "").trim());
      return { name: "playlist", playlistId: id || null };
@@ -701,7 +724,7 @@ function mapServerSong(x) {
        </div>
 
        <div class="home-section">
-         <h2 class="home-section-title"><i class="fa-solid fa-fire" style="margin-right:8px; color:var(--green);"></i>Trending Now</h2>
+         <h2 class="home-section-title"><i class="fa-solid fa-om" style="margin-right:8px; color:var(--green);"></i>Classical & Semi Classical</h2>
          <div class="home-scroll">
            ${state.isLoading ? loaderHTML : (trending.length ? trending.map((s, i) => renderHomeScrollCard(s, i, "trending")).join("") : '<div class="empty-state">No songs available right now.</div>')}
          </div>
@@ -709,7 +732,7 @@ function mapServerSong(x) {
 
        ${(!state.isLoading && indie.length) ? `
        <div class="home-section">
-         <h2 class="home-section-title"><i class="fa-solid fa-guitar" style="margin-right:8px; color:var(--green);"></i>Indie Hits</h2>
+         <h2 class="home-section-title"><i class="fa-solid fa-guitar" style="margin-right:8px; color:var(--green);"></i>Indian Indie</h2>
          <div class="home-scroll">
            ${indie.map((s, i) => renderHomeScrollCard(s, i, "indie")).join("")}
          </div>
@@ -717,7 +740,7 @@ function mapServerSong(x) {
 
        ${(!state.isLoading && english.length) ? `
        <div class="home-section">
-         <h2 class="home-section-title"><i class="fa-solid fa-globe" style="margin-right:8px; color:var(--green);"></i>Global Top 50</h2>
+         <h2 class="home-section-title"><i class="fa-solid fa-headphones" style="margin-right:8px; color:var(--green);"></i>Lofi Bollywood</h2>
          <div class="home-scroll">
            ${english.map((s, i) => renderHomeScrollCard(s, i, "english")).join("")}
          </div>
@@ -784,44 +807,92 @@ function mapServerSong(x) {
  }
 
  function renderSearchResults() {
-   const songs = state.searchResults.songs;
-   const artists = state.searchResults.artists;
-   return `
-     <div class="tab-list">
-       <button class="tab-btn ${state.searchTab === "songs" ? "active" : ""}" data-action="set-search-tab" data-value="songs" type="button">Songs</button>
-       <button class="tab-btn ${state.searchTab === "artists" ? "active" : ""}" data-action="set-search-tab" data-value="artists" type="button">Artists</button>
-     </div>
-     ${state.searchTab === "songs"
-       ? `<div class="song-table">${songs.length ? songs.map((s, i) => renderSongRow(s, i + 1, "search")).join("") : '<div class="empty-state">No songs found.</div>'}</div>`
-       : `<div class="card-grid">${artists.length ? artists.map((a, i) => renderArtistSearchCard(a, i)).join("") : '<div class="empty-state">No artists found.</div>'}</div>`}
-   `;
- }
+  const songs = state.searchResults.songs;
+  const artists = state.searchResults.artists;
+  
+  if (state.searchLoading) {
+    return `
+      <div class="tab-list">
+        <button class="tab-btn ${state.searchTab === "songs" ? "active" : ""}" type="button">Songs</button>
+        <button class="tab-btn ${state.searchTab === "artists" ? "active" : ""}" type="button">Artists</button>
+      </div>
+      ${state.searchTab === "songs" 
+        ? '<div class="song-table">' + Array(5).fill(0).map(() => `
+            <div class="skeleton-song-row">
+              <div class="skeleton-cover-sm skeleton"></div>
+              <div class="skeleton-text-wrap">
+                <div class="skeleton-text-main skeleton"></div>
+                <div class="skeleton-text-sub skeleton"></div>
+              </div>
+            </div>
+          `).join('') + '</div>'
+        : '<div class="card-grid">' + Array(5).fill(0).map(() => `
+            <article class="skeleton-card">
+              <div class="skeleton-card-cover skeleton"></div>
+              <div class="skeleton-card-title skeleton"></div>
+              <div class="skeleton-card-meta skeleton"></div>
+            </article>
+          `).join('') + '</div>'
+      }
+    `;
+  }
 
- function renderSearchHistory() {
-   return `
-     <div>
-       <div class="page-header">
-         <h2 class="page-title" style="font-size:1.25rem;">Recent Searches</h2>
-         ${state.recentSearches.length ? '<button class="btn btn-soft" data-action="clear-search-history" type="button">Clear All</button>' : ""}
-       </div>
-       <div class="card-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
-         ${state.recentSearches.length
-           ? state.recentSearches.map((item) => `
-             <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px;">
-               <button class="recent-left" data-action="use-recent-search" data-query="${escapeHTML(item.query)}" type="button" style="text-align:left; flex:1;">
-                 <div style="font-weight:700; font-size:1rem;">${escapeHTML(item.query)}</div>
-                 <div style="font-size:0.8125rem; color:var(--muted); margin-top:4px;">${new Date(item.timestamp).toLocaleDateString()}</div>
-               </button>
-               <button class="song-action-btn" style="opacity:1;" data-action="remove-recent-search" data-query="${escapeHTML(item.query)}" type="button" aria-label="Remove">
-                 <i class="fa-solid fa-xmark"></i>
-               </button>
-             </div>
-           `).join("")
-           : '<div class="empty-state">No recent searches.</div>'}
-       </div>
-     </div>
-   `;
- }
+  return `
+    <div class="tab-list">
+      <button class="tab-btn ${state.searchTab === "songs" ? "active" : ""}" data-action="set-search-tab" data-value="songs" type="button">Songs</button>
+      <button class="tab-btn ${state.searchTab === "artists" ? "active" : ""}" data-action="set-search-tab" data-value="artists" type="button">Artists</button>
+    </div>
+    ${state.searchTab === "songs"
+      ? `<div class="song-table">${songs.length ? songs.map((s, i) => renderSongRow(s, i + 1, "search")).join("") : '<div class="empty-state">No songs found.</div>'}</div>`
+      : `<div class="card-grid">${artists.length ? artists.map((a, i) => renderArtistSearchCard(a, i)).join("") : '<div class="empty-state">No artists found.</div>'}</div>`}
+  `;
+}
+
+function renderSearchHistory() {
+  const moods = [
+    { name: 'Bollywood', color: '#ff4b4b' },
+    { name: 'Desi Hip Hop', color: '#f59e0b' },
+    { name: 'Ghazals', color: '#10b981' },
+    { name: 'Punjabi Hits', color: '#3b82f6' },
+    { name: 'Classical', color: '#8b5cf6' },
+    { name: 'Sufi', color: '#ec4899' }
+  ];
+
+  const moodGrid = `
+    <div style="margin-top:24px;">
+      <h2 class="page-title" style="font-size:1.25rem; margin-bottom:16px;">Browse All</h2>
+      <div class="card-grid" style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:16px;">
+        ${moods.map(m => `
+          <div class="card mood-card" data-action="search-mood" data-mood="${m.name}" style="background: linear-gradient(135deg, ${m.color}, #111); height:100px; display:flex; align-items:flex-end; padding:12px; border-radius:12px; cursor:pointer;">
+            <h3 style="font-size:1.1rem; font-weight:700;">${m.name}</h3>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  return `
+    <div>
+      ${state.recentSearches.length ? `
+        <div class="page-header">
+          <h2 class="page-title" style="font-size:1.25rem;">Recent Searches</h2>
+          <button class="btn btn-soft" data-action="clear-search-history" type="button">Clear All</button>
+        </div>
+        <div class="card-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
+          ${state.recentSearches.map((item) => `
+            <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px;">
+              <span style="font-weight:600; cursor:pointer;" data-action="use-recent-search" data-query="${escapeHTML(item)}">${escapeHTML(item)}</span>
+              <button class="icon-btn" data-action="remove-recent-search" data-query="${escapeHTML(item)}" type="button" aria-label="Remove recent search">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+      ${moodGrid}
+    </div>
+  `;
+}
 
  /* ================================================================
     RENDER: LIBRARY PAGE
@@ -851,48 +922,40 @@ function mapServerSong(x) {
     RENDER: PLAYLIST PAGE
  ================================================================ */
  function renderPlaylistPage(playlistId) {
-   const playlist = state.playlists.find((item) => item.id === playlistId);
-   if (!playlist) {
-     return `
-       <section class="page">
-         <div class="empty-state">
-           <i class="fa-solid fa-music"></i>
-           <h2>Playlist Not Found</h2>
-           <button class="btn btn-primary" data-route="/library" type="button" style="margin-top:16px;">Back to Library</button>
-         </div>
-       </section>
-     `;
-   }
+  const isFavorites = playlistId === "favorites";
+  const playlist = isFavorites
+    ? { id: "favorites", name: "Favorites", songs: state.favorites }
+    : state.playlists.find((p) => p.id === playlistId);
 
-   const cover = playlist.songs[0]?.coverUrl || "";
-   return `
-     <section class="page">
-       <div class="hero-player" style="background: linear-gradient(180deg, rgba(40,40,40,0.8) 0%, var(--dark-gray) 100%);">
-         ${cover ? `<img class="hero-cover" src="${escapeHTML(cover)}" alt="" />` : `<div class="hero-cover" style="background:var(--elevated); display:grid; place-items:center;"><i class="fa-solid fa-music" style="font-size:4rem; color:var(--muted);"></i></div>`}
-         <div class="hero-details">
-           <span class="hero-kicker">Playlist</span>
-           <h1 class="hero-title">${escapeHTML(playlist.name)}</h1>
-           <div class="hero-meta">
-             <img src="${LOGO_URL}" alt="" />
-             <span>Pawtify</span>
-             <span>\u2022</span>
-             <span>${playlist.songs.length} songs</span>
-           </div>
-           <div class="hero-actions">
-             <button class="btn-play" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button"><i class="fa-solid fa-play"></i></button>
-             <button class="btn-icon" data-action="shuffle-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button"><i class="fa-solid fa-shuffle"></i></button>
-             ${playlist.id !== "default" ? `<button class="btn-icon" data-action="delete-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button"><i class="fa-solid fa-trash"></i></button>` : ""}
-           </div>
-         </div>
-       </div>
-       <div class="song-table">
-         ${playlist.songs.length
-           ? playlist.songs.map((s, i) => renderSongRow(s, i + 1, "playlist", playlist.id)).join("")
-           : '<div class="empty-state">This playlist is empty.</div>'}
-       </div>
-     </section>
-   `;
- }
+  if (!playlist) return `<div class="empty-state">Playlist not found</div>`;
+
+  return `
+    <section class="page playlist-view fade-in">
+      <div style="display:flex; align-items:flex-end; gap:24px; padding:40px 20px; background: linear-gradient(transparent 0%, rgba(255,255,255,0.05) 100%); margin:-20px -20px 24px -20px;">
+        <div style="width:200px; height:200px; background:var(--surface-light); box-shadow:0 10px 30px rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <i class="${isFavorites ? 'fa-solid fa-heart' : 'fa-solid fa-music'}" style="font-size:4rem; color:${isFavorites ? 'var(--green)' : 'var(--text-sub)'}"></i>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <span style="text-transform:uppercase; font-size:0.85rem; font-weight:700; letter-spacing:1px; color:var(--text-sub);">Playlist</span>
+          <h1 style="font-size:3rem; font-weight:900; margin:0; line-height:1.1; word-break:break-word;">${escapeHTML(playlist.name)}</h1>
+          <p style="color:var(--text-sub); font-size:1rem; margin-top:8px;">${playlist.songs.length} ${playlist.songs.length === 1 ? 'song' : 'songs'}</p>
+        </div>
+      </div>
+      
+      <div style="display:flex; align-items:center; gap:24px; padding:0 0 24px 0;">
+        ${playlist.songs.length > 0 ? `<button class="btn btn-primary" data-action="play-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" style="width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 16px rgba(29, 185, 84, 0.3);"><i class="fa-solid fa-play" style="font-size:1.5rem; margin-left:4px;"></i></button>` : ''}
+        ${!isFavorites ? `<button class="btn btn-soft" data-action="delete-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" style="padding:12px 24px;">Delete Playlist</button>` : ''}
+      </div>
+
+      <div class="song-table">
+        ${playlist.songs.length > 0 
+          ? playlist.songs.map((song, i) => renderSongRow(song, i + 1, "playlist", playlist.id)).join("") 
+          : '<div class="empty-state">No songs in this playlist yet.</div>'
+        }
+      </div>
+    </section>
+  `;
+}
 
  /* ================================================================
     RENDER: CARDS & ROWS
@@ -1070,23 +1133,25 @@ function renderSongRow(song, index, source, playlistId = "") {
  }
 
  function markActiveNav() {
-   document.querySelectorAll(".nav-link").forEach((btn) => {
-     const route = btn.dataset.route;
-     const active =
-       (route === "/" && state.route.name === "home") ||
-       (route === "/search" && state.route.name === "search") ||
-       (route === "/library" && (state.route.name === "library" || state.route.name === "playlist"));
-     btn.classList.toggle("active", active);
-   });
-   document.querySelectorAll(".mobile-nav-item").forEach((btn) => {
-     const route = btn.dataset.route;
-     const active =
-       (route === "/" && state.route.name === "home") ||
-       (route === "/search" && state.route.name === "search") ||
-       (route === "/library" && (state.route.name === "library" || state.route.name === "playlist"));
-     btn.classList.toggle("active", active);
-   });
- }
+  document.querySelectorAll(".nav-link").forEach((btn) => {
+    const route = btn.dataset.route;
+    const active =
+      (route === "/" && state.route.name === "home") ||
+      (route === "/search" && state.route.name === "search") ||
+      (route === "/library" && (state.route.name === "library" || state.route.name === "playlist"));
+    if (active) btn.classList.add("active");
+    else btn.classList.remove("active");
+  });
+  document.querySelectorAll(".mobile-nav-item").forEach((btn) => {
+    const route = btn.dataset.route;
+    const active =
+      (route === "/" && state.route.name === "home") ||
+      (route === "/search" && state.route.name === "search") ||
+      (route === "/library" && (state.route.name === "library" || state.route.name === "playlist"));
+    if (active) btn.classList.add("active");
+    else btn.classList.remove("active");
+  });
+}
 
  function refreshPlaybackUI() {
    const seek = document.getElementById("seekbar");
@@ -1346,9 +1411,9 @@ function renderSongRow(song, index, source, playlistId = "") {
  async function loadTrendingSongs() {
   try {
     const results = await Promise.allSettled([
-      fetch(`/api/search?q=official+top+hits+english+music+video`),
-      fetch(`/api/search?q=official+indie+music+video`),
-      fetch(`/api/search?q=official+pop+hits+music+video`)
+      fetch(`/api/search?q=classical+semi+classical+hindi+music`),
+      fetch(`/api/search?q=indian+indie+bollywood+music`),
+      fetch(`/api/search?q=lofi+bollywood+mashup+music`)
     ]);
     const parseSafe = (res) => {
       if (!res || !res.items) return [];
@@ -1391,18 +1456,20 @@ function renderSongRow(song, index, source, playlistId = "") {
  }
 
  async function shareCurrentSong() {
-   if (!state.currentSong) return;
-   const song = state.currentSong;
-   const shareText = `${song.title} by ${song.artist} on Pawtify`;
-   const shareUrl = `${window.location.origin}${window.location.pathname}#/`;
-   try {
-     if (navigator.share) { await navigator.share({ title: song.title, text: shareText, url: shareUrl }); return; }
-   } catch (error) { console.warn("Native share failed:", error); }
-   try {
-     await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-     alert("Song link copied to clipboard.");
-   } catch (error) { console.error("Clipboard write failed:", error); }
- }
+  if (!state.currentSong) return;
+  const song = state.currentSong;
+  const shareText = `${song.title} by ${song.artist} on Pawtify`;
+  const shareUrl = `${window.location.origin}${window.location.pathname}#/song/${song.id}`;
+  try {
+    if (navigator.share) { await navigator.share({ title: song.title, text: shareText, url: shareUrl }); return; }
+  } catch (error) { console.warn("Native share failed:", error); }
+  try {
+    await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+    showToast("Song link copied to clipboard.");
+  } catch (err) {
+    showToast("Failed to copy link.");
+  }
+}
 
  async function playSongById(songId, source, playlistId) {
    const song = getSongById(songId);
@@ -1714,11 +1781,11 @@ function normalizePlaylists(playlists) {
  }
 
  async function downloadCurrentSong() {
-   alert("Downloading directly from YouTube embeds is restricted. We recommend adding this song to a playlist instead!");
+   showToast("Downloading directly from YouTube embeds is restricted. We recommend adding this song to a playlist instead!");
  }
  
  async function openLyrics() {
-   alert("Live lyrics sync functionality is currently unavailable in the YouTube No-Cookie environment.");
+   showToast("Live lyrics sync functionality is currently unavailable in the YouTube No-Cookie environment.");
  }
 
 
