@@ -2,7 +2,7 @@
   "name": "pawtify",
   "version": "1.0.0",
   "description": "A privacy-friendly, browser-based static music player featuring local playlist controls and distraction-free streaming.",
-  "main": "index.html",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",

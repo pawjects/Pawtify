@@ -12,6 +12,11 @@ node_modules/
 # Vercel
 .vercel
 
+# Build output
+public/
+dist/
+.output/
+
 # Editor & OS
 .DS_Store
 Thumbs.db

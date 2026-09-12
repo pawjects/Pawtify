@@ -1,202 +1,182 @@
 <div align="center">
+  <img src="https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png" alt="Pawtify Logo" width="120" />
 
-# 🎧 Pawtify
+  # 🎧 Pawtify
 
-### Open Source Music Streaming WebApp
+  **A modern, lightweight, and privacy-friendly music streaming experience built for the web.**
 
-*A modern, lightweight and privacy-friendly music streaming experience built for everyone.*
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![Vercel Deployment](https://img.shields.io/badge/Vercel-Deployed-000000?logo=vercel)](https://vercel.com)
+  [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js)](https://nodejs.org)
+  [![GitHub stars](https://img.shields.io/github/stars/pawjects/Pawtify?style=flat-square)](https://github.com/pawjects/Pawtify/stargazers)
+  [![GitHub issues](https://img.shields.io/github/issues/pawjects/Pawtify?style=flat-square)](https://github.com/pawjects/Pawtify/issues)
+  [![GitHub release](https://img.shields.io/github/v/release/pawjects/Pawtify?style=flat-square)](https://github.com/pawjects/Pawtify/releases)
+  [![PWA Supported](https://img.shields.io/badge/PWA-Supported-5A0FC8?style=flat-square&logo=pwa)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps)
 
-<p>
-  <img src="https://img.shields.io/badge/Open%20Source-GPLv3-blue?style=flat-square" alt="GPLv3">
-  <img src="https://img.shields.io/badge/PWA-Supported-5A0FC8?style=flat-square" alt="PWA">
-  <img src="https://img.shields.io/badge/Mobile-Friendly-00C2FF?style=flat-square" alt="Responsive">
-  <img src="https://img.shields.io/badge/Status-Active-success?style=flat-square" alt="Active">
-</p>
-
-### **Listen to your favorite music with a beautiful, fast and app-like experience.**
-
+  [Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Architecture](#-architecture) • [Contributing](#-contributing)
 </div>
 
 ---
 
-# ✨ Overview
+## ✨ Overview
 
-**Pawtify** is a free and open-source music streaming web application designed with simplicity, speed and modern design principles.
+**Pawtify** is a free and open-source music streaming web application designed with simplicity, speed, and modern design principles. It provides an immersive listening experience without overwhelming the user with unnecessary elements. 
 
-Instead of overwhelming users with unnecessary elements, Pawtify focuses on delivering a smooth listening experience through an intuitive interface that works seamlessly across phones, tablets and desktops.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png" alt="Pawtify App Screenshot" width="600" style="border-radius: 12px; box-shadow: 0px 4px 15px rgba(0,0,0,0.5);" />
+  <p><i>(Replace with actual app screenshot showing the UI)</i></p>
+</div>
 
-Whether you're discovering new music, searching for your favorite artist or managing your personal library, Pawtify provides a clean and distraction-free environment.
-
----
-
-# 🚀 Features
-
-## 🎵 Music Streaming
-
-- Smooth and responsive music playback
-- High-quality listening experience
-- Fast loading interface
-- Continuous playback support
-
-## 🔍 Powerful Search
-
-Quickly discover:
-
-- Songs
-- Artists
-- Albums
-- Playlists
-
-with an easy-to-use search experience.
-
-## 📚 Your Library
-
-Keep everything organized in one place.
-
-- Saved songs
-- Favorite artists
-- Recently played content
-- Personal collections
-
-## 🎼 Playlist Support
-
-Enjoy music the way you want.
-
-- Browse playlists
-- Open curated collections
-- Organize your listening experience
-
-## 📱 Progressive Web App (PWA)
-
-Pawtify can be installed just like a native application.
-
-Benefits include:
-
-- Add to Home Screen
-- Standalone app experience
-- Faster loading
-- Better mobile usability
-- No app store required
-
-## 🎨 Modern Interface
-
-Designed with usability in mind.
-
-- Minimal layout
-- Smooth navigation
-- Touch-friendly controls
-- Responsive design
-- Clean typography
-
-## ⚡ Optimized Performance
-
-Built to stay lightweight.
-
-- Fast startup
-- Responsive interactions
-- Low resource usage
-- Mobile-first optimization
+Whether you're discovering new music, searching for your favorite artist, or managing your personal library, Pawtify provides a clean, distraction-free environment across phones, tablets, and desktops.
 
 ---
 
-# 🌍 Compatibility
+## 🚀 Features
 
-Pawtify works directly from your browser without requiring any additional software.
+### 🎵 Music Streaming
+- **Smooth Playback**: Uninterrupted audio streaming with a responsive player.
+- **High-Quality Audio**: Immersive listening experience with low latency.
+- **Continuous Playback**: Seamlessly transition between tracks.
+- **Video Toggle**: Watch the official music video directly within the app when available.
 
-| Platform | Support |
-| ------------ | ------------ |
-| Android | ✅ Fully Supported |
-| iPhone & iPad | ✅ Supported |
-| Windows | ✅ Supported |
-| macOS | ✅ Supported |
-| Linux | ✅ Supported |
-| ChromeOS | ✅ Supported |
+### 🔍 Powerful Search
+- **Comprehensive Results**: Quickly discover songs, artists, albums, and playlists.
+- **Smart Fallbacks**: Intelligent stream routing ensures you always get the best available audio source.
 
----
+### 📚 Your Library & Playlists
+- **Personal Collections**: Keep your favorite tracks and artists organized in one place.
+- **Recently Played**: Easily jump back into what you were listening to.
+- **Custom Playlists**: Create, manage, and curate your own playlists.
 
-# 🌐 Browser Compatibility
+### 📱 Progressive Web App (PWA)
+- **Installable**: Add Pawtify directly to your home screen for a native app-like experience.
+- **Offline Resiliency**: Built-in service workers cache the app shell for faster loading and basic offline support.
 
-| Browser | Status |
-| ------------ | ------------ |
-| Google Chrome | ✅ |
-| Microsoft Edge | ✅ |
-| Mozilla Firefox | ✅ |
-| Brave Browser | ✅ |
-| Opera | ✅ |
-| Safari | ✅ |
-
----
-
-# ❤️ Why Pawtify?
-
-- 🎧 Beautiful music streaming experience
-- ⚡ Lightweight and fast
-- 📱 Mobile-first design
-- 🌙 Clean and distraction-free interface
-- 🔍 Easy music discovery
-- 📚 Organized personal library
-- 🎼 Playlist support
-- 🌍 Cross-platform compatibility
-- 🔓 Completely open source
+### 🎨 Modern Interface
+- **Minimalist Design**: Clean, AMOLED-friendly dark mode with intuitive navigation.
+- **Responsive**: Adapts perfectly to desktop, tablet, and mobile screens.
 
 ---
 
-# 🔒 Privacy
+## 🛠️ Installation & Setup
 
-Pawtify is designed with a simple philosophy:
+You can easily run Pawtify locally for development or deploy it to your own server.
 
-> **Your music experience should remain simple, transparent and accessible.**
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v18 or higher recommended)
+- `npm` or `bun` package manager
 
-The project aims to provide a modern web-based music player without unnecessary complexity, allowing users to enjoy their music through a clean and intuitive interface.
+### Local Development
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/pawjects/Pawtify.git
+   cd Pawtify
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+   The app will be available at `http://localhost:3000`.
+
+### Production Build
+
+1. **Build the project**
+   ```bash
+   npm run build
+   ```
+   This will synchronize the static assets into the `public/` directory.
+
+2. **Start the production server**
+   ```bash
+   npm start
+   ```
 
 ---
 
-# 🌟 Open Source
+## 💻 Usage
 
-Pawtify is an open-source community project.
+Once the application is running:
 
-Everyone is welcome to:
-
-- ⭐ Star the repository
-- 🍴 Fork the project
-- 🐛 Report bugs
-- 💡 Suggest new features
-- 🤝 Contribute improvements
-
-Community contributions help make Pawtify better for everyone.
+1. **Search & Discover:** Use the search bar to find artists, tracks, and playlists.
+2. **Playback Controls:** The bottom player bar allows you to pause, skip, and toggle the underlying video stream via the TV icon.
+3. **Library Management:** Navigate to the "Library" tab to see your recently played items and manage custom playlists.
+4. **PWA Installation:** Click the "Install" prompt in your browser's address bar or the in-app banner to install Pawtify locally for a native app experience.
 
 ---
 
-# 📈 Project Goals
+## 🏗️ Project Structure
 
-The long-term vision of Pawtify is to create a modern music streaming web application that is:
+Pawtify is built with a clean, modular structure, utilizing vanilla JavaScript on the frontend and a lightweight Express/Serverless backend.
 
-- Fast
-- Beautiful
-- Accessible
-- Responsive
-- Easy to use
-- Community-driven
-- Open source
+```
+Pawtify/
+├── api/                  # Backend API routes (Vercel Serverless compatible)
+│   └── search.js         # Unified search handler utilizing ytmusic-api
+├── app/                  # Frontend source files
+│   ├── app.js            # Core client-side application logic
+│   ├── index.html        # Main entry point and UI skeleton
+│   ├── styles.css        # Application styling and themes
+│   ├── manifest.json     # PWA manifest
+│   └── sw.js             # Service worker for offline caching
+├── assets/               # Static assets (images, icons)
+├── scripts/              # Build and utility scripts
+├── server.js             # Express server for local and containerized deployments
+├── vercel.json           # Vercel deployment configuration
+└── package.json          # Project dependencies and scripts
+```
 
 ---
 
-# 📄 License
+## 🌍 Deployment
 
-This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
+Pawtify is fully configured for one-click deployment on **Vercel**. 
 
-You are free to use, modify and distribute the project under the terms of the license.
+1. Push your repository to GitHub.
+2. Import the project in the Vercel Dashboard.
+3. Vercel will automatically detect the `vercel.json` configuration and deploy the app seamlessly, utilizing serverless functions for the API routes.
+
+Alternatively, you can deploy the app as a standard Node.js application or via Docker using the provided `server.js` entry point.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions from the community! Whether it's fixing a bug, improving the UI, or adding a new feature, your help is appreciated.
+
+1. **Fork** the repository.
+2. **Create** a new branch (`git checkout -b feature/AmazingFeature`).
+3. **Commit** your changes (`git commit -m 'Add some AmazingFeature'`).
+4. **Push** to the branch (`git push origin feature/AmazingFeature`).
+5. **Open** a Pull Request.
+
+Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) for more details.
+
+---
+
+## 🔒 Privacy & Security
+
+Pawtify is designed to be privacy-friendly:
+- **No Tracking**: We do not embed third-party analytics or trackers.
+- **Local Storage**: Your library, playlists, and preferences are stored locally in your browser.
+
+For security reports, please review our [Security Policy](SECURITY.md).
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information.
 
 ---
 
 <div align="center">
-
-## 🎧 Pawtify
-
-### Stream • Discover • Enjoy
-
-*A beautiful open-source music streaming experience for the modern web.*
-
-Made with ❤️ by **Pawjects**
-
+  Made with ❤️ by <b>Pawjects</b>
 </div>
+
