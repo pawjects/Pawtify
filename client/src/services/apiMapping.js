@@ -55,7 +55,7 @@ export async function searchArtists(query, page = 0, limit = 10) {
       name: (typeof x.uploaderName === 'string' ? x.uploaderName : (Array.isArray(x.uploaderName) ? x.uploaderName.map(a => a.name || a).join(', ') : x.uploaderName?.name)) || x.title || 'Unknown Artist',
       imageUrl:
         x.thumbnail ||
-        '/assets/icon-512.png',
+        '/assets/pawtify.png',
       type: 'Artist',
       bio: '',
     }));

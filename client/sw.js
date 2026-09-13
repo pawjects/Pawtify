@@ -7,7 +7,7 @@ const DYNAMIC_CACHE = 'pawtify-dynamic-v2.3';
 const API_CACHE = 'pawtify-api-v2.3';
 const MEDIA_CACHE = 'pawtify-media-v2.3';
 
-const ASSETS = ['/', '/index.html', '/styles.css', '/src/main.js', '/manifest.webmanifest', '/assets/icon-192.png', '/assets/icon-512.png'];
+const ASSETS = ['/', '/index.html', '/styles.css', '/src/main.js', '/manifest.webmanifest', '/assets/pawtify.png', '/assets/pawtify.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

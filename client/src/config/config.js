@@ -24,7 +24,7 @@ import {
 } from '../services/dataLoader.js';
 
 export const LOGO_URL =
-  '/assets/icon-512.png';
+  '/assets/pawtify.png';
 
 export const STORAGE = {
   THEME: 'pawtify-theme',
