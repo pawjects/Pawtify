@@ -1,5 +1,5 @@
 # Default owners for everything in the repo
-*       @pawjects
+*       @skykoderhere
 
 # Specific ownership for critical music player logic
 /js/player.js           @skykoderhere
