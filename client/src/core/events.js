@@ -65,7 +65,7 @@ export function bindGlobalEvents() {
 
   document.addEventListener('click', async (event) => {
     const btn = event.target.closest(
-      'button, .song-row, .card, .home-scroll-card, .nav-link, .mobile-nav-item'
+      'button, .song-row, .card, .home-scroll-card, .nav-link, .mobile-nav-item, .category-card'
     );
     if (btn) vibrate();
     const routeButton = event.target.closest('[data-route]');
@@ -84,6 +84,21 @@ export function bindGlobalEvents() {
     const playlistId = actionNode.dataset.playlistId || null;
 
     try {
+      if (action === 'search-category') {
+        event.preventDefault();
+        const category = actionNode.dataset.category;
+        if (category) {
+          state.searchQuery = category;
+          const searchInput = document.querySelector('.search-input');
+          if (searchInput) searchInput.value = category;
+          // Trigger search using performSearch or by dispatching an event
+          // It looks like search is handled elsewhere, let's trigger the input event
+          if (searchInput) {
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }
+        return;
+      }
       if (action === 'play-something') {
         event.preventDefault();
         await playSomething();
@@ -221,17 +236,41 @@ export function bindGlobalEvents() {
         event.preventDefault();
         const pid = actionNode.dataset.playlistId;
         if (pid) {
-          playYTPlaylist(pid);
           const titleNode =
             actionNode.querySelector('span') ||
             actionNode.querySelector('.card-title');
-          if (titleNode)
+          const name = titleNode ? titleNode.innerText : 'Playlist';
+          const img = actionNode.querySelector('img')?.src || '';
+          
+          if (titleNode) {
             saveRecentItem('playlist', {
               id: pid,
-              title: titleNode.innerText,
+              title: name,
               subtitle: 'Playlist',
-              imageUrl: actionNode.querySelector('img')?.src || '',
+              imageUrl: img,
             });
+          }
+          
+          // Pre-populate temporary playlist to show loading state
+          if (!state.ytPlaylists) state.ytPlaylists = {};
+          if (!state.ytPlaylists[pid]) {
+             state.ytPlaylists[pid] = { id: pid, name: name, coverUrl: img, songs: [], isLoading: true, isSystem: true };
+             
+             fetch(`/api/search?type=playlist_videos&q=${pid}`)
+               .then(res => res.json())
+               .then(data => {
+                  state.ytPlaylists[pid].songs = data.items || [];
+                  state.ytPlaylists[pid].isLoading = false;
+                  window.dispatchEvent(new CustomEvent('routechange'));
+               })
+               .catch(e => {
+                  state.ytPlaylists[pid].isLoading = false;
+                  showToast('Error loading playlist.');
+                  window.dispatchEvent(new CustomEvent('routechange'));
+               });
+          }
+          
+          window.location.hash = '/playlist/' + pid;
         }
         return;
       }
@@ -499,6 +538,11 @@ export function bindGlobalEvents() {
         return;
       }
       state.searchLoading = true;
+      if (state.route.name === 'search') {
+        renderCurrentRoute();
+        const input = document.getElementById('search-input');
+        if (input) input.focus();
+      }
       if (globals.searchTimer) window.clearTimeout(globals.searchTimer);
       globals.searchTimer = window.setTimeout(() => {
         runSearch(state.searchQuery);

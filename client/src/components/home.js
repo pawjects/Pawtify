@@ -27,10 +27,34 @@ export function renderHomePage() {
   // Shuffle heroes
   heroCandidates = heroCandidates.sort(() => 0.5 - Math.random());
 
-  const loaderHTML = `<div class="empty-state"><div class="spinner" style="margin:0 auto 16px;"></div><h2>Loading Music...</h2></div>`;
+  
+  let sectionsHTML = '';
+  let gridHTML = '';
 
-  let sectionsHTML = state.isLoading ? loaderHTML : '';
-  if (!state.isLoading) {
+  if (state.isLoading) {
+    gridHTML = Array(6).fill('').map(() => `
+      <div class="home-grid-card" style="pointer-events:none;">
+        <div class="skeleton" style="width:56px; height:56px; flex-shrink:0;"></div>
+        <div class="skeleton skeleton-text-main" style="width: 70%; margin: 0; border-radius: 4px; height: 14px;"></div>
+      </div>
+    `).join('');
+
+    sectionsHTML += Array(3).fill('').map(() => `
+      <div class="home-section">
+        <div class="skeleton skeleton-text-main" style="width: 200px; height: 24px; margin-bottom: 16px; margin-left: 16px;"></div>
+        <div class="home-scroll" style="display:flex; overflow:hidden; gap:16px; padding:0 16px;">
+          ${Array(4).fill('').map(() => `
+            <div class="home-scroll-card" style="pointer-events:none; flex-shrink:0;">
+              <div class="skeleton" style="width:140px; height:140px; border-radius:var(--radius-md); margin-bottom:12px;"></div>
+              <div class="skeleton skeleton-text-main" style="width: 80%; margin: 0 0 8px 0; border-radius: 4px; height:14px;"></div>
+              <div class="skeleton skeleton-text-sub" style="width: 50%; margin: 0; border-radius: 4px; height:12px;"></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  } else {
+
     if (rec.length) {
       sectionsHTML += `
         <div class="home-section">
@@ -67,7 +91,6 @@ export function renderHomePage() {
       }
     }
   }
-
   return `
     <section class="page">
       <div class="home-greeting" style="display:flex; justify-content:space-between; align-items:center;">
@@ -79,14 +102,11 @@ export function renderHomePage() {
         </div>
       </div>
 
-      <div class="home-grid">
-        ${state.favorites.length ? renderHomeGridCard(state.favorites[0], 'favorites') : ''}
-        ${state.playlists[0]?.songs?.length ? renderHomeGridCard(state.playlists[0].songs[0], 'playlist', state.playlists[0].id) : ''}
-        ${heroCandidates
-          .slice(0, 4)
-          .map((h) => renderHomeGridCard(h.song, h.source))
-          .join('')}
-      </div>
+      <div class="home-grid">${gridHTML || `
+      ${state.favorites.length ? renderHomeGridCard(state.favorites[0], 'favorites') : ''}
+      ${state.playlists[0]?.songs?.length ? renderHomeGridCard(state.playlists[0].songs[0], 'playlist', state.playlists[0].id) : ''}
+      ${heroCandidates.slice(0, 4).map((h) => renderHomeGridCard(h.song, h.source)).join('')}
+    `}</div>
 
       ${sectionsHTML}
     </section>

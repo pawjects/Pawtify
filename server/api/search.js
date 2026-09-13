@@ -69,7 +69,7 @@ async function searchHandler(req, res) {
           return {
             id: item.videoId,
             title: item.name || 'Unknown Title',
-            uploaderName: item.artist?.name || 'Unknown Artist',
+            uploaderName: Array.isArray(item.artist) ? item.artist.map(a => a.name || a).join(', ') : (item.artist?.name || item.artist || 'Unknown Artist'),
             thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
             duration: durationSec,
             durationString: formatDurationString(durationSec),
@@ -87,7 +87,7 @@ async function searchHandler(req, res) {
         .map((item) => ({
           id: item.playlistId,
           title: item.name || 'Unknown Playlist',
-          uploaderName: item.artist?.name || 'Various Artists',
+          uploaderName: Array.isArray(item.artist) ? item.artist.map(a => a.name || a).join(', ') : (item.artist?.name || item.artist || 'Various Artists'),
           thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
           resultType: 'playlist',
         }))
@@ -110,7 +110,7 @@ async function searchHandler(req, res) {
           return {
             id: item.videoId,
             title: item.name || 'Unknown Title',
-            uploaderName: item.artist?.name || 'Unknown Artist',
+            uploaderName: Array.isArray(item.artist) ? item.artist.map(a => a.name || a).join(', ') : (item.artist?.name || item.artist || 'Unknown Artist'),
             thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
             duration: durationSec,
             durationString: formatDurationString(durationSec),

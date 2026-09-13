@@ -86,7 +86,15 @@ export function renderArtistProfile() {
        <div class="song-table">
          ${
            artist.loading
-             ? '<div class="empty-state"><div class="spinner" style="margin:0 auto 16px;"></div><h2>Loading...</h2></div>'
+             ? `<div class="song-table" style="padding:0 24px;">${Array(6).fill('').map(() => `
+    <div class="skeleton-song-row">
+      <div class="skeleton skeleton-cover-sm"></div>
+      <div class="skeleton-text-wrap">
+        <div class="skeleton skeleton-text-main" style="width: 60%;"></div>
+        <div class="skeleton skeleton-text-sub" style="width: 40%;"></div>
+      </div>
+    </div>
+  `).join('')}</div>`
              : artist.songs?.length
                ? artist.songs
                    .map((s, i) => renderSongRow(s, i + 1, 'artist'))

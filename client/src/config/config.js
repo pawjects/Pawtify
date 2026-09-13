@@ -24,7 +24,7 @@ import {
 } from '../services/dataLoader.js';
 
 export const LOGO_URL =
-  'https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png';
+  '/assets/icon-512.png';
 
 export const STORAGE = {
   THEME: 'pawtify-theme',
@@ -149,37 +149,16 @@ export const initialVol =
   typeof storedVol === 'number' && !isNaN(storedVol) ? storedVol : 0.7;
 
 export const DISCOVERY_CATEGORIES = [
-  { title: 'Chill Vibes', query: 'chill relaxing study vibes music official' },
-  {
-    title: 'Late Night Drives',
-    query: 'late night drive midnight songs official',
-  },
-  { title: 'Focus & Flow', query: 'focus flow deep work instrumental beat' },
-  {
-    title: 'Acoustic Morning',
-    query: 'acoustic morning sunrise indie folk songs',
-  },
-  { title: 'Upbeat Workout', query: 'upbeat workout hype energy pop rap gym' },
-  { title: 'Evening Jazz', query: 'evening jazz smooth lounge background' },
-  { title: 'Feel Good Pop', query: 'feel good happy pop upbeat hits official' },
-  {
-    title: 'Rainy Day Acoustics',
-    query: 'rainy day sad acoustic melancholy songs',
-  },
-  {
-    title: 'Coffeehouse Indie',
-    query: 'coffeehouse indie folk acoustic vocal',
-  },
-  {
-    title: 'Global Top Hits',
-    query: 'global top hits popular trending songs official',
-  },
-  { title: 'Lo-Fi Beats', query: 'lofi hip hop beats to relax study to' },
-  { title: 'Soul & R&B', query: 'smooth soul rnb hits neo soul' },
-  { title: 'Weekend Party', query: 'weekend party club dance hits upbeat' },
-  { title: 'Synthwave Dreams', query: 'synthwave retrowave 80s electronic' },
-  { title: 'Ambient Escapes', query: 'ambient ethereal atmospheric cinematic' },
-  { title: 'Indie Rock Anthems', query: 'indie rock alternative anthem' },
+  { title: 'Late Night Indie', query: 'Indian indie late night vibes The Local Train official' },
+  { title: 'Acoustic Love', query: 'Anuv Jain acoustic romantic indie songs official' },
+  { title: 'Soothing Hindi', query: 'Prateek Kuhad soothing Hindi mellow official' },
+  { title: 'Melancholic Moods', query: 'Indian indie sad melancholic songs official' },
+  { title: 'Dreamy Pop', query: 'Mitraz dreamy lo-fi pop aesthetic official' },
+  { title: 'Lo-Fi Chill', query: 'Hindi lo-fi chill romantic aesthetic vibes official' },
+  { title: 'Aesthetic Indie', query: 'Indian aesthetic indie pop love songs official' },
+  { title: 'Late Night Drives', query: 'Hindi indie late night drive soothing official' },
+  { title: 'Midnight Acoustic', query: 'Acoustic indie Hindi midnight calm official' },
+  { title: 'Indie Rock Vibes', query: 'The Local Train Indian indie rock official' },
 ];
 
 export const globals = {

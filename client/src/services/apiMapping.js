@@ -31,7 +31,7 @@ export async function searchPlaylists(query, limit = 10) {
     return data.items.slice(0, limit).map((x) => ({
       id: x.id,
       name: x.title || 'Unknown Playlist',
-      uploaderName: x.uploaderName || '',
+      uploaderName: typeof x.uploaderName === 'string' ? x.uploaderName : (Array.isArray(x.uploaderName) ? x.uploaderName.map(a => a.name || a).join(', ') : (x.uploaderName?.name || '')),
       imageUrl:
         x.thumbnail ||
         'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=300&h=300',
@@ -52,10 +52,10 @@ export async function searchArtists(query, page = 0, limit = 10) {
     if (!data || !data.items) return [];
     return data.items.slice(0, limit).map((x) => ({
       id: x.id,
-      name: x.uploaderName || x.title || 'Unknown Artist',
+      name: (typeof x.uploaderName === 'string' ? x.uploaderName : (Array.isArray(x.uploaderName) ? x.uploaderName.map(a => a.name || a).join(', ') : x.uploaderName?.name)) || x.title || 'Unknown Artist',
       imageUrl:
         x.thumbnail ||
-        'https://raw.githubusercontent.com/pawjects/Pawtify/refs/heads/main/assets/pawtify.png',
+        '/assets/icon-512.png',
       type: 'Artist',
       bio: '',
     }));

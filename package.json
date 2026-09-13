@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "express": "^5.2.1",
+    "puppeteer": "^25.10.0",
     "ytmusic-api": "^5.3.1"
   }
 }

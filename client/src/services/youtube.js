@@ -148,16 +148,7 @@ export function setupBackgroundPlayback() {
     }
   });
 
-  setInterval(() => {
-    if (state.isPlaying) {
-      if (globals.ytPlayerReady && globals.ytPlayer) {
-        try {
-          if (globals.ytPlayer.getPlayerState() === 2)
-            globals.ytPlayer.playVideo();
-        } catch (e) {}
-      }
-    }
-  }, 2000);
+  // Removed aggressive 2s playback enforcement loop to prevent race conditions
 
   setInterval(() => {
     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
@@ -218,10 +209,9 @@ export function onPlayerStateChange(event) {
     refreshPlaybackUI();
   } else if (event.data === 2) {
     // PAUSED
-    if (!document.hidden) {
-      state.isPlaying = false;
-      if (navigator.mediaSession)
-        navigator.mediaSession.playbackState = 'paused';
+    state.isPlaying = false;
+    if (navigator.mediaSession) {
+      navigator.mediaSession.playbackState = 'paused';
     }
     clearInterval(globals.ytPollInterval);
   } else if (event.data === 0) {
@@ -274,10 +264,24 @@ export function prioritizeMusic(a, b) {
 
 export function mapServerSong(x) {
   if (!x || !x.id) return null;
+  
+  let artistName = 'Unknown Artist';
+  if (typeof x.uploaderName === 'string') {
+    artistName = x.uploaderName;
+  } else if (Array.isArray(x.uploaderName)) {
+    artistName = x.uploaderName.map(a => a.name || a).join(', ');
+  } else if (x.uploaderName && typeof x.uploaderName === 'object') {
+    artistName = x.uploaderName.name || 'Unknown Artist';
+  } else if (x.artist) {
+    if (typeof x.artist === 'string') artistName = x.artist;
+    else if (Array.isArray(x.artist)) artistName = x.artist.map(a => a.name || a).join(', ');
+    else if (typeof x.artist === 'object') artistName = x.artist.name || 'Unknown Artist';
+  }
+
   return {
     id: x.id,
     title: x.title || 'Unknown Song',
-    artist: x.uploaderName || 'YouTube Artist',
+    artist: artistName,
     album: 'Single',
     coverUrl: x.thumbnail || `https://i.ytimg.com/vi/${x.id}/hqdefault.jpg`,
     audioUrl: x.id,

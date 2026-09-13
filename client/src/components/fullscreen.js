@@ -26,7 +26,7 @@ export function renderFullscreenPlayer() {
   const shuffleActive = state.shuffleMode ? 'active' : '';
 
   fullscreenPlayer.innerHTML = `
-     <div class="fs-backdrop"></div>
+     <div class="fs-backdrop" style="background-image: url('${escapeHTML(song.coverUrl)}')"></div>
      <div class="fs-content">
        <div class="fs-header">
          <button class="fs-close-btn" data-action="close-fullscreen-player" type="button" aria-label="Close">
