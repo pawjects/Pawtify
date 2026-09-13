@@ -9,7 +9,10 @@ const PORT = process.env.PORT || 3000;
 // Enable CORS for all incoming requests
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept'
+  );
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
@@ -18,10 +21,8 @@ app.use((req, res, next) => {
 });
 
 // Serve static assets from both public/ and app/ directories
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'app')));
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
-app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
+
+app.use(express.static(path.join(__dirname, '../client')));
 
 // Search API endpoint
 app.all('/api/search', searchHandler);
@@ -33,11 +34,8 @@ app.get('/health', (req, res) => {
 
 // SPA catch-all for any non-static route
 app.use((req, res) => {
-  const publicIndex = path.join(__dirname, 'public', 'index.html');
-  const appIndex = path.join(__dirname, 'app', 'index.html');
-  if (fs.existsSync(publicIndex)) {
-    return res.sendFile(publicIndex);
-  }
+  const appIndex = path.join(__dirname, '../client', 'index.html');
+
   return res.sendFile(appIndex);
 });
 
@@ -49,4 +47,3 @@ if (require.main === module) {
 }
 
 module.exports = app;
-

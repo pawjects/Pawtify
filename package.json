@@ -2,12 +2,12 @@
   "name": "pawtify",
   "version": "1.0.0",
   "description": "A privacy-friendly, browser-based static music player featuring local playlist controls and distraction-free streaming.",
-  "main": "server.js",
+  "main": "server/index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "build": "node scripts/build.js",
-    "lint": "node --check server.js && node --check api/search.js && node --check app/app.js",
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "build": "echo 'No build step required for ES modules (Served directly)'",
+    "lint": "node --check server/index.js && node --check server/api/search.js && for file in client/src/*/*.js; do node --check \"$file\"; done",
     "format": "prettier --write \"**/*.{html,css,js}\""
   },
   "repository": {
