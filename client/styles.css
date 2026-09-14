@@ -3843,3 +3843,25 @@ button:active,
     padding-bottom: calc(24px + var(--mini-player-height) + var(--mobile-nav-height) + env(safe-area-inset-bottom));
   }
 }
+
+.recent-searches-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  z-index: 100;
+  flex-direction: column;
+  overflow: hidden;
+}
+.search-container:focus-within .recent-searches-dropdown,
+.recent-searches-dropdown:focus-within {
+  display: flex;
+}
+.recent-search-item:hover {
+  background: var(--glass-hover) !important;
+}
