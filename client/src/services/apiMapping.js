@@ -86,3 +86,14 @@ export async function getNextSong(currentSongId) {
   );
   return next || suggestions[0] || null;
 }
+
+
+export async function fetchSearchSuggestions(query) {
+  try {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=suggestions`);
+    const data = await res.json();
+    return data.items || [];
+  } catch (e) {
+    return [];
+  }
+}

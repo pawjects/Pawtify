@@ -61,7 +61,10 @@ async function searchHandler(req, res) {
 
   try {
     let items = [];
-    if (type === 'playlist_videos') {
+    if (type === 'suggestions') {
+      const results = await ytmusic.getSearchSuggestions(query).catch(() => []);
+      return res.status(200).json({ items: results });
+    } else if (type === 'playlist_videos') {
       const results = await ytmusic.getPlaylistVideos(query).catch(() => []);
       items = results
         .map((item) => {

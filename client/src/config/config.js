@@ -37,6 +37,7 @@ export const STORAGE = {
   CURRENT_TIME: 'pawtify-current-time',
   VOLUME: 'pawtify-volume',
   RECENT_SEARCHES: 'pawtify-recent-searches',
+  SEARCH_QUERY: 'pawtify-search-query',
   RECENT_PLAYED: 'pawtify-recently-played',
 };
 
@@ -180,7 +181,8 @@ Object.assign(state, {
   theme: loadJSON(STORAGE.THEME, 'dark'),
   repeatMode: loadJSON(STORAGE.REPEAT, 'none'),
   shuffleMode: loadJSON(STORAGE.SHUFFLE, false),
-  searchQuery: '',
+  searchQuery: loadJSON(STORAGE.SEARCH_QUERY, ''),
+  searchSuggestions: [],
   searchTab: 'songs',
   libraryTab: 'recent',
   searchLoading: false,

@@ -12,6 +12,7 @@ import {
   renderSearchPage,
   renderLibraryPage,
   renderPlaylistPage,
+  updateSearchPageUI
 } from './components.js';
 import { runSearch } from '../services/search.js';
 import { renderHomePage } from './home.js';
@@ -31,20 +32,31 @@ export function renderCurrentRoute() {
       const activeId = document.activeElement
         ? document.activeElement.id
         : null;
-      appMain.innerHTML = renderSearchPage();
-      const searchInput = document.getElementById('search-input');
-      if (searchInput) {
-        searchInput.value = state.searchQuery;
-        if (activeId === 'search-input') {
-          searchInput.focus();
-          const len = searchInput.value.length;
-          searchInput.setSelectionRange(len, len);
+        
+      const existingInput = document.getElementById('search-input');
+      const isAlreadyOnSearchPage = !!existingInput && appMain.querySelector('.page-title')?.textContent === 'Search';
+
+      if (isAlreadyOnSearchPage) {
+        updateSearchPageUI();
+      } else {
+        appMain.innerHTML = renderSearchPage();
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+          searchInput.value = state.searchQuery;
+          if (activeId === 'search-input') {
+            searchInput.focus();
+            const len = searchInput.value.length;
+            searchInput.setSelectionRange(len, len);
+          }
         }
       }
+
       if (state.pendingSearchQuery) {
         const pending = state.pendingSearchQuery;
         state.pendingSearchQuery = '';
         runSearch(pending);
+      } else if (state.searchQuery && (!state.searchResults.songs || state.searchResults.songs.length === 0)) {
+        runSearch(state.searchQuery);
       }
     } else if (state.route.name === 'library') {
       appMain.innerHTML = renderLibraryPage();

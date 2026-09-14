@@ -101,13 +101,69 @@ export function renderSearchResults() {
   `;
 }
 
-export function renderSearchPage() {
+export function renderSearchDynamicUI() {
   const hasQuery = state.searchQuery.trim().length > 0;
-  
   const recentQueries = (state.recentSearches || [])
     .filter((item) => item.type === 'query')
     .slice(0, 5);
+  const suggestions = state.searchSuggestions || [];
 
+  let html = '';
+  if (hasQuery) {
+    html += `<button class="clear-search" data-action="clear-search-input" type="button" aria-label="Clear Search"><i class="fa-solid fa-xmark" style="font-size: 1rem;"></i></button>`;
+  }
+  
+  if (hasQuery && suggestions.length > 0) {
+    html += `
+      <div class="recent-searches-dropdown">
+        ${suggestions.map(s => `
+          <button class="recent-search-item" data-action="use-recent-search" data-query="${escapeHTML(s)}" type="button" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: transparent; border: none; color: var(--text-main); text-align: left; cursor: pointer; width: 100%; transition: background 0.2s;">
+            <div style="display: flex; align-items: center; gap: 12px; pointer-events: none;">
+              <i class="fa-solid fa-magnifying-glass" style="color: var(--muted);"></i>
+              <span>${escapeHTML(s)}</span>
+            </div>
+          </button>
+        `).join('')}
+      </div>
+    `;
+  } else if (!hasQuery && recentQueries.length > 0) {
+    html += `
+      <div class="recent-searches-dropdown">
+        <div style="padding: 12px 16px; font-size: 0.85rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border);">
+          Recent Searches
+        </div>
+        ${recentQueries.map(item => `
+          <button class="recent-search-item" data-action="use-recent-search" data-query="${escapeHTML(item.query)}" type="button" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: transparent; border: none; color: var(--text-main); text-align: left; cursor: pointer; width: 100%; transition: background 0.2s;">
+            <div style="display: flex; align-items: center; gap: 12px; pointer-events: none;">
+              <i class="fa-solid fa-clock-rotate-left" style="color: var(--muted);"></i>
+              <span>${escapeHTML(item.query)}</span>
+            </div>
+            <div data-action="remove-recent-search" data-type="query" data-id="${escapeHTML(item.query)}" style="padding: 4px; color: var(--muted); cursor: pointer;" title="Remove">
+              <i class="fa-solid fa-xmark" style="pointer-events: none;"></i>
+            </div>
+          </button>
+        `).join('')}
+      </div>
+    `;
+  }
+  return html;
+}
+
+export function updateSearchPageUI() {
+  const dynamicUI = document.getElementById('search-dynamic-ui');
+  if (dynamicUI) {
+    dynamicUI.innerHTML = renderSearchDynamicUI();
+  }
+  const contentArea = document.getElementById('search-content-area');
+  if (contentArea) {
+    const hasQuery = state.searchQuery.trim().length > 0;
+    contentArea.innerHTML = hasQuery ? renderSearchResults() : renderSearchCategories();
+  }
+}
+
+export function renderSearchPage() {
+  const hasQuery = state.searchQuery.trim().length > 0;
+  
   return `
     <section class="page">
       <div class="page-header" style="flex-direction:column; align-items:flex-start; margin-bottom: 24px; gap: 16px;">
@@ -115,32 +171,18 @@ export function renderSearchPage() {
         <div class="search-container">
           <i class="fa-solid fa-magnifying-glass search-icon"></i>
           <input type="text" id="search-input" class="search-input" placeholder="What do you want to listen to?" value="${escapeHTML(state.searchQuery)}" autocomplete="off" />
-          ${hasQuery ? `<button class="clear-search" type="button" aria-label="Clear Search"><i class="fa-solid fa-xmark" style="font-size: 1rem;"></i></button>` : ''}
-          
-          ${!hasQuery && recentQueries.length > 0 ? `
-            <div class="recent-searches-dropdown">
-              <div style="padding: 12px 16px; font-size: 0.85rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border);">
-                Recent Searches
-              </div>
-              ${recentQueries.map(item => `
-                <button class="recent-search-item" data-action="use-recent-search" data-query="${escapeHTML(item.query)}" type="button" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: transparent; border: none; color: var(--text-main); text-align: left; cursor: pointer; width: 100%; transition: background 0.2s;">
-                  <div style="display: flex; align-items: center; gap: 12px; pointer-events: none;">
-                    <i class="fa-solid fa-clock-rotate-left" style="color: var(--muted);"></i>
-                    <span>${escapeHTML(item.query)}</span>
-                  </div>
-                  <div data-action="remove-recent-search" data-type="query" data-id="${escapeHTML(item.query)}" style="padding: 4px; color: var(--muted); cursor: pointer;" title="Remove">
-                    <i class="fa-solid fa-xmark" style="pointer-events: none;"></i>
-                  </div>
-                </button>
-              `).join('')}
-            </div>
-          ` : ''}
+          <div id="search-dynamic-ui">
+            ${renderSearchDynamicUI()}
+          </div>
         </div>
       </div>
-      ${hasQuery ? renderSearchResults() : renderSearchCategories()}
+      <div id="search-content-area" style="width: 100%;">
+        ${hasQuery ? renderSearchResults() : renderSearchCategories()}
+      </div>
     </section>
   `;
 }
+
 export function renderLibraryPage() {
   let tabContent = '';
   

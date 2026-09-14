@@ -84,11 +84,26 @@ export function bindGlobalEvents() {
     const playlistId = actionNode.dataset.playlistId || null;
 
     try {
+      if (action === 'clear-search-input') {
+        event.preventDefault();
+        state.searchQuery = ''; saveJSON(STORAGE.SEARCH_QUERY, '');
+        state.searchLoading = false;
+        state.searchResults = { songs: [], artists: [], playlists: [] }; state.searchSuggestions = [];
+        if (state.route.name === 'search') {
+          renderCurrentRoute();
+          const input = document.getElementById('search-input');
+          if (input) {
+            input.value = '';
+            input.focus();
+          }
+        }
+        return;
+      }
       if (action === 'search-category') {
         event.preventDefault();
         const category = actionNode.dataset.category;
         if (category) {
-          state.searchQuery = category;
+          state.searchQuery = category; saveJSON(STORAGE.SEARCH_QUERY, category);
           const searchInput = document.querySelector('.search-input');
           if (searchInput) searchInput.value = category;
           // Trigger search using performSearch or by dispatching an event
@@ -413,10 +428,12 @@ export function bindGlobalEvents() {
       if (action === 'search-mood') {
         event.preventDefault();
         const mood = actionNode.dataset.mood;
-        state.searchQuery = mood;
+        state.searchQuery = mood; saveJSON(STORAGE.SEARCH_QUERY, mood);
         state.searchLoading = true;
         if (state.route.name === 'search') {
           renderCurrentRoute();
+          const input = document.getElementById('search-input');
+          if (input) input.value = mood;
           runSearch(mood);
         } else {
           state.pendingSearchQuery = mood;
@@ -427,7 +444,7 @@ export function bindGlobalEvents() {
       if (action === 'use-recent-search') {
         event.preventDefault();
         const query = actionNode.dataset.query || '';
-        state.searchQuery = query;
+        state.searchQuery = query; saveJSON(STORAGE.SEARCH_QUERY, query);
         if (state.route.name !== 'search') {
           state.pendingSearchQuery = query;
           navigate('/search');
@@ -522,13 +539,14 @@ export function bindGlobalEvents() {
     }
   });
 
-  document.addEventListener('input', (event) => {
+  document.addEventListener('input', async (event) => {
     const target = event.target;
     if (target.id === 'search-input') {
-      state.searchQuery = target.value;
+      state.searchQuery = target.value; saveJSON(STORAGE.SEARCH_QUERY, target.value);
       if (!state.searchQuery.trim()) {
         state.searchLoading = false;
         state.searchResults = { songs: [], artists: [] };
+        state.searchSuggestions = [];
         globals.searchRequestToken += 1;
         if (globals.searchTimer) {
           window.clearTimeout(globals.searchTimer);
@@ -538,11 +556,26 @@ export function bindGlobalEvents() {
         return;
       }
       state.searchLoading = true;
+      
+      // Fast fetch for suggestions
+      const currentQuery = state.searchQuery;
+      
       if (state.route.name === 'search') {
         renderCurrentRoute();
-        const input = document.getElementById('search-input');
-        if (input) input.focus();
       }
+      
+      if (globals.suggestionTimer) window.clearTimeout(globals.suggestionTimer);
+      globals.suggestionTimer = window.setTimeout(async () => {
+         const { fetchSearchSuggestions } = await import('../services/apiMapping.js');
+         if (state.searchQuery === currentQuery) {
+            state.searchSuggestions = await fetchSearchSuggestions(currentQuery);
+            if (state.route.name === 'search') {
+               const { updateSearchPageUI } = await import('../components/components.js');
+               updateSearchPageUI();
+            }
+         }
+      }, 150);
+
       if (globals.searchTimer) window.clearTimeout(globals.searchTimer);
       globals.searchTimer = window.setTimeout(() => {
         runSearch(state.searchQuery);
