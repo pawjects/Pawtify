@@ -24,8 +24,7 @@ Have an idea for a new feature or improvement? We'd love to hear it! Open an iss
 1. **Prerequisites**: Ensure you have Node.js (v18+) installed.
 2. **Install Dependencies**: Run `npm install` to install project dependencies.
 3. **Run Locally**: Run `npm run dev` to start the local development server at `http://localhost:3000`.
-4. **Build**: Run `npm run build` to package the app into the `public/` directory.
-5. **Format Code**: Run `npm run format` to ensure your code matches the project's Prettier styling rules.
+4. **Format Code**: Run `npm run format` to ensure your code matches the project's Prettier styling rules.
 
 ## 🧑‍💻 Code Style Guidelines
 
@@ -37,9 +36,7 @@ Have an idea for a new feature or improvement? We'd love to hear it! Open an iss
 ## 💬 Community
 
 By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
-
 If you have any questions or need help, feel free to open a discussion or contact the maintainers.
 
 ---
-
 *Thank you for contributing to Pawtify!*

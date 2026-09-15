@@ -1,7 +1,7 @@
 {
   "name": "Pawtify",
   "short_name": "Pawtify",
-  "description": "A Spotify-style music streaming experience.",
+  "description": "A privacy-friendly, distraction-free music streaming experience.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
