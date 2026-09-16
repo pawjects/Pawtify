@@ -102,61 +102,6 @@ export function updateMediaSession(song) {
   });
 }
 
-export function setupBackgroundPlayback() {
-  let audioCtx = null;
-  function initAudioCtx() {
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const buf = audioCtx.createBuffer(1, 1, 22050);
-      const src = audioCtx.createBufferSource();
-      src.buffer = buf;
-      const gain = audioCtx.createGain();
-      gain.gain.value = 0;
-      src.connect(gain);
-      gain.connect(audioCtx.destination);
-      src.start();
-    } catch (e) {}
-  }
-  document.addEventListener(
-    'click',
-    () => {
-      if (!audioCtx) initAudioCtx();
-    },
-    { once: true }
-  );
-  document.addEventListener(
-    'touchstart',
-    () => {
-      if (!audioCtx) initAudioCtx();
-    },
-    { once: true }
-  );
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      persistPlayer();
-    } else {
-      if (state.isPlaying) {
-        if (globals.ytPlayerReady && globals.ytPlayer) {
-          try {
-            if (globals.ytPlayer.getPlayerState() === 2)
-              globals.ytPlayer.playVideo();
-          } catch (e) {}
-        }
-      }
-    }
-  });
-
-  // Removed aggressive 2s playback enforcement loop to prevent race conditions
-
-  setInterval(() => {
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'ping' });
-    }
-  }, 30000);
-}
-
 export function onPlayerReady(event) {
   globals.ytPlayerReady = true;
   globals.ytPlayer.setVolume(state.volume * 100);

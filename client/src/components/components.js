@@ -210,8 +210,8 @@ export function renderLibraryPage() {
 
   return `
     <section class="page">
-      <div class="page-header">
-        <h1 class="page-title">Your Library</h1>
+      <div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h1 class="page-title">Your Library</h1><div class="header-actions" style="display:flex; gap:8px;"><button class="btn btn-soft" data-action="import-library" type="button" aria-label="Import Backup" title="Import Backup"><i class="fa-solid fa-file-import"></i></button><button class="btn btn-soft" data-action="export-library" type="button" aria-label="Export Backup" title="Export Backup"><i class="fa-solid fa-file-export"></i></button></div>
       </div>
       <div class="tab-list">
         <button class="tab-btn ${state.libraryTab === 'recent' ? 'active' : ''}" data-action="set-library-tab" data-value="recent" type="button">Recently Added</button>

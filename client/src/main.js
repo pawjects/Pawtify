@@ -1,5 +1,4 @@
 import { initApp } from './config/config.js';
-
 import './services/youtube.js';
 import './core/events.js';
 import './config/router.js';
@@ -18,5 +17,7 @@ import './components/lyrics.js';
 import './components/fullscreen.js';
 import './components/artistProfile.js';
 import './components/queuePanel.js';
+import { setupSwipeGestures } from './core/gestures.js';
 
 initApp();
+setupSwipeGestures();

@@ -11,9 +11,9 @@ import {
 } from '../core/details.js';
 import { nextTrack } from '../components/player.js';
 import { loadJSON, saveJSON } from '../utils/utils.js';
+import { idbGet } from '../utils/idb.js';
 import {
   loadYTApi,
-  setupBackgroundPlayback,
   updateMediaSession,
 } from '../services/youtube.js';
 import { bindGlobalEvents } from '../core/events.js';
@@ -227,13 +227,31 @@ Object.assign(state, {
   videoVisible: false,
 });
 
-export function initApp() {
+export async function initApp() {
   try {
+    // Restore from IndexedDB
+    const idbPlaylists = await idbGet(STORAGE.PLAYLISTS);
+    if (idbPlaylists) state.playlists = normalizePlaylists(idbPlaylists);
+
+    const idbFavorites = await idbGet(STORAGE.FAVORITES);
+    if (idbFavorites) state.favorites = dedupeSongs(idbFavorites);
+
+    const idbQueue = await idbGet(STORAGE.QUEUE);
+    if (idbQueue) state.queue = dedupeSongs(idbQueue);
+
+    const idbRecent = await idbGet(STORAGE.RECENT_PLAYED);
+    if (idbRecent) state.recentlyPlayed = idbRecent;
+
+    const idbSong = await idbGet(STORAGE.CURRENT_SONG);
+    if (idbSong !== undefined) state.currentSong = idbSong;
+    
+    const idbTime = await idbGet(STORAGE.CURRENT_TIME);
+    if (idbTime !== undefined) state.progress = Number(idbTime) || 0;
+
     seedCatalog();
     restoreCurrentSongIndex();
     loadYTApi();
 
-    setupBackgroundPlayback();
     if (state.currentSong) updateMediaSession(state.currentSong);
 
     bindGlobalEvents();

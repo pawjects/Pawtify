@@ -56,7 +56,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior: none;
+  overscroll-behavior-y: none;
 }
 
 button,
@@ -3722,7 +3722,7 @@ button,
 .card,
 .song-row {
   transition:
-    transform 0.15s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
     background-color 0.2s,
     box-shadow 0.2s;
 }
@@ -3894,7 +3894,7 @@ img {
 /* Active states for all buttons and interactive elements */
 button, .nav-link, .mobile-nav-item, .card, .list-item, .icon-btn, .pill-btn, .primary-btn, .yt-player-header {
   transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), 
-              opacity 0.2s ease,
+              opacity 0.15s cubic-bezier(0.2, 0, 0, 1),
               background-color 0.2s ease,
               box-shadow 0.2s ease,
               filter 0.2s ease !important;
@@ -3914,7 +3914,7 @@ button:active, .nav-link:active, .mobile-nav-item:active, .card:active, .list-it
 
 /* Smooth modal/panel expansion */
 .fullscreen-player, .lyrics-panel, .artist-profile, .queue-panel, .overlay-backdrop {
-  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
 }
 
 /* Make scrolling smooth */
@@ -3931,7 +3931,7 @@ button:active, .nav-link:active, .mobile-nav-item:active, .card:active, .list-it
 
 /* Mini player transitions */
 .mini-player {
-  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease !important;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease !important;
 }
 
 /* Active navigation pill specific */
@@ -3952,104 +3952,5 @@ input[type="range"]:active {
 
 /* Improve overlay handling */
 .overlay-content {
-  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease !important;
-}
-/* ============ NATIVE INTERACTION & UX ENHANCEMENTS ============ */
-body {
-  /* Prevent context menus, selection, and callouts globally */
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-user-drag: none;
-  
-  /* Modern touch interaction */
-  touch-action: manipulation;
-}
-
-/* Allow selection in inputs */
-input, textarea, [contenteditable="true"] {
-  -webkit-touch-callout: default;
-  -webkit-user-select: auto;
-  user-select: auto;
-  -webkit-user-drag: auto;
-}
-
-/* Prevent image dragging natively */
-img {
-  -webkit-user-drag: none;
-}
-
-/* Active states for interactive elements */
-button, .nav-link, .mobile-nav-item, .card, .list-item, .icon-btn, .pill-btn, .primary-btn, .song-row, .category-card {
-  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), 
-              opacity 0.2s ease,
-              background-color 0.2s ease,
-              box-shadow 0.2s ease;
-  will-change: transform, opacity;
-}
-
-/* Pressed state for touch/click */
-button:active, .nav-link:active, .mobile-nav-item:active, .card:active, .icon-btn:active, .pill-btn:active, .primary-btn:active, .category-card:active {
-  transform: scale(0.96);
-  opacity: 0.8;
-}
-
-.song-row:active {
-  background-color: var(--hover);
-}
-
-/* Smooth Navigation/Pill transitions */
-.nav-link, .mobile-nav-item {
-  transition: color 0.2s ease, background-color 0.2s ease, transform 0.15s cubic-bezier(0.2, 0, 0, 1);
-}
-
-/* Make scrolling smooth */
-.main-stage, .sidebar-playlists, .lyrics-content, .fullscreen-scroll, .queue-scroll, .artist-content, .home-scroll, .search-scroll {
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Range sliders (seekbar) native feel */
-input[type="range"] {
-  transition: transform 0.1s ease;
-}
-
-input[type="range"]:active {
-  transform: scaleY(1.5);
-}
-
-/* Smooth modals */
-.fullscreen-player, .lyrics-panel, .artist-profile, .queue-panel {
-  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
-}
-
-.overlay-backdrop {
-  transition: opacity 0.3s ease;
-}
-
-.overlay-content {
-  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
-}
-
-
-/* Additional touch optimizations for inputs */
-input[type="range"] {
-  touch-action: pan-y; /* Prevent vertical scrolling from blocking horizontal sliding */
-}
-
-/* Additional active states for list items */
-.queue-item, .search-dropdown-item, .sidebar-playlist-item {
-  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease;
-  will-change: transform;
-}
-
-.queue-item:active, .search-dropdown-item:active, .sidebar-playlist-item:active {
-  transform: scale(0.98);
-  background-color: var(--hover);
-}
-
-/* Mini-player smooth transition */
-.mini-player {
-  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
-  will-change: transform, opacity;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.1), opacity 0.3s ease !important;
 }

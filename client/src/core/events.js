@@ -55,7 +55,7 @@ import { searchSongs } from '../services/apiMapping.js';
 export function vibrate() {
   if (navigator.vibrate) {
     try {
-      navigator.vibrate(50);
+      navigator.vibrate(10);
     } catch (e) {}
   }
 }
@@ -65,7 +65,7 @@ export function bindGlobalEvents() {
 
   document.addEventListener('click', async (event) => {
     const btn = event.target.closest(
-      'button, .song-row, .card, .home-scroll-card, .nav-link, .mobile-nav-item, .category-card'
+      'button, .song-row, .card, .home-scroll-card, .nav-link, .mobile-nav-item, .category-card, .queue-item, .list-item, .search-dropdown-item'
     );
     if (btn) vibrate();
     const routeButton = event.target.closest('[data-route]');

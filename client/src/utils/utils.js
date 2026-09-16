@@ -1,5 +1,6 @@
 import { showToast, state } from '../config/config.js';
 import { renderLyricsPanel } from '../components/lyrics.js';
+import { idbSet } from './idb.js';
 
 export function formatTime(value) {
   const seconds = Math.max(0, Math.floor(Number(value) || 0));
@@ -32,6 +33,8 @@ export function saveJSON(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {}
+  // Persist seamlessly to IndexedDB in the background
+  idbSet(key, value).catch(e => console.warn('IDB Save failed', e));
 }
 
 export async function downloadCurrentSong() {
@@ -39,6 +42,7 @@ export async function downloadCurrentSong() {
     'Downloading directly from YouTube embeds is restricted. We recommend adding this song to a playlist instead!'
   );
 }
+
 export async function openLyrics() {
   state.lyricsPanel = true;
   renderLyricsPanel();
