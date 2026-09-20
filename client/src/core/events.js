@@ -37,7 +37,7 @@ import {
   renderFullscreenPlayer,
   playYTPlaylist,
 } from '../components/fullscreen.js';
-import { downloadCurrentSong, openLyrics, saveJSON } from '../utils/utils.js';
+import { downloadCurrentSong, formatTime, openLyrics, saveJSON } from '../utils/utils.js';
 import { renderLyricsPanel } from '../components/lyrics.js';
 import { updateWavyProgress } from '../components/wavyProgress.js';
 import {
