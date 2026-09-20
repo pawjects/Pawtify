@@ -145,7 +145,10 @@ function drawFrame() {
       waveCtx.lineTo(scrubX, cy);
     }
 
-    waveCtx.strokeStyle = '#1db954';
+    const waveGrad = waveCtx.createLinearGradient(0, cy, Math.max(1, scrubX), cy);
+    waveGrad.addColorStop(0, '#1db954');
+    waveGrad.addColorStop(1, '#1ed760');
+    waveCtx.strokeStyle = waveGrad;
     waveCtx.lineWidth = 3.5;
     waveCtx.lineCap = 'round';
     waveCtx.lineJoin = 'round';

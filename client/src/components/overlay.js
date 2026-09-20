@@ -37,6 +37,14 @@ export function renderOverlay() {
                <p class="meta-item"><b>Quality:</b> HQ Audio Stream</p>
                <p class="meta-item"><b>Duration:</b> ${escapeHTML(song.duration || '0:00')}</p>
              </div>
+             <div style="display:flex; gap:10px; margin-top:16px;">
+               <button class="btn btn-primary" data-action="download-song" type="button" style="flex:1;">
+                 <i class="fa-solid fa-download"></i> Download
+               </button>
+               <button class="btn btn-soft" data-action="share-song" type="button" style="flex:1;">
+                 <i class="fa-solid fa-share-nodes"></i> Share
+               </button>
+             </div>
            </div>
          </article>
        </section>
@@ -111,43 +119,41 @@ export function renderOverlay() {
     const isEdit = state.modal.type === 'editName';
     overlayRoot.innerHTML = `
        <section class="overlay welcome-overlay" data-action="dismiss-overlay">
-         <article class="modal welcome-modal personalized-welcome-card" style="max-width: 400px; padding: 28px 24px; border-radius: var(--radius-xl); background: var(--liquid-surface); backdrop-filter: var(--liquid-blur); border: 1px solid var(--liquid-border); box-shadow: var(--liquid-shadow);">
-           <div class="welcome-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-             <div class="welcome-icon" style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, rgba(29, 185, 84, 0.2) 0%, rgba(29, 185, 84, 0.05) 100%); display: flex; align-items: center; justify-content: center; color: var(--green); font-size: 1.25rem;">
-               <i class="fa-solid fa-sparkles"></i>
-             </div>
-             <button class="icon-btn small welcome-close-btn" data-action="close-modal" type="button" aria-label="Close" style="width: 32px; height: 32px; border-radius: 50%;">
+         <article class="modal welcome-modal personalized-welcome-card" style="max-width: 400px;">
+           <header class="modal-head">
+             <h2 class="modal-title">${isEdit ? 'Edit Name' : 'Welcome'}</h2>
+             <button class="icon-btn" data-action="close-modal" type="button" aria-label="Close" style="width:32px; height:32px; border-radius:999px;">
                <i class="fa-solid fa-xmark"></i>
              </button>
-           </div>
-           <form id="save-name-form" class="welcome-content" style="display: flex; flex-direction: column; gap: 16px;">
+           </header>
+           <form id="save-name-form" class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
              <div>
-               <h2 class="welcome-title" style="font-size: 1.35rem; font-weight: 700; margin-bottom: 8px; color: var(--text);">What can I call you?</h2>
-               <p class="welcome-desc" style="font-size: 0.875rem; color: var(--muted); line-height: 1.5; margin: 0;">
-                 Personalize your listening experience. Stored private and local to your device.
+               <label class="form-label" for="welcome-user-name" style="font-size: 1.05rem; font-weight: 600; margin-bottom: 4px; display: block; color: var(--text);">What should we call you?</label>
+               <p style="font-size: 0.8125rem; color: var(--muted); margin: 0;">
+                 Stored locally on this device.
                </p>
              </div>
-             <div class="welcome-input-group" style="margin-top: 4px;">
+             <div>
                <input 
                  type="text" 
                  id="welcome-user-name" 
                  name="userName" 
                  class="text-input" 
-                 placeholder="Your name or nickname" 
+                 placeholder="Your name" 
                  value="${escapeHTML(state.userName || '')}" 
                  maxlength="28" 
                  autocomplete="name" 
                  required
                  autofocus
-                 style="width: 100%; padding: 12px 16px; font-size: 1rem; border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--text); outline: none;" 
+                 style="width: 100%;" 
                />
              </div>
-             <div class="welcome-actions-row" style="display: flex; gap: 10px; margin-top: 8px;">
-               <button class="btn btn-primary welcome-action" type="submit" style="flex: 1; padding: 12px 20px; font-size: 0.95rem; font-weight: 600;">
-                 ${isEdit ? 'Save Name' : 'Continue'}
+             <div style="display: flex; gap: 10px; margin-top: 4px;">
+               <button class="btn btn-primary" type="submit" style="flex: 1;">
+                 ${isEdit ? 'Save' : 'Continue'}
                </button>
                ${isEdit && state.userName ? `
-                 <button class="btn btn-soft" data-action="reset-user-name" type="button" style="padding: 12px 16px; font-size: 0.875rem; color: var(--danger, #f43f5e);" title="Clear saved name">
+                 <button class="btn btn-soft" data-action="reset-user-name" type="button" style="color: var(--danger, #f43f5e);" title="Clear saved name">
                    Reset
                  </button>
                ` : ''}

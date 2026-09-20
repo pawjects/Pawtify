@@ -63,7 +63,7 @@ export function renderHomePage() {
     if (rec.length) {
       sectionsHTML += `
         <div class="home-section">
-          <h2 class="home-section-title"><i class="fa-solid fa-star" style="margin-right:8px; color:var(--green);"></i>${state.userName ? `Made for ${escapeHTML(state.userName)}` : 'Recommended for You'}</h2>
+          <h2 class="home-section-title">${state.userName ? `Made for ${escapeHTML(state.userName)}` : 'Recommended'}</h2>
           <div class="home-scroll">
             ${rec.map((s, i) => renderHomeScrollCard(s, i, 'recommended')).join('')}
           </div>
@@ -73,7 +73,7 @@ export function renderHomePage() {
     categories.forEach((cat) => {
       sectionsHTML += `
         <div class="home-section">
-          <h2 class="home-section-title"><i class="fa-solid fa-music" style="margin-right:8px; color:var(--green);"></i>${escapeHTML(cat.title)}</h2>
+          <h2 class="home-section-title">${escapeHTML(cat.title)}</h2>
           <div class="home-scroll">
             ${cat.songs.map((s, i) => renderHomeScrollCard(s, i, cat.id)).join('')}
           </div>
@@ -87,7 +87,7 @@ export function renderHomePage() {
       if (recentSongs.length) {
         sectionsHTML += `
            <div class="home-section">
-             <h2 class="home-section-title"><i class="fa-solid fa-clock-rotate-left" style="margin-right:8px; color:var(--green);"></i>Recently Played</h2>
+             <h2 class="home-section-title">Recently played</h2>
              <div class="home-scroll">
                ${recentSongs.map((s, i) => renderHomeScrollCard(s, i, 'queue')).join('')}
              </div>
@@ -99,7 +99,10 @@ export function renderHomePage() {
   return `
     <section class="page">
       <div class="home-greeting">
-        <h1><i class="fa-solid fa-music" style="margin-right:10px; color:var(--green); font-size:0.85em;"></i>${escapeHTML(greeting)}</h1>
+        <h1>${escapeHTML(greeting)}</h1>
+        <button class="settings-btn" data-route="/you" type="button" aria-label="Settings" title="Settings">
+          <i class="fa-solid fa-gear"></i>
+        </button>
       </div>
 
       <div class="home-grid">${gridHTML || `
