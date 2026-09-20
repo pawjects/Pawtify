@@ -152,7 +152,8 @@ export function markActiveNav() {
       (route === '/' && state.route.name === 'home') ||
       (route === '/search' && state.route.name === 'search') ||
       (route === '/library' &&
-        (state.route.name === 'library' || state.route.name === 'playlist'));
+        (state.route.name === 'library' || state.route.name === 'playlist')) ||
+      (route === '/you' && state.route.name === 'you');
     if (active) btn.classList.add('active');
     else btn.classList.remove('active');
   });
@@ -162,7 +163,8 @@ export function markActiveNav() {
       (route === '/' && state.route.name === 'home') ||
       (route === '/search' && state.route.name === 'search') ||
       (route === '/library' &&
-        (state.route.name === 'library' || state.route.name === 'playlist'));
+        (state.route.name === 'library' || state.route.name === 'playlist')) ||
+      (route === '/you' && state.route.name === 'you');
     if (active) btn.classList.add('active');
     else btn.classList.remove('active');
   });
@@ -239,4 +241,5 @@ export function refreshPlaybackUI() {
   renderMiniPlayer();
   renderFullscreenPlayer();
   renderQueuePanel();
+  document.body.classList.toggle('has-active-track', !!state.currentSong);
 }

@@ -1,4 +1,5 @@
 import { appMain } from './dom.js';
+import { parseRoute } from './router.js';
 import { refreshPlaybackUI } from '../components/playerBar.js';
 import {
   rememberSongs,
@@ -253,15 +254,23 @@ export async function initApp() {
     loadYTApi();
 
     if (state.currentSong) updateMediaSession(state.currentSong);
+    document.body.classList.toggle('has-active-track', !!state.currentSong);
 
     bindGlobalEvents();
 
-    if (!window.location.hash) {
+    const initialRoute = parseRoute();
+    if (initialRoute.name === 'song' && initialRoute.songId) {
+      window.location.hash = `#/song/${encodeURIComponent(initialRoute.songId)}`;
+    } else if (initialRoute.name === 'playlist' && initialRoute.playlistId) {
+      window.location.hash = `#/playlist/${encodeURIComponent(initialRoute.playlistId)}`;
+    } else if (initialRoute.name !== 'home') {
+      window.location.hash = `#/${initialRoute.name}`;
+    } else if (!window.location.hash) {
       window.location.hash = '#/';
     }
 
     const firstVisit = loadJSON('pawtify-welcome-seen', false);
-    if (!firstVisit) {
+    if (!firstVisit && initialRoute.name !== 'song') {
       state.modal = { type: 'welcome' };
       saveJSON('pawtify-welcome-seen', true);
     }

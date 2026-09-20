@@ -144,3 +144,71 @@ export async function loadRecommendations() {
     state.recommendedSongs = [];
   }
 }
+
+export async function fetchSongById(songId) {
+  if (!songId) return null;
+  const cached = getSongById(songId);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(
+      `/api/search?type=song&q=${encodeURIComponent(songId)}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data.item) {
+        const song = mapServerSong(data.item);
+        if (song) {
+          rememberSongs([song]);
+          return song;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Server song lookup error:', e);
+  }
+
+  // Fallback: YouTube oEmbed
+  try {
+    const oembedRes = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${encodeURIComponent(songId)}&format=json`
+    );
+    if (oembedRes.ok) {
+      const oembed = await oembedRes.json();
+      const song = {
+        id: songId,
+        title: oembed.title || 'YouTube Music Track',
+        artist: oembed.author_name || 'YouTube Music',
+        album: 'Single',
+        coverUrl:
+          oembed.thumbnail_url ||
+          `https://i.ytimg.com/vi/${songId}/hqdefault.jpg`,
+        audioUrl: songId,
+        durationSec: 0,
+        duration: '',
+        releaseDate: '',
+        genre: 'Music',
+      };
+      rememberSongs([song]);
+      return song;
+    }
+  } catch (e) {
+    console.warn('oEmbed fallback error:', e);
+  }
+
+  // Default fallback object for a valid songId
+  const fallback = {
+    id: songId,
+    title: 'Track ' + songId,
+    artist: 'Pawtify Stream',
+    album: 'Single',
+    coverUrl: `https://i.ytimg.com/vi/${songId}/hqdefault.jpg`,
+    audioUrl: songId,
+    durationSec: 0,
+    duration: '',
+    releaseDate: '',
+    genre: 'Music',
+  };
+  rememberSongs([fallback]);
+  return fallback;
+}

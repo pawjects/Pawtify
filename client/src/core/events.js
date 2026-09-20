@@ -71,6 +71,7 @@ export function bindGlobalEvents() {
     const routeButton = event.target.closest('[data-route]');
     if (routeButton) {
       event.preventDefault();
+      state.fullscreenPlayer = false;
       navigate(routeButton.dataset.route);
       return;
     }
@@ -312,6 +313,11 @@ export function bindGlobalEvents() {
         removeFromQueue(songId);
         return;
       }
+      if (action === 'navigate') {
+        event.preventDefault();
+        navigate(actionNode.dataset.path || actionNode.dataset.route || '/');
+        return;
+      }
       if (action === 'clear-queue') {
         event.preventDefault();
         clearQueue();
@@ -326,6 +332,25 @@ export function bindGlobalEvents() {
         event.preventDefault();
         state.modal = { type: 'appInfo' };
         renderOverlay();
+        return;
+      }
+      if (action === 'open-welcome-modal') {
+        event.preventDefault();
+        state.modal = { type: 'welcome' };
+        renderOverlay();
+        return;
+      }
+      if (action === 'show-offline-info') {
+        event.preventDefault();
+        showToast('PWA Service Worker active: App shell and offline cache ready');
+        return;
+      }
+      if (action === 'clear-history') {
+        event.preventDefault();
+        state.recentlyPlayed = [];
+        saveJSON(STORAGE.RECENT_PLAYED, []);
+        showToast('Listening history cleared');
+        renderCurrentRoute();
         return;
       }
       if (action === 'set-search-tab') {

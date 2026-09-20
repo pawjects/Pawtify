@@ -61,7 +61,110 @@ async function searchHandler(req, res) {
 
   try {
     let items = [];
-    if (type === 'suggestions') {
+    if (type === 'song' || type === 'track' || type === 'song_details') {
+      if (!/^[a-zA-Z0-9_-]{11}$/.test(query)) {
+        return res.status(400).json({ error: 'Invalid song ID format', item: null, items: [] });
+      }
+      let songObj = null;
+      try {
+        const item = await ytmusic.getSong(query);
+        if (item && (item.videoId || item.name)) {
+          const durationSec = item.duration || 0;
+          const uploader = Array.isArray(item.artist)
+            ? item.artist.map((a) => a.name || a).join(', ')
+            : (item.artist?.name || item.artist || 'Unknown Artist');
+          const thumb = item.thumbnails?.[item.thumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${item.videoId || query}/hqdefault.jpg`;
+          songObj = {
+            id: item.videoId || query,
+            title: item.name || 'Unknown Title',
+            uploaderName: uploader,
+            thumbnail: thumb,
+            duration: durationSec,
+            durationString: formatDurationString(durationSec),
+            resultType: 'song',
+            isVerified: true,
+            isOfficialArtist: true,
+            isTopic: true,
+            tags: ['official release'],
+          };
+        }
+      } catch (err) {
+        // Fallback to getVideo if getSong failed
+        try {
+          const vItem = await ytmusic.getVideo(query);
+          if (vItem && (vItem.videoId || vItem.name)) {
+            const durationSec = vItem.duration || 0;
+            const uploader = Array.isArray(vItem.artist)
+              ? vItem.artist.map((a) => a.name || a).join(', ')
+              : (vItem.artist?.name || vItem.artist || vItem.author || 'Unknown Artist');
+            const thumb = vItem.thumbnails?.[vItem.thumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${vItem.videoId || query}/hqdefault.jpg`;
+            songObj = {
+              id: vItem.videoId || query,
+              title: vItem.name || vItem.title || 'Unknown Title',
+              uploaderName: uploader,
+              thumbnail: thumb,
+              duration: durationSec,
+              durationString: formatDurationString(durationSec),
+              resultType: 'song',
+              isVerified: true,
+              isOfficialArtist: true,
+              isTopic: true,
+              tags: ['official release'],
+            };
+          }
+        } catch (vErr) {
+          // Both getSong and getVideo failed
+        }
+      }
+
+      if (!songObj) {
+        // Fallback to search songs for the ID
+        const searchResults = await ytmusic.searchSongs(query).catch(() => []);
+        if (searchResults && searchResults.length > 0) {
+          const match = searchResults.find((s) => s.videoId === query) || searchResults[0];
+          const durationSec = match.duration || 0;
+          const uploader = Array.isArray(match.artist)
+            ? match.artist.map((a) => a.name || a).join(', ')
+            : (match.artist?.name || match.artist || 'Unknown Artist');
+          const thumb = match.thumbnails?.[match.thumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${query}/hqdefault.jpg`;
+          songObj = {
+            id: match.videoId || query,
+            title: match.name || 'Unknown Title',
+            uploaderName: uploader,
+            thumbnail: thumb,
+            duration: durationSec,
+            durationString: formatDurationString(durationSec),
+            resultType: 'song',
+            isVerified: true,
+            isOfficialArtist: true,
+            isTopic: true,
+            tags: ['official release'],
+          };
+        }
+      }
+
+      // Safe fallback if still null but valid query ID
+      if (!songObj && /^[a-zA-Z0-9_-]{6,32}$/.test(query)) {
+        songObj = {
+          id: query,
+          title: 'Track ' + query,
+          uploaderName: 'YouTube Music',
+          thumbnail: `https://i.ytimg.com/vi/${query}/hqdefault.jpg`,
+          duration: 0,
+          durationString: '',
+          resultType: 'song',
+          isVerified: true,
+          isOfficialArtist: false,
+          isTopic: false,
+          tags: ['official release'],
+        };
+      }
+
+      return res.status(200).json({
+        item: songObj,
+        items: songObj ? [songObj] : [],
+      });
+    } else if (type === 'suggestions') {
       const results = await ytmusic.getSearchSuggestions(query).catch(() => []);
       return res.status(200).json({ items: results });
     } else if (type === 'playlist_videos') {

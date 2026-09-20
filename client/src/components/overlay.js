@@ -108,30 +108,23 @@ export function renderOverlay() {
   }
 
   if (state.modal.type === 'welcome') {
-    const year = new Date().getFullYear();
     overlayRoot.innerHTML = `
        <section class="overlay welcome-overlay" data-action="dismiss-overlay">
          <article class="modal welcome-modal">
-           <div class="welcome-content">
-             <div class="welcome-logo">
-               <img src="${LOGO_URL}" alt="Pawtify" />
+           <div class="welcome-header">
+             <div class="welcome-icon">
+               <i class="fa-solid fa-music"></i>
              </div>
-             <h1 class="welcome-title">Welcome to <span style="color:var(--green);">Pawtify</span></h1>
-             <p class="welcome-subtitle">Your personal music streaming experience</p>
-             <div class="welcome-features">
-               <div class="welcome-feature"><i class="fa-solid fa-music"></i><span>Stream millions of songs via YouTube</span></div>
-               <div class="welcome-feature"><i class="fa-solid fa-list-ul"></i><span>Create & manage playlists</span></div>
-               <div class="welcome-feature"><i class="fa-solid fa-heart"></i><span>Save your favourites</span></div>
-               <div class="welcome-feature"><i class="fa-solid fa-shield-halved"></i><span>No-cookie embedded privacy</span></div>
-             </div>
-             <div class="welcome-dev">
-               <p><i class="fa-brands fa-github" style="color:var(--green);"></i> <b>Pawtify</b> is an <b>open source</b> project</p>
-               <p style="margin-top:6px; font-size:0.8rem; color:var(--muted);">Built with ❤️ by <a href="https://github.com/pawjects" target="_blank" rel="noopener" style="color:var(--green);">Pawjects ORG</a></p>
-             </div>
-             <button class="btn-primary welcome-cta" data-action="close-modal" type="button">
-               <i class="fa-solid fa-play"></i> Get Started
+             <button class="icon-btn small welcome-close-btn" data-action="close-modal" type="button" aria-label="Close">
+               <i class="fa-solid fa-xmark"></i>
              </button>
-             <p class="welcome-meta">© ${year} Pawtify. All rights reserved.</p>
+           </div>
+           <div class="welcome-content">
+             <h2 class="welcome-title">Welcome to Pawtify</h2>
+             <p class="welcome-desc">Stream millions of songs, curate your library, and enjoy distraction-free listening.</p>
+             <button class="btn btn-primary welcome-action" data-action="close-modal" type="button">
+               Start Listening
+             </button>
            </div>
          </article>
        </section>

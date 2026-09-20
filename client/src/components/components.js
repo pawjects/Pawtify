@@ -396,7 +396,7 @@ export function renderSearchCategories() {
   return `
     <div style="margin-top: 8px;">
       <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 16px;">Browse All</h2>
-      <div class="card-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px;">
+      <div class="category-grid">
         ${SEARCH_CATEGORIES.map(cat => `
           <div class="category-card" data-action="search-category" data-category="${escapeHTML(cat.name)}" tabindex="0" style="background: ${cat.color};">
             <span>${escapeHTML(cat.name)}</span>

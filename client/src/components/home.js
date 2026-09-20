@@ -93,13 +93,8 @@ export function renderHomePage() {
   }
   return `
     <section class="page">
-      <div class="home-greeting" style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="home-greeting">
         <h1><i class="fa-solid fa-music" style="margin-right:10px; color:var(--green); font-size:0.85em;"></i>${escapeHTML(greeting)}</h1>
-        <div style="display:flex; gap:8px;">
-          <button class="settings-btn" data-action="open-app-info" type="button" aria-label="About Pawtify" title="About">
-            <i class="fa-solid fa-gear"></i>
-          </button>
-        </div>
       </div>
 
       <div class="home-grid">${gridHTML || `

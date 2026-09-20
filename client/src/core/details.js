@@ -10,10 +10,10 @@ export async function openSongDetails() {
 }
 
 export async function shareSpecificSong(songId) {
-  const song = getSongById(songId);
+  const song = getSongById(songId) || (state.currentSong?.id === songId ? state.currentSong : null);
   if (!song) return;
   const shareText = `${song.title} by ${song.artist} on Pawtify`;
-  const shareUrl = `${window.location.origin}${window.location.pathname}#/song/${song.id}`;
+  const shareUrl = `${window.location.origin}/#/song/${encodeURIComponent(song.id)}`;
   try {
     if (navigator.share) {
       await navigator.share({
@@ -41,7 +41,7 @@ export async function sharePlaylist(playlistId) {
   }
   if (!playlist) return;
   const shareText = `Listen to ${playlist.name} on Pawtify`;
-  const shareUrl = `${window.location.origin}${window.location.pathname}#/playlist/${playlist.id}`;
+  const shareUrl = `${window.location.origin}/#/playlist/${encodeURIComponent(playlist.id)}`;
   try {
     if (navigator.share) {
       await navigator.share({
@@ -66,7 +66,7 @@ export async function shareCurrentSong() {
   if (!state.currentSong) return;
   const song = state.currentSong;
   const shareText = `${song.title} by ${song.artist} on Pawtify`;
-  const shareUrl = `${window.location.origin}${window.location.pathname}#/song/${song.id}`;
+  const shareUrl = `${window.location.origin}/#/song/${encodeURIComponent(song.id)}`;
   try {
     if (navigator.share) {
       await navigator.share({
