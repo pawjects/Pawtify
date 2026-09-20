@@ -5,9 +5,14 @@ import { getSongById } from '../core/details.js';
 
 export function getGreeting() {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good Morning';
-  if (hour < 18) return 'Good Afternoon';
-  return 'Good Evening';
+  let text = 'Good Evening';
+  if (hour < 12) text = 'Good Morning';
+  else if (hour < 18) text = 'Good Afternoon';
+
+  if (state.userName) {
+    return `${text}, ${state.userName}`;
+  }
+  return text;
 }
 
 export function renderHomePage() {
@@ -58,7 +63,7 @@ export function renderHomePage() {
     if (rec.length) {
       sectionsHTML += `
         <div class="home-section">
-          <h2 class="home-section-title"><i class="fa-solid fa-star" style="margin-right:8px; color:var(--green);"></i>Recommended for You</h2>
+          <h2 class="home-section-title"><i class="fa-solid fa-star" style="margin-right:8px; color:var(--green);"></i>${state.userName ? `Made for ${escapeHTML(state.userName)}` : 'Recommended for You'}</h2>
           <div class="home-scroll">
             ${rec.map((s, i) => renderHomeScrollCard(s, i, 'recommended')).join('')}
           </div>

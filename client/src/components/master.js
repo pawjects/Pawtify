@@ -17,6 +17,7 @@ import {
 import { runSearch } from '../services/search.js';
 import { renderHomePage } from './home.js';
 import { renderYouPage } from './you.js';
+import { initYouChart, teardownYouChart } from './youChart.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
 import { renderLyricsPanel } from './lyrics.js';
 import { renderArtistProfile } from './artistProfile.js';
@@ -27,6 +28,8 @@ import { play } from './player.js';
 
 let currentDeepLinkSongId = null;
 let isHandlingDeepLink = false;
+const tabScrollPositions = new Map();
+let previousRoute = null;
 
 export async function handleSongDeepLink(songId) {
   if (!songId || !isValidSongId(songId)) {
@@ -83,6 +86,9 @@ export async function handleSongDeepLink(songId) {
 export function renderCurrentRoute() {
   if (!appMain) return;
   try {
+    const prevKey = previousRoute?.name === 'playlist' ? `playlist-${previousRoute.playlistId}` : previousRoute?.name || 'home';
+    tabScrollPositions.set(prevKey, appMain.scrollTop);
+
     state.route = parseRoute();
     markActiveNav();
 
@@ -122,12 +128,16 @@ export function renderCurrentRoute() {
         runSearch(state.searchQuery);
       }
     } else if (state.route.name === 'library') {
+      teardownYouChart();
       appMain.innerHTML = renderLibraryPage();
     } else if (state.route.name === 'you') {
       appMain.innerHTML = renderYouPage();
+      initYouChart();
     } else if (state.route.name === 'playlist') {
+      teardownYouChart();
       appMain.innerHTML = renderPlaylistPage(state.route.playlistId);
     } else if (state.route.name === 'song') {
+      teardownYouChart();
       appMain.innerHTML = renderHomePage();
       if (state.route.songId) {
         handleSongDeepLink(state.route.songId);
@@ -135,8 +145,16 @@ export function renderCurrentRoute() {
         navigate('/');
       }
     } else {
+      teardownYouChart();
       appMain.innerHTML = renderHomePage();
     }
+
+    const newKey = state.route.name === 'playlist' ? `playlist-${state.route.playlistId}` : state.route.name;
+    const targetScroll = tabScrollPositions.get(newKey) || 0;
+    if (previousRoute && previousRoute.name !== state.route.name) {
+      appMain.scrollTop = targetScroll;
+    }
+    previousRoute = { ...state.route };
 
     renderPlayerBar();
     renderMiniPlayer();

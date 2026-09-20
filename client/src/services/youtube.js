@@ -119,22 +119,30 @@ export function onPlayerReady(event) {
   }
 }
 
+let lastSaveTime = 0;
+
 export function startYTPoll() {
   if (globals.ytPollInterval) clearInterval(globals.ytPollInterval);
   globals.ytPollInterval = setInterval(() => {
     if (
       globals.ytPlayerReady &&
       globals.ytPlayer &&
+      typeof globals.ytPlayer.getPlayerState === 'function' &&
       globals.ytPlayer.getPlayerState() === 1
     ) {
       state.progress = globals.ytPlayer.getCurrentTime() || 0;
       const dur = globals.ytPlayer.getDuration();
-      if (dur) state.duration = dur;
-      if (state.currentSong) saveJSON(STORAGE.CURRENT_TIME, state.progress);
+      if (dur && dur > 0) state.duration = dur;
+
+      const now = Date.now();
+      if (state.currentSong && now - lastSaveTime > 2000) {
+        saveJSON(STORAGE.CURRENT_TIME, state.progress);
+        lastSaveTime = now;
+      }
       refreshPlaybackUI();
       syncLyricsWithPlayback();
     }
-  }, 1000);
+  }, 250);
 }
 
 export function onPlayerStateChange(event) {

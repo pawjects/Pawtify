@@ -1,12 +1,17 @@
 import { state, globals } from '../config/config.js';
 import { searchSongs, searchArtists, searchPlaylists } from './apiMapping.js';
 import { rememberSongs } from '../core/details.js';
-import { renderCurrentRoute } from '../components/master.js';
+import { updateSearchPageUI } from '../components/components.js';
 
 export async function runSearch(query) {
   const q = (query || '').trim();
   if (!q) return;
   const token = ++globals.searchRequestToken;
+
+  state.searchLoading = true;
+  if (state.route.name === 'search') {
+    updateSearchPageUI();
+  }
 
   try {
     const [songs, artists, playlists] = await Promise.all([
@@ -20,10 +25,10 @@ export async function runSearch(query) {
     state.searchLoading = false;
     rememberSongs(songs);
 
-    if (state.route.name === 'search') renderCurrentRoute();
+    if (state.route.name === 'search') updateSearchPageUI();
   } catch (error) {
     if (token !== globals.searchRequestToken) return;
     state.searchLoading = false;
-    if (state.route.name === 'search') renderCurrentRoute();
+    if (state.route.name === 'search') updateSearchPageUI();
   }
 }

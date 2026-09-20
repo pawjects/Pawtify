@@ -35,11 +35,14 @@ export function renderYouPage() {
             <span class="you-status-dot" title="Active & Privacy Preserved"></span>
           </div>
           <div class="you-profile-details">
-            <div class="you-title-row">
-              <h1 class="you-name">Pawtify</h1>
+            <div class="you-title-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <h1 class="you-name">${escapeHTML(state.userName || 'Pawtify')}</h1>
+              <button class="icon-btn small you-edit-name-btn" data-action="edit-user-name" type="button" aria-label="Edit your name" title="Edit your name" style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:var(--muted);">
+                <i class="fa-solid fa-pen" style="font-size:0.75rem;"></i>
+              </button>
               <span class="you-badge"><i class="fa-solid fa-shield-halved"></i> Privacy First</span>
             </div>
-            <p class="you-tagline">Your personal music hub, offline library & distraction-free streaming sanctuary.</p>
+            <p class="you-tagline">${state.userName ? `Welcome back, ${escapeHTML(state.userName)}. Your personal music hub, offline library & distraction-free streaming sanctuary.` : 'Your personal music hub, offline library & distraction-free streaming sanctuary.'}</p>
             <div class="you-pill-row">
               <span class="you-pill"><i class="fa-solid fa-code-branch"></i> v1.0.0</span>
               <span class="you-pill"><i class="fa-solid fa-ban"></i> Zero Ads</span>
@@ -66,6 +69,40 @@ export function renderYouPage() {
             <span class="you-stat-val">${queueCount}</span>
             <span class="you-stat-lbl"><i class="fa-solid fa-bars-staggered" style="color:var(--green);"></i> In Queue</span>
           </button>
+        </div>
+      </div>
+
+      <!-- D3 Chart Section: Taste Distribution & Library Insights -->
+      <div class="you-section" id="you-chart-section">
+        <div class="you-section-head you-chart-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2 class="you-section-title" id="you-chart-title">
+              <i class="fa-solid fa-chart-pie" style="color:var(--green); margin-right:8px;"></i>Music Taste &amp; Distribution
+            </h2>
+            <span class="you-section-sub">Interactive D3 visualization of artists and genres in your library</span>
+          </div>
+          <div class="you-chart-toggle-group" id="you-chart-mode-toggles">
+            <button class="you-chart-mode-btn active" id="you-chart-toggle-artists" data-mode="artists" type="button">
+              <i class="fa-solid fa-microphone-lines"></i> Artists
+            </button>
+            <button class="you-chart-mode-btn" id="you-chart-toggle-genres" data-mode="genres" type="button">
+              <i class="fa-solid fa-compact-disc"></i> Genres
+            </button>
+          </div>
+        </div>
+
+        <div class="you-glass-card you-chart-card" id="you-chart-card">
+          <div class="you-chart-layout" id="you-chart-layout">
+            <!-- D3 Visual Stage -->
+            <div class="you-chart-visual-stage" id="you-chart-visual-stage">
+              <div class="you-chart-svg-container" id="you-chart-container"></div>
+            </div>
+            <!-- Interactive Legend & Details List -->
+            <div class="you-chart-legend-stage" id="you-chart-legend-stage">
+              <div class="you-chart-meta-summary" id="you-chart-meta-summary"></div>
+              <div class="you-chart-legend-list" id="you-chart-legend-list"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -255,6 +292,26 @@ export function renderYouPage() {
         </div>
 
         <div class="you-glass-card you-settings-container">
+          <!-- Setting item 0: Profile Display Name -->
+          <div class="you-setting-row">
+            <div class="you-setting-info">
+              <div class="you-setting-label">Your Name</div>
+              <div class="you-setting-desc">${state.userName ? `Personalized for "<b>${escapeHTML(state.userName)}</b>". Stored locally on this device.` : 'Set your name to personalize your greetings and recommendations.'}</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn btn-soft you-setting-btn" data-action="edit-user-name" type="button">
+                <i class="fa-solid fa-pen"></i> ${state.userName ? 'Edit Name' : 'Set Name'}
+              </button>
+              ${state.userName ? `
+                <button class="btn btn-soft you-setting-btn you-btn-danger" data-action="reset-user-name" type="button" title="Clear saved name">
+                  <i class="fa-solid fa-rotate-left"></i> Reset
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="you-setting-divider"></div>
+
           <!-- Setting item 1: Floating Video -->
           <div class="you-setting-row">
             <div class="you-setting-info">

@@ -3,23 +3,36 @@ import { fullscreenPlayer } from '../config/dom.js';
 import { escapeHTML, formatTime, saveJSON } from '../utils/utils.js';
 import { renderCurrentRoute } from './master.js';
 import { play } from './player.js';
+import {
+  initWavyProgress,
+  teardownWavyProgress,
+  updateWavyProgress,
+} from './wavyProgress.js';
 
-export function renderFullscreenPlayer() {
+export function renderFullscreenPlayer(force = false) {
   if (!fullscreenPlayer) return;
   if (!state.currentSong || !state.fullscreenPlayer) {
+    teardownWavyProgress();
     fullscreenPlayer.classList.remove('active');
     fullscreenPlayer.innerHTML = '';
+    delete fullscreenPlayer.dataset.renderedTrackId;
     return;
   }
   fullscreenPlayer.classList.add('active');
   const song = state.currentSong;
+
+  // If already rendered with this song and not forced, avoid wiping DOM
+  if (!force && fullscreenPlayer.dataset.renderedTrackId === String(song.id) && fullscreenPlayer.querySelector('.fs-title')) {
+    updateWavyProgress();
+    return;
+  }
+  fullscreenPlayer.dataset.renderedTrackId = String(song.id);
+
   const isFav = state.favorites.some((item) => item.id === song.id);
   const fsMax = Math.max(
     1,
     Math.floor(state.duration || song.durationSec || 1)
   );
-  const fsPct = fsMax > 0 ? (Math.floor(state.progress || 0) / fsMax) * 100 : 0;
-  const volPct = Math.round(state.volume * 100);
   const repeatIcon =
     state.repeatMode === 'one' ? 'fa-solid fa-1' : 'fa-solid fa-repeat';
   const repeatActive = state.repeatMode !== 'none' ? 'active' : '';
@@ -43,15 +56,18 @@ export function renderFullscreenPlayer() {
              <div class="fs-title">${escapeHTML(song.title)}</div>
              <div class="fs-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
            </div>
-           <button class="fs-heart ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button">
+           <button class="fs-heart ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Favorite">
              <i class="${isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}"></i>
            </button>
          </div>
          <div class="fs-progress">
-           <input id="fs-seekbar" class="fs-seekbar" type="range" min="0" max="${fsMax}" value="${Math.floor(state.progress || 0)}" style="background: linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${fsPct}%, rgba(255,255,255,0.15) ${fsPct}%)" />
+           <div class="fs-wave-container" id="fs-wave-container">
+             <canvas id="fs-wavy-canvas" class="fs-wavy-canvas"></canvas>
+             <input id="fs-seekbar" class="fs-seekbar fs-wave-seekbar" type="range" min="0" max="${fsMax}" step="0.1" value="${state.progress || 0}" aria-label="Playback progress" />
+           </div>
            <div class="fs-time">
-             <span>${formatTime(state.progress)}</span>
-             <span>${formatTime(state.duration || song.durationSec || 0)}</span>
+             <span id="fs-time-current">${formatTime(state.progress)}</span>
+             <span id="fs-time-total">${formatTime(state.duration || song.durationSec || 0)}</span>
            </div>
          </div>
          <div class="fs-extra-controls">
@@ -77,6 +93,11 @@ export function renderFullscreenPlayer() {
        </div>
      </div>
    `;
+
+  const waveContainer = fullscreenPlayer.querySelector('#fs-wave-container');
+  if (waveContainer) {
+    initWavyProgress(waveContainer);
+  }
 }
 
 export async function playYTPlaylist(playlistId) {

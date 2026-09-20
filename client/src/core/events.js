@@ -39,6 +39,7 @@ import {
 } from '../components/fullscreen.js';
 import { downloadCurrentSong, openLyrics, saveJSON } from '../utils/utils.js';
 import { renderLyricsPanel } from '../components/lyrics.js';
+import { updateWavyProgress } from '../components/wavyProgress.js';
 import {
   openArtistProfile,
   renderArtistProfile,
@@ -62,6 +63,7 @@ export function vibrate() {
 
 export function bindGlobalEvents() {
   window.addEventListener('hashchange', renderCurrentRoute);
+  window.addEventListener('popstate', renderCurrentRoute);
 
   document.addEventListener('click', async (event) => {
     const btn = event.target.closest(
@@ -535,6 +537,24 @@ export function bindGlobalEvents() {
         return;
       }
 
+      if (action === 'edit-user-name') {
+        event.preventDefault();
+        state.modal = { type: 'editName' };
+        renderOverlay();
+        return;
+      }
+
+      if (action === 'reset-user-name') {
+        event.preventDefault();
+        state.userName = '';
+        saveJSON(STORAGE.USER_NAME, '');
+        state.modal = null;
+        renderOverlay();
+        renderCurrentRoute();
+        showToast('Name reset to default.');
+        return;
+      }
+
       if (action === 'delete-playlist' && playlistId) {
         event.preventDefault();
         if (playlistId === 'default') return;
@@ -607,8 +627,21 @@ export function bindGlobalEvents() {
       }, 500);
     }
     if (target.id === 'seekbar' || target.id === 'fs-seekbar') {
+      state.isSeeking = true;
       const nextTime = Number.parseFloat(target.value);
-      if (!Number.isNaN(nextTime)) seekTo(nextTime);
+      if (!Number.isNaN(nextTime)) {
+        state.progress = nextTime;
+        const maxVal = Number.parseFloat(target.max) || 1;
+        const pct = maxVal > 0 ? (nextTime / maxVal) * 100 : 0;
+        target.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${pct}%, rgba(255,255,255,0.15) ${pct}%)`;
+        const currentLabel = document.getElementById('time-current');
+        if (currentLabel) currentLabel.textContent = formatTime(nextTime);
+        const fsCurrentLabel = document.getElementById('fs-time-current');
+        if (fsCurrentLabel) fsCurrentLabel.textContent = formatTime(nextTime);
+        if (target.id === 'fs-seekbar') {
+          updateWavyProgress();
+        }
+      }
     }
     if (target.id === 'volume-slider' || target.id === 'fs-volume-slider') {
       const nextVolume = Number.parseFloat(target.value) / 100;
@@ -616,8 +649,38 @@ export function bindGlobalEvents() {
     }
   });
 
+  document.addEventListener('change', (event) => {
+    const target = event.target;
+    if (target.id === 'seekbar' || target.id === 'fs-seekbar') {
+      state.isSeeking = false;
+      const nextTime = Number.parseFloat(target.value);
+      if (!Number.isNaN(nextTime)) seekTo(nextTime);
+    }
+  });
+
+  const endSeeking = () => {
+    if (state.isSeeking) {
+      state.isSeeking = false;
+    }
+  };
+  document.addEventListener('pointerup', endSeeking);
+  document.addEventListener('touchend', endSeeking);
+
   document.addEventListener('submit', (event) => {
     const form = event.target;
+    if (form.id === 'save-name-form') {
+      event.preventDefault();
+      const input = form.querySelector("input[name='userName']");
+      const name = (input?.value || '').trim();
+      state.userName = name;
+      saveJSON(STORAGE.USER_NAME, name);
+      saveJSON('pawtify-welcome-seen', true);
+      state.modal = null;
+      renderOverlay();
+      renderCurrentRoute();
+      showToast(name ? `Welcome to Pawtify, ${name}!` : 'Welcome to Pawtify!');
+      return;
+    }
     if (form.id !== 'create-playlist-form') return;
     event.preventDefault();
     const input = form.querySelector("input[name='playlistName']");
@@ -669,6 +732,10 @@ export function bindGlobalEvents() {
   });
 }
 
+let resizeTimer = null;
 window.addEventListener('resize', () => {
-  if (state.fullscreenPlayer) renderFullscreenPlayer();
+  if (resizeTimer) window.clearTimeout(resizeTimer);
+  resizeTimer = window.setTimeout(() => {
+    if (state.fullscreenPlayer) renderFullscreenPlayer(true);
+  }, 200);
 });

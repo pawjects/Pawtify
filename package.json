@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@distube/ytdl-core": "^4.16.12",
+    "d3": "^7.9.0",
     "express": "^5.2.1",
     "play-dl": "^1.9.7",
     "youtube-dl-exec": "^3.1.15",

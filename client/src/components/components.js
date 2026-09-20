@@ -82,8 +82,20 @@ export function renderSearchResults() {
       content = `<div class="card-grid">${Array(8).fill('').map(() => renderCardSkeleton(state.searchTab === 'artists')).join('')}</div>`;
     }
   } else {
+    const noSongsMsg = `
+      <div class="empty-state">
+        <i class="fa-solid fa-music"></i>
+        <h2>No songs found</h2>
+        <p>No results found for "${escapeHTML(state.searchQuery)}"${state.userName ? `, ${escapeHTML(state.userName)}` : ''}. Try another keyword or explore trending tags:</p>
+        <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 480px;">
+          <button class="btn btn-soft" data-action="use-recent-search" data-query="Prateek Kuhad" type="button" style="font-size: 0.8125rem; padding: 6px 14px; border-radius: 999px;"><i class="fa-solid fa-guitar" style="color:var(--green); margin-right:6px;"></i>Prateek Kuhad</button>
+          <button class="btn btn-soft" data-action="use-recent-search" data-query="Lo-Fi Chill" type="button" style="font-size: 0.8125rem; padding: 6px 14px; border-radius: 999px;"><i class="fa-solid fa-headphones" style="color:var(--green); margin-right:6px;"></i>Lo-Fi Chill</button>
+          <button class="btn btn-soft" data-action="use-recent-search" data-query="Arijit Singh" type="button" style="font-size: 0.8125rem; padding: 6px 14px; border-radius: 999px;"><i class="fa-solid fa-microphone" style="color:var(--green); margin-right:6px;"></i>Arijit Singh</button>
+        </div>
+      </div>
+    `;
     if (state.searchTab === 'songs') {
-      content = `<div class="song-table">${songs.length ? songs.map((s, i) => renderSongRow(s, i + 1, 'search')).join('') : '<div class="empty-state"><i class="fa-solid fa-music"></i><h2>No songs found</h2><p>Try searching with different keywords.</p></div>'}</div>`;
+      content = `<div class="song-table">${songs.length ? songs.map((s, i) => renderSongRow(s, i + 1, 'search')).join('') : noSongsMsg}</div>`;
     } else if (state.searchTab === 'artists') {
       content = `<div class="card-grid">${artists.length ? artists.map((a, i) => renderArtistSearchCard(a, i)).join('') : '<div class="empty-state"><i class="fa-solid fa-microphone"></i><h2>No artists found</h2><p>Try searching with different keywords.</p></div>'}</div>`;
     } else {
@@ -166,7 +178,7 @@ export function renderSearchPage() {
   
   return `
     <section class="page">
-      <div class="page-header" style="flex-direction:column; align-items:flex-start; margin-bottom: 24px; gap: 16px;">
+      <div class="page-header" style="flex-direction:column; align-items:flex-start; margin-bottom: 20px; gap: 14px;">
         <h1 class="page-title">Search</h1>
         <div class="search-container">
           <i class="fa-solid fa-magnifying-glass search-icon"></i>
@@ -174,6 +186,14 @@ export function renderSearchPage() {
           <div id="search-dynamic-ui">
             ${renderSearchDynamicUI()}
           </div>
+        </div>
+        <div class="search-shortcuts-bar" style="display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; max-width: 100%; scrollbar-width: none;">
+          ${TRENDING_SEARCH_SHORTCUTS.map(item => `
+            <button class="btn btn-soft search-shortcut-chip" data-action="use-recent-search" data-query="${escapeHTML(item.label)}" type="button" style="white-space: nowrap; font-size: 0.8125rem; padding: 6px 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="fa-solid ${item.icon}" style="font-size: 0.75rem; color: var(--green);"></i>
+              <span>${escapeHTML(item.label)}</span>
+            </button>
+          `).join('')}
         </div>
       </div>
       <div id="search-content-area" style="width: 100%;">
@@ -377,6 +397,16 @@ export function renderArtistSearchCard(artist, index) {
 }
 
 
+const TRENDING_SEARCH_SHORTCUTS = [
+  { label: 'Prateek Kuhad', icon: 'fa-guitar' },
+  { label: 'Arijit Singh', icon: 'fa-microphone' },
+  { label: 'Lo-Fi Chill', icon: 'fa-headphones' },
+  { label: 'Anuv Jain', icon: 'fa-heart' },
+  { label: 'Desi Hip Hop', icon: 'fa-fire' },
+  { label: 'Indie Rock', icon: 'fa-bolt' },
+  { label: 'Late Night', icon: 'fa-moon' },
+];
+
 const SEARCH_CATEGORIES = [
   { name: 'Bollywood Hits', color: 'linear-gradient(135deg, #f97316, #c2410c)' },
   { name: 'Punjabi Pop', color: 'linear-gradient(135deg, #f43f5e, #c026d3)' },
@@ -393,16 +423,60 @@ const SEARCH_CATEGORIES = [
 ];
 
 export function renderSearchCategories() {
+  const recentQueries = (state.recentSearches || [])
+    .filter((item) => item.type === 'query')
+    .slice(0, 8);
+
   return `
-    <div style="margin-top: 8px;">
-      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 16px;">Browse All</h2>
-      <div class="category-grid">
-        ${SEARCH_CATEGORIES.map(cat => `
-          <div class="category-card" data-action="search-category" data-category="${escapeHTML(cat.name)}" tabindex="0" style="background: ${cat.color};">
-            <span>${escapeHTML(cat.name)}</span>
-            <div class="bg-accent"></div>
+    <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 28px;">
+      ${recentQueries.length > 0 ? `
+        <div class="search-recent-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text);">Recent Searches</h2>
+            <button class="btn btn-soft" data-action="clear-search-history" type="button" style="font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; color: var(--muted);">
+              Clear All
+            </button>
           </div>
-        `).join('')}
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            ${recentQueries.map(item => `
+              <div class="recent-search-pill" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);">
+                <button class="recent-search-text-btn" data-action="use-recent-search" data-query="${escapeHTML(item.query)}" type="button" style="background: none; border: none; padding: 0; color: var(--text); font-size: 0.8125rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                  <i class="fa-solid fa-clock-rotate-left" style="font-size: 0.75rem; color: var(--muted);"></i>
+                  <span>${escapeHTML(item.query)}</span>
+                </button>
+                <button class="recent-search-del-btn" data-action="remove-recent-search" data-type="query" data-id="${escapeHTML(item.query)}" type="button" aria-label="Remove search" style="background: none; border: none; padding: 0; color: var(--muted); cursor: pointer; font-size: 0.75rem; display: flex; align-items: center;" title="Remove">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="search-trending-section">
+        <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; color: var(--text);">
+          <i class="fa-solid fa-fire" style="color: var(--green); margin-right: 8px;"></i>Popular Searches
+        </h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          ${TRENDING_SEARCH_SHORTCUTS.map(item => `
+            <button class="btn btn-soft" data-action="use-recent-search" data-query="${escapeHTML(item.label)}" type="button" style="font-size: 0.8125rem; padding: 7px 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="fa-solid ${item.icon}" style="font-size: 0.75rem; color: var(--green);"></i>
+              <span>${escapeHTML(item.label)}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="search-categories-section">
+        <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 16px; color: var(--text);">Browse Genres & Moods</h2>
+        <div class="category-grid">
+          ${SEARCH_CATEGORIES.map(cat => `
+            <div class="category-card" data-action="search-category" data-category="${escapeHTML(cat.name)}" tabindex="0" style="background: ${cat.color};">
+              <span>${escapeHTML(cat.name)}</span>
+              <div class="bg-accent"></div>
+            </div>
+          `).join('')}
+        </div>
       </div>
     </div>
   `;

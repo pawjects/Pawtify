@@ -310,6 +310,7 @@ img {
   position: relative;
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 .main-stage::-webkit-scrollbar {
@@ -337,6 +338,18 @@ img {
   flex-direction: column;
   gap: 28px;
   width: 100%;
+  animation: pageEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0.85;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .page:has(.empty-state) {
@@ -1166,9 +1179,28 @@ img {
   height: var(--mobile-nav-height);
   grid-template-columns: repeat(4, 1fr);
   place-items: center;
+  overflow: hidden;
+}
+
+.mobile-nav-indicator {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 6px;
+  width: calc((100% - 12px) / 4);
+  transform: translateX(calc(var(--active-tab-index, 0) * 100%));
+  background: linear-gradient(135deg, rgba(29, 185, 84, 0.22) 0%, rgba(29, 185, 84, 0.07) 100%), rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(29, 185, 84, 0.32);
+  border-radius: var(--radius-xl);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 4px 12px -2px rgba(29, 185, 84, 0.25);
+  transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .mobile-nav-item {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1181,9 +1213,10 @@ img {
   width: calc(100% - 12px);
   margin: 6px;
   border-radius: var(--radius-xl);
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition: color 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.15s;
   padding-bottom: 0;
   border: 1px solid transparent;
+  background: transparent;
 }
 
 .mobile-nav-item i {
@@ -1192,13 +1225,14 @@ img {
 
 .mobile-nav-item.active {
   color: var(--text);
-  background: linear-gradient(135deg, rgba(29, 185, 84, 0.22) 0%, rgba(29, 185, 84, 0.06) 100%), rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(29, 185, 84, 0.32);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 4px 12px -2px rgba(29, 185, 84, 0.25);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .mobile-nav-item:active {
   opacity: 0.7;
+  transform: scale(0.94);
 }
 
 /* ============ TABS ============ */
@@ -1801,6 +1835,45 @@ img {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.fs-wave-container {
+  position: relative;
+  width: 100%;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  border-radius: 8px;
+}
+
+.fs-wave-container:focus-within {
+  outline: 2px solid rgba(29, 185, 84, 0.4);
+  outline-offset: 4px;
+}
+
+.fs-wavy-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
+.fs-wave-seekbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 3;
+  margin: 0;
+  padding: 0;
 }
 
 .fs-seekbar {
@@ -4894,4 +4967,376 @@ input[type="range"]:active {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   D3 TASTE & LIBRARY DISTRIBUTION CHART (YOU TAB)
+   ========================================================================== */
+
+.you-chart-card {
+  padding: 24px;
+  margin-top: 14px;
+}
+
+.you-chart-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.you-chart-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.you-chart-mode-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.you-chart-mode-btn.active {
+  color: #041f0f;
+  background: var(--green);
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(29, 185, 84, 0.35);
+}
+
+.you-chart-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 32px;
+  align-items: center;
+}
+
+.you-chart-visual-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 320px;
+}
+
+.you-chart-svg-container {
+  width: 100%;
+  max-width: 360px;
+  height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.you-chart-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.you-chart-legend-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Summary Strip */
+.you-chart-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+}
+
+.you-summary-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.you-summary-lbl {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.you-summary-val {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.you-sample-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(29, 185, 84, 0.08);
+  border: 1px solid rgba(29, 185, 84, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+}
+
+/* Legend List */
+.you-chart-legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.you-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.you-legend-item:hover,
+.you-legend-item.highlighted {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateX(4px);
+}
+
+.you-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.you-legend-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.you-legend-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.you-legend-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.you-legend-count {
+  font-size: 0.6875rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.you-legend-bar-wrap {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.you-legend-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.you-legend-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* Floating Interactive Tooltip */
+.you-chart-floating-tooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  background: rgba(15, 20, 18, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 1px rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 190px;
+  max-width: 250px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+}
+
+.you-chart-floating-tooltip.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.you-tt-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.you-tt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.you-tt-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.you-tt-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.you-tt-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.you-tt-tracks-lbl {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.you-tt-song {
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.you-tt-song i {
+  font-size: 0.5rem;
+  color: var(--green);
+}
+
+.you-tt-hint {
+  margin-top: 4px;
+  font-size: 0.625rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 900px) {
+  .you-chart-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .you-chart-svg-container {
+    max-width: 320px;
+    height: 320px;
+  }
+
+  .you-chart-summary-strip {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .you-chart-card {
+    padding: 16px 14px;
+  }
+
+  .you-chart-svg-container {
+    max-width: 270px;
+    height: 270px;
+  }
+
+  .you-chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .you-chart-toggle-group {
+    width: 100%;
+    display: flex;
+  }
+
+  .you-chart-mode-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
 

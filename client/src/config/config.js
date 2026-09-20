@@ -40,6 +40,7 @@ export const STORAGE = {
   RECENT_SEARCHES: 'pawtify-recent-searches',
   SEARCH_QUERY: 'pawtify-search-query',
   RECENT_PLAYED: 'pawtify-recently-played',
+  USER_NAME: 'pawtify-user-name',
 };
 
 export const songCatalog = new Map();
@@ -178,6 +179,7 @@ export const globals = {
 export const state = {};
 Object.assign(state, {
   feedCategories: [],
+  userName: loadJSON(STORAGE.USER_NAME, '') || '',
   route: { name: 'home', playlistId: null },
   theme: loadJSON(STORAGE.THEME, 'dark'),
   repeatMode: loadJSON(STORAGE.REPEAT, 'none'),
@@ -269,10 +271,11 @@ export async function initApp() {
       window.location.hash = '#/';
     }
 
-    const firstVisit = loadJSON('pawtify-welcome-seen', false);
-    if (!firstVisit && initialRoute.name !== 'song') {
+    const savedName = loadJSON(STORAGE.USER_NAME, '');
+    state.userName = savedName || '';
+    const welcomeSeen = loadJSON('pawtify-welcome-seen', false);
+    if (!welcomeSeen && !state.userName && initialRoute.name !== 'song') {
       state.modal = { type: 'welcome' };
-      saveJSON('pawtify-welcome-seen', true);
     }
 
     renderCurrentRoute();

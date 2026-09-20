@@ -107,25 +107,52 @@ export function renderOverlay() {
     return;
   }
 
-  if (state.modal.type === 'welcome') {
+  if (state.modal.type === 'welcome' || state.modal.type === 'editName') {
+    const isEdit = state.modal.type === 'editName';
     overlayRoot.innerHTML = `
        <section class="overlay welcome-overlay" data-action="dismiss-overlay">
-         <article class="modal welcome-modal">
-           <div class="welcome-header">
-             <div class="welcome-icon">
-               <i class="fa-solid fa-music"></i>
+         <article class="modal welcome-modal personalized-welcome-card" style="max-width: 400px; padding: 28px 24px; border-radius: var(--radius-xl); background: var(--liquid-surface); backdrop-filter: var(--liquid-blur); border: 1px solid var(--liquid-border); box-shadow: var(--liquid-shadow);">
+           <div class="welcome-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+             <div class="welcome-icon" style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, rgba(29, 185, 84, 0.2) 0%, rgba(29, 185, 84, 0.05) 100%); display: flex; align-items: center; justify-content: center; color: var(--green); font-size: 1.25rem;">
+               <i class="fa-solid fa-sparkles"></i>
              </div>
-             <button class="icon-btn small welcome-close-btn" data-action="close-modal" type="button" aria-label="Close">
+             <button class="icon-btn small welcome-close-btn" data-action="close-modal" type="button" aria-label="Close" style="width: 32px; height: 32px; border-radius: 50%;">
                <i class="fa-solid fa-xmark"></i>
              </button>
            </div>
-           <div class="welcome-content">
-             <h2 class="welcome-title">Welcome to Pawtify</h2>
-             <p class="welcome-desc">Stream millions of songs, curate your library, and enjoy distraction-free listening.</p>
-             <button class="btn btn-primary welcome-action" data-action="close-modal" type="button">
-               Start Listening
-             </button>
-           </div>
+           <form id="save-name-form" class="welcome-content" style="display: flex; flex-direction: column; gap: 16px;">
+             <div>
+               <h2 class="welcome-title" style="font-size: 1.35rem; font-weight: 700; margin-bottom: 8px; color: var(--text);">What can I call you?</h2>
+               <p class="welcome-desc" style="font-size: 0.875rem; color: var(--muted); line-height: 1.5; margin: 0;">
+                 Personalize your listening experience. Stored private and local to your device.
+               </p>
+             </div>
+             <div class="welcome-input-group" style="margin-top: 4px;">
+               <input 
+                 type="text" 
+                 id="welcome-user-name" 
+                 name="userName" 
+                 class="text-input" 
+                 placeholder="Your name or nickname" 
+                 value="${escapeHTML(state.userName || '')}" 
+                 maxlength="28" 
+                 autocomplete="name" 
+                 required
+                 autofocus
+                 style="width: 100%; padding: 12px 16px; font-size: 1rem; border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--text); outline: none;" 
+               />
+             </div>
+             <div class="welcome-actions-row" style="display: flex; gap: 10px; margin-top: 8px;">
+               <button class="btn btn-primary welcome-action" type="submit" style="flex: 1; padding: 12px 20px; font-size: 0.95rem; font-weight: 600;">
+                 ${isEdit ? 'Save Name' : 'Continue'}
+               </button>
+               ${isEdit && state.userName ? `
+                 <button class="btn btn-soft" data-action="reset-user-name" type="button" style="padding: 12px 16px; font-size: 0.875rem; color: var(--danger, #f43f5e);" title="Clear saved name">
+                   Reset
+                 </button>
+               ` : ''}
+             </div>
+           </form>
          </article>
        </section>
      `;

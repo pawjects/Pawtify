@@ -4,8 +4,9 @@ import { escapeHTML, formatTime } from '../utils/utils.js';
 import { getSongById } from '../core/details.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
 import { renderQueuePanel } from './queuePanel.js';
+import { updateWavyProgress } from './wavyProgress.js';
 
-export function renderPlayerBar() {
+export function renderPlayerBar(force = false) {
   if (!playerBar) return;
   if (!state.currentSong) {
     playerBar.innerHTML = `
@@ -16,10 +17,16 @@ export function renderPlayerBar() {
        <div class="player-bar-center"></div>
        <div class="player-bar-right"></div>
      `;
+    delete playerBar.dataset.renderedTrackId;
     return;
   }
 
   const song = state.currentSong;
+  if (!force && playerBar.dataset.renderedTrackId === String(song.id) && playerBar.querySelector('.player-bar-title')) {
+    return;
+  }
+  playerBar.dataset.renderedTrackId = String(song.id);
+
   const isFav = state.favorites.some((item) => item.id === song.id);
   playerBar.innerHTML = `
      <div class="player-bar-left">
@@ -31,7 +38,7 @@ export function renderPlayerBar() {
            <span class="player-quality-badge">HQ Audio</span>
          </div>
        </div>
-       <button class="player-bar-like ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button">
+       <button class="player-bar-like ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Favorite">
          <i class="${isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}"></i>
        </button>
      </div>
@@ -66,16 +73,22 @@ export function renderPlayerBar() {
    `;
 }
 
-export function renderMiniPlayer() {
+export function renderMiniPlayer(force = false) {
   if (!miniPlayer) return;
   if (!state.currentSong) {
     miniPlayer.innerHTML = '';
     miniPlayer.classList.add('hidden');
+    delete miniPlayer.dataset.renderedTrackId;
     return;
   }
 
   miniPlayer.classList.remove('hidden');
   const song = state.currentSong;
+  if (!force && miniPlayer.dataset.renderedTrackId === String(song.id) && miniPlayer.querySelector('.mini-player-title')) {
+    return;
+  }
+  miniPlayer.dataset.renderedTrackId = String(song.id);
+
   const isFav = state.favorites.some((item) => item.id === song.id);
   const progressPercent =
     state.duration > 0 ? (state.progress / state.duration) * 100 : 0;
@@ -93,7 +106,7 @@ export function renderMiniPlayer() {
          <button class="mini-player-btn" data-action="open-queue" type="button" aria-label="Queue">
            <i class="fa-solid fa-list-ul"></i>
          </button>
-         <button class="mini-player-btn ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" style="color: ${isFav ? 'var(--green)' : 'var(--muted)'};">
+         <button class="mini-player-btn ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Favorite" style="color: ${isFav ? 'var(--green)' : 'var(--muted)'};">
            <i class="${isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}"></i>
          </button>
          <button class="mini-player-btn" data-action="toggle-play" type="button" aria-label="Play/Pause">
@@ -146,6 +159,24 @@ export function renderSidebarPlaylists() {
 }
 
 export function markActiveNav() {
+  let activeIndex = 0;
+  if (state.route.name === 'home') activeIndex = 0;
+  else if (state.route.name === 'search') activeIndex = 1;
+  else if (state.route.name === 'library' || state.route.name === 'playlist') activeIndex = 2;
+  else if (state.route.name === 'you') activeIndex = 3;
+
+  const mobileNav = document.querySelector('.mobile-nav');
+  if (mobileNav) {
+    mobileNav.style.setProperty('--active-tab-index', String(activeIndex));
+    let indicator = mobileNav.querySelector('.mobile-nav-indicator');
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.className = 'mobile-nav-indicator';
+      indicator.id = 'mobile-nav-indicator';
+      mobileNav.prepend(indicator);
+    }
+  }
+
   document.querySelectorAll('.nav-link').forEach((btn) => {
     const route = btn.dataset.route;
     const active =
@@ -171,29 +202,38 @@ export function markActiveNav() {
 }
 
 export function refreshPlaybackUI() {
-  const seek = document.getElementById('seekbar');
-  if (seek) {
-    const maxVal = Math.max(
-      1,
-      Math.floor(state.duration || state.currentSong?.durationSec || 1)
-    );
-    seek.max = String(maxVal);
-    seek.value = String(Math.floor(state.progress || 0));
-    const pct =
-      maxVal > 0 ? (Math.floor(state.progress || 0) / maxVal) * 100 : 0;
-    seek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${pct}%, rgba(255,255,255,0.15) ${pct}%)`;
-  }
-  const fsSeek = document.getElementById('fs-seekbar');
-  if (fsSeek) {
-    const fsMax = Math.max(
-      1,
-      Math.floor(state.duration || state.currentSong?.durationSec || 1)
-    );
-    fsSeek.max = String(fsMax);
-    fsSeek.value = String(Math.floor(state.progress || 0));
-    const fsPct =
-      fsMax > 0 ? (Math.floor(state.progress || 0) / fsMax) * 100 : 0;
-    fsSeek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${fsPct}%, rgba(255,255,255,0.15) ${fsPct}%)`;
+  const isSeeking = !!state.isSeeking;
+
+  if (!isSeeking) {
+    const seek = document.getElementById('seekbar');
+    if (seek) {
+      const maxVal = Math.max(
+        1,
+        Math.floor(state.duration || state.currentSong?.durationSec || 1)
+      );
+      seek.max = String(maxVal);
+      seek.value = String(Math.floor(state.progress || 0));
+      const pct =
+        maxVal > 0 ? (Math.floor(state.progress || 0) / maxVal) * 100 : 0;
+      seek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${pct}%, rgba(255,255,255,0.15) ${pct}%)`;
+    }
+    const fsSeek = document.getElementById('fs-seekbar');
+    if (fsSeek) {
+      const fsMax = Math.max(
+        1,
+        Math.floor(state.duration || state.currentSong?.durationSec || 1)
+      );
+      fsSeek.max = String(fsMax);
+      fsSeek.value = String(Math.floor(state.progress || 0));
+      const fsPct =
+        fsMax > 0 ? (Math.floor(state.progress || 0) / fsMax) * 100 : 0;
+      fsSeek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${fsPct}%, rgba(255,255,255,0.15) ${fsPct}%)`;
+    }
+
+    const currentLabel = document.getElementById('time-current');
+    if (currentLabel) currentLabel.textContent = formatTime(state.progress);
+    const fsCurrentLabel = document.getElementById('fs-time-current');
+    if (fsCurrentLabel) fsCurrentLabel.textContent = formatTime(state.progress);
   }
   
   const miniFill = document.querySelector('.mini-progress-fill');
@@ -203,13 +243,11 @@ export function refreshPlaybackUI() {
     miniFill.style.width = `${pct}%`;
   }
 
-  const currentLabel = document.getElementById('time-current');
-  if (currentLabel) currentLabel.textContent = formatTime(state.progress);
   const totalLabel = document.getElementById('time-total');
-  if (totalLabel)
-    totalLabel.textContent = formatTime(
-      state.duration || state.currentSong?.durationSec || 0
-    );
+  const durSec = state.duration || state.currentSong?.durationSec || 0;
+  if (totalLabel) totalLabel.textContent = formatTime(durSec);
+  const fsTotalLabel = document.getElementById('fs-time-total');
+  if (fsTotalLabel) fsTotalLabel.textContent = formatTime(durSec);
 
   const playToggles = document.querySelectorAll('[data-action="toggle-play"]');
   playToggles.forEach((playToggle) => {
@@ -225,21 +263,50 @@ export function refreshPlaybackUI() {
   });
 
   const volumeSlider = document.getElementById('volume-slider');
-  if (volumeSlider) {
+  if (volumeSlider && document.activeElement !== volumeSlider) {
     volumeSlider.value = String(Math.round(state.volume * 100));
     const volPct = Math.round(state.volume * 100);
     volumeSlider.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${volPct}%, rgba(255,255,255,0.15) ${volPct}%)`;
   }
   const fsVol = document.getElementById('fs-volume-slider');
-  if (fsVol) {
+  if (fsVol && document.activeElement !== fsVol) {
     fsVol.value = String(Math.round(state.volume * 100));
     const volPct = Math.round(state.volume * 100);
     fsVol.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${volPct}%, rgba(255,255,255,0.15) ${volPct}%)`;
   }
 
-  renderPlayerBar();
-  renderMiniPlayer();
-  renderFullscreenPlayer();
-  renderQueuePanel();
+  // Ensure active-track class is kept in sync on document body
   document.body.classList.toggle('has-active-track', !!state.currentSong);
+
+  // Sync repeat & shuffle icons across controls
+  const repeatIconClass = state.repeatMode === 'one' ? 'fa-solid fa-1' : 'fa-solid fa-repeat';
+  document.querySelectorAll('[data-action="toggle-repeat"]').forEach((btn) => {
+    btn.classList.toggle('repeat-active', state.repeatMode !== 'none');
+    btn.classList.toggle('active', state.repeatMode !== 'none');
+    const icon = btn.querySelector('i');
+    if (icon) icon.className = repeatIconClass;
+  });
+
+  document.querySelectorAll('[data-action="toggle-shuffle"]').forEach((btn) => {
+    btn.classList.toggle('shuffle-active', !!state.shuffleMode);
+    btn.classList.toggle('active', !!state.shuffleMode);
+  });
+
+  // Sync favorites
+  const isFav = state.favorites.some((item) => item.id === state.currentSong?.id);
+  document.querySelectorAll('[data-action="toggle-favorite"]').forEach((btn) => {
+    btn.classList.toggle('active', isFav);
+    const icon = btn.querySelector('i');
+    if (icon) {
+      icon.className = isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+    }
+  });
+
+  // Re-render components only if their rendered track ID differs from current state
+  renderPlayerBar(false);
+  renderMiniPlayer(false);
+  if (state.fullscreenPlayer) {
+    renderFullscreenPlayer(false);
+    updateWavyProgress();
+  }
 }
