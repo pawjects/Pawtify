@@ -1,6 +1,6 @@
 import { state } from '../config/config.js';
 import { playerBar, miniPlayer, sidebarPlaylists } from '../config/dom.js';
-import { escapeHTML, formatTime } from '../utils/utils.js';
+import { escapeHTML, formatTime, getOptimizedArtwork } from '../utils/utils.js';
 import { getSongById } from '../core/details.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
 import { renderQueuePanel } from './queuePanel.js';
@@ -30,7 +30,7 @@ export function renderPlayerBar(force = false) {
   const isFav = state.favorites.some((item) => item.id === song.id);
   playerBar.innerHTML = `
      <div class="player-bar-left">
-       <img class="player-bar-cover" src="${escapeHTML(song.coverUrl)}" alt="" />
+       <img class="player-bar-cover" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
        <div class="player-bar-info">
          <div class="player-bar-title">${escapeHTML(song.title)}</div>
          <div style="display:flex; align-items:center; gap:4px;">
@@ -96,7 +96,7 @@ export function renderMiniPlayer(force = false) {
   miniPlayer.innerHTML = `
      <div class="mini-player-inner">
        <div class="mini-player-main" data-action="open-fullscreen-player">
-         <img class="mini-player-cover" src="${escapeHTML(song.coverUrl)}" alt="" />
+         <img class="mini-player-cover" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
          <div class="mini-player-info">
            <div class="mini-player-title">${escapeHTML(song.title)}</div>
            <div class="mini-player-artist">${escapeHTML(song.artist)}</div>
@@ -129,7 +129,7 @@ export function renderSidebarPlaylists() {
      <button class="sidebar-playlist-item ${isHistoryActive ? 'active' : ''}" data-route="/playlist/history" type="button">
        ${
          historyCover
-           ? `<img class="sidebar-playlist-thumb" src="${escapeHTML(historyCover)}" alt="" />`
+           ? `<img class="sidebar-playlist-thumb" src="${escapeHTML(getOptimizedArtwork(historyCover, 80))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />`
            : `<div class="sidebar-playlist-thumb empty"><i class="fa-solid fa-clock-rotate-left"></i></div>`
        }
        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Listening History</span>
@@ -146,7 +146,7 @@ export function renderSidebarPlaylists() {
        <button class="sidebar-playlist-item ${isActive ? 'active' : ''}" data-route="/playlist/${encodeURIComponent(playlist.id)}" type="button">
          ${
            cover
-             ? `<img class="sidebar-playlist-thumb" src="${escapeHTML(cover)}" alt="" />`
+             ? `<img class="sidebar-playlist-thumb" src="${escapeHTML(getOptimizedArtwork(cover, 80))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />`
              : `<div class="sidebar-playlist-thumb empty"><i class="fa-solid fa-music"></i></div>`
          }
          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(playlist.name)}</span>
@@ -158,16 +158,47 @@ export function renderSidebarPlaylists() {
   sidebarPlaylists.innerHTML = historyItem + userPlaylists;
 }
 
-export function markActiveNav() {
-  let activeIndex = 0;
-  if (state.route.name === 'home') activeIndex = 0;
-  else if (state.route.name === 'search') activeIndex = 1;
-  else if (state.route.name === 'library' || state.route.name === 'playlist') activeIndex = 2;
-  else if (state.route.name === 'you') activeIndex = 3;
+let isInitialNav = true;
 
+export function markActiveNav(targetRoute = null, skipTransition = false) {
+  let routeName = state.route?.name || 'home';
+  if (targetRoute) {
+    if (targetRoute === '/' || targetRoute === '') routeName = 'home';
+    else if (targetRoute.startsWith('/search')) routeName = 'search';
+    else if (
+      targetRoute.startsWith('/library') ||
+      targetRoute.startsWith('/playlist') ||
+      targetRoute.startsWith('/album') ||
+      targetRoute.startsWith('/artist')
+    ) {
+      routeName = 'library';
+    } else if (targetRoute.startsWith('/you') || targetRoute.startsWith('/settings')) {
+      routeName = 'you';
+    }
+  }
+
+  let activeIndex = 0;
+  if (routeName === 'home') activeIndex = 0;
+  else if (routeName === 'search') activeIndex = 1;
+  else if (
+    routeName === 'library' ||
+    routeName === 'playlist' ||
+    routeName === 'album' ||
+    routeName === 'artist'
+  ) {
+    activeIndex = 2;
+  } else if (routeName === 'you' || routeName === 'settings') {
+    activeIndex = 3;
+  }
+
+  const shouldSkip = skipTransition || isInitialNav;
+  if (isInitialNav) {
+    isInitialNav = false;
+  }
+
+  // 1. Mobile Bottom Nav Indicator
   const mobileNav = document.querySelector('.mobile-nav');
   if (mobileNav) {
-    mobileNav.style.setProperty('--active-tab-index', String(activeIndex));
     let indicator = mobileNav.querySelector('.mobile-nav-indicator');
     if (!indicator) {
       indicator = document.createElement('div');
@@ -175,29 +206,66 @@ export function markActiveNav() {
       indicator.id = 'mobile-nav-indicator';
       mobileNav.prepend(indicator);
     }
+    if (shouldSkip) {
+      indicator.style.transition = 'none';
+    }
+    mobileNav.style.setProperty('--active-tab-index', String(activeIndex));
+    if (shouldSkip) {
+      void indicator.offsetWidth;
+      indicator.style.transition = '';
+    }
   }
 
+  // 2. Desktop Sidebar Nav Indicator
+  const sidebarNav = document.querySelector('.sidebar-nav');
+  if (sidebarNav) {
+    let sidebarIndicator = sidebarNav.querySelector('.sidebar-nav-indicator');
+    if (!sidebarIndicator) {
+      sidebarIndicator = document.createElement('div');
+      sidebarIndicator.className = 'sidebar-nav-indicator';
+      sidebarIndicator.id = 'sidebar-nav-indicator';
+      sidebarNav.prepend(sidebarIndicator);
+    }
+    if (shouldSkip) {
+      sidebarIndicator.style.transition = 'none';
+    }
+    sidebarNav.style.setProperty('--active-tab-index', String(activeIndex));
+    if (shouldSkip) {
+      void sidebarIndicator.offsetWidth;
+      sidebarIndicator.style.transition = '';
+    }
+  }
+
+  // 3. Update active classes on nav links
   document.querySelectorAll('.nav-link').forEach((btn) => {
     const route = btn.dataset.route;
     const active =
-      (route === '/' && state.route.name === 'home') ||
-      (route === '/search' && state.route.name === 'search') ||
+      (route === '/' && routeName === 'home') ||
+      (route === '/search' && routeName === 'search') ||
       (route === '/library' &&
-        (state.route.name === 'library' || state.route.name === 'playlist')) ||
-      (route === '/you' && state.route.name === 'you');
-    if (active) btn.classList.add('active');
-    else btn.classList.remove('active');
+        (routeName === 'library' ||
+          routeName === 'playlist' ||
+          routeName === 'album' ||
+          routeName === 'artist')) ||
+      (route === '/you' &&
+        (routeName === 'you' || routeName === 'settings'));
+    btn.classList.toggle('active', !!active);
   });
+
+  // 4. Update active classes on mobile nav items
   document.querySelectorAll('.mobile-nav-item').forEach((btn) => {
     const route = btn.dataset.route;
     const active =
-      (route === '/' && state.route.name === 'home') ||
-      (route === '/search' && state.route.name === 'search') ||
+      (route === '/' && routeName === 'home') ||
+      (route === '/search' && routeName === 'search') ||
       (route === '/library' &&
-        (state.route.name === 'library' || state.route.name === 'playlist')) ||
-      (route === '/you' && state.route.name === 'you');
-    if (active) btn.classList.add('active');
-    else btn.classList.remove('active');
+        (routeName === 'library' ||
+          routeName === 'playlist' ||
+          routeName === 'album' ||
+          routeName === 'artist')) ||
+      (route === '/you' &&
+        (routeName === 'you' || routeName === 'settings'));
+    btn.classList.toggle('active', !!active);
   });
 }
 

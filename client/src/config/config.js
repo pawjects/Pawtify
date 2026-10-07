@@ -31,6 +31,7 @@ export const STORAGE = {
   THEME: 'pawtify-theme',
   REPEAT: 'pawtify-repeat',
   SHUFFLE: 'pawtify-shuffle',
+  AUTOPLAY: 'pawtify-autoplay',
   FAVORITES: 'pawtify-favorites',
   PLAYLISTS: 'pawtify-playlists',
   QUEUE: 'pawtify-queue',
@@ -41,12 +42,26 @@ export const STORAGE = {
   SEARCH_QUERY: 'pawtify-search-query',
   RECENT_PLAYED: 'pawtify-recently-played',
   USER_NAME: 'pawtify-user-name',
+  AUDIO_QUALITY: 'pawtify-audio-quality',
 };
+
+export function applyTheme(themeName) {
+  let effective = themeName || 'amoled';
+  if (effective === 'system') {
+    const prefersDark =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
+    effective = prefersDark ? 'amoled' : 'light';
+  }
+  document.documentElement.setAttribute('data-theme', effective);
+}
 
 export const songCatalog = new Map();
 // YouTube Audio Engine State
 
-export function showToast(msg) {
+let toastTimer = null;
+export function showToast(msg, duration = 3200) {
   let toast = document.getElementById('toast-container');
   if (!toast) {
     toast = document.createElement('div');
@@ -54,9 +69,21 @@ export function showToast(msg) {
     toast.className = 'toast';
     document.body.appendChild(toast);
   }
-  toast.textContent = msg;
+  const str = String(msg || '');
+  const isErr = /error|fail|restrict|invalid|could not/i.test(str);
+  const iconClass = isErr ? 'fa-circle-exclamation' : 'fa-circle-info';
+  const iconColor = isErr ? 'var(--danger, #ef4444)' : 'var(--green, #1db954)';
+  
+  toast.innerHTML = `
+    <i class="fa-solid ${iconClass}" style="color:${iconColor}; flex-shrink:0; font-size:1rem;"></i>
+    <span class="toast-text">${str.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+  `;
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 3000);
+  
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, duration);
 }
 
 export function clearYtLoadTimeout() {
@@ -108,7 +135,7 @@ export async function handlePlaybackError(errorCode) {
 
       if (alternatives.length > 0) {
         const altSong = alternatives[0];
-        console.log(
+        console.info(
           `Switching to alternative playable stream: ${altSong.id} (${altSong.title})`
         );
         current.id = altSong.id;
@@ -184,6 +211,8 @@ Object.assign(state, {
   theme: loadJSON(STORAGE.THEME, 'dark'),
   repeatMode: loadJSON(STORAGE.REPEAT, 'none'),
   shuffleMode: loadJSON(STORAGE.SHUFFLE, false),
+  autoplay: loadJSON(STORAGE.AUTOPLAY, true),
+  audioQuality: loadJSON(STORAGE.AUDIO_QUALITY, 'high'),
   searchQuery: loadJSON(STORAGE.SEARCH_QUERY, ''),
   searchSuggestions: [],
   searchTab: 'songs',
@@ -257,6 +286,12 @@ export async function initApp() {
 
     if (state.currentSong) updateMediaSession(state.currentSong);
     document.body.classList.toggle('has-active-track', !!state.currentSong);
+    applyTheme(state.theme);
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (state.theme === 'system') applyTheme('system');
+      });
+    }
 
     bindGlobalEvents();
 

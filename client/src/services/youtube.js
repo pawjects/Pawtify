@@ -14,7 +14,7 @@ import {
   nextTrack,
 } from '../components/player.js';
 import { persistPlayer } from '../core/details.js';
-import { loadJSON, saveJSON } from '../utils/utils.js';
+import { loadJSON, saveJSON, getOptimizedArtwork } from '../utils/utils.js';
 import { refreshPlaybackUI } from '../components/playerBar.js';
 
 export function loadYTApi() {
@@ -173,8 +173,11 @@ export function onPlayerStateChange(event) {
     if (state.repeatMode === 'one') {
       globals.ytPlayer.seekTo(0);
       globals.ytPlayer.playVideo();
-    } else {
+    } else if (state.autoplay !== false) {
       nextTrack();
+    } else {
+      state.isPlaying = false;
+      refreshPlaybackUI();
     }
   }
   refreshPlaybackUI();
@@ -236,7 +239,7 @@ export function mapServerSong(x) {
     title: x.title || 'Unknown Song',
     artist: artistName,
     album: 'Single',
-    coverUrl: x.thumbnail || `https://i.ytimg.com/vi/${x.id}/hqdefault.jpg`,
+    coverUrl: getOptimizedArtwork(x.thumbnail || `https://i.ytimg.com/vi/${x.id}/hqdefault.jpg`, 540),
     audioUrl: x.id,
     durationSec: x.duration || 0,
     duration: x.durationString || '',

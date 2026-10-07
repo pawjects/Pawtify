@@ -47,3 +47,24 @@ export async function openLyrics() {
   state.lyricsPanel = true;
   renderLyricsPanel();
 }
+
+/**
+ * Optimizes YouTube & streaming artwork URLs to request crisp, high-resolution thumbnails
+ * while avoiding blurry low-res thumbnails or huge unneeded downloads.
+ */
+export function getOptimizedArtwork(url, targetSize = 540) {
+  if (!url || typeof url !== 'string') return '/assets/pawtify.png';
+  let clean = url.trim();
+  if (!clean) return '/assets/pawtify.png';
+
+  // Upgrade Google/YouTube Music thumbnail size parameters to sharp resolution
+  if (clean.includes('googleusercontent.com') || clean.includes('ggpht.com')) {
+    if (/=w\d+-h\d+/.test(clean)) {
+      clean = clean.replace(/=w\d+-h\d+[^?]*/, `=w${targetSize}-h${targetSize}-l90-rj`);
+    } else if (/=s\d+/.test(clean)) {
+      clean = clean.replace(/=s\d+[^?]*/, `=s${targetSize}`);
+    }
+  }
+
+  return clean;
+}

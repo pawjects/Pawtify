@@ -8,8 +8,10 @@ import {
 import { searchSongs, searchArtists } from '../services/apiMapping.js';
 import { escapeHTML } from '../utils/utils.js';
 import { renderSongRow } from './components.js';
+import { pushHistoryLayer } from '../core/navigationHistory.js';
 
 export async function openArtistProfile(artistName) {
+  pushHistoryLayer('artist');
   if (state.route.name === 'search' && state.searchQuery.trim()) {
     // Save as query for now since we don't have full artist data immediately, but wait, we have artistName.
     // If we can get image from searchResults we save as item
@@ -69,7 +71,7 @@ export function renderArtistProfile() {
        <button class="artist-hero-back" data-action="close-artist-profile" type="button" aria-label="Back">
          <i class="fa-solid fa-chevron-down"></i>
        </button>
-       <img class="artist-hero-img" src="${escapeHTML(artist.imageUrl || LOGO_URL)}" alt="${escapeHTML(artist.name)}" />
+       <img class="artist-hero-img" src="${escapeHTML(artist.imageUrl || LOGO_URL)}" alt="${escapeHTML(artist.name)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
        <div class="artist-hero-name">${escapeHTML(artist.name)}</div>
        <div class="artist-hero-meta">${escapeHTML(artist.type || 'Artist')} \u2022 ${artist.songs?.length || 0} songs</div>
        <div class="artist-hero-actions">

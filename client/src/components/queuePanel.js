@@ -1,6 +1,6 @@
 import { state, STORAGE } from '../config/config.js';
 import { queuePanel, miniPlayer } from '../config/dom.js';
-import { escapeHTML, saveJSON } from '../utils/utils.js';
+import { escapeHTML, saveJSON, getOptimizedArtwork } from '../utils/utils.js';
 import { renderPlayerBar } from './playerBar.js';
 import { previousTrack, nextTrack } from './player.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
@@ -40,7 +40,7 @@ export function renderQueuePanel() {
          <div class="queue-section-title">Now Playing</div>
          <div class="queue-item active" data-action="play-song" data-song-id="${escapeHTML(nowPlaying.id)}" data-source="queue" type="button">
            <div class="queue-item-index"><i class="fa-solid fa-volume-high" style="font-size:0.75rem;"></i></div>
-           <img class="queue-item-cover" src="${escapeHTML(nowPlaying.coverUrl)}" alt="" />
+           <img class="queue-item-cover" src="${escapeHTML(getOptimizedArtwork(nowPlaying.coverUrl, 100))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
            <div class="queue-item-info">
              <div class="queue-item-title">${escapeHTML(nowPlaying.title)}</div>
              <div class="queue-item-artist">${escapeHTML(nowPlaying.artist)}</div>
@@ -59,7 +59,7 @@ export function renderQueuePanel() {
              (s, i) => `
            <div class="queue-item" data-action="play-song" data-song-id="${escapeHTML(s?.id || '')}" data-source="queue" type="button">
              <div class="queue-item-index">${currentIdx + i + 2}</div>
-             <img class="queue-item-cover" src="${escapeHTML(s?.coverUrl || '')}" alt="" />
+             <img class="queue-item-cover" src="${escapeHTML(getOptimizedArtwork(s?.coverUrl || '', 100))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
              <div class="queue-item-info">
                <div class="queue-item-title">${escapeHTML(s?.title || '')}</div>
                <div class="queue-item-artist">${escapeHTML(s?.artist || '')}</div>
@@ -84,7 +84,7 @@ export function renderQueuePanel() {
              (s, i) => `
            <div class="queue-item" data-action="play-song" data-song-id="${escapeHTML(s?.id || '')}" data-source="queue" type="button">
              <div class="queue-item-index">${i + 1}</div>
-             <img class="queue-item-cover" src="${escapeHTML(s?.coverUrl || '')}" alt="" />
+             <img class="queue-item-cover" src="${escapeHTML(getOptimizedArtwork(s?.coverUrl || '', 100))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
              <div class="queue-item-info">
                <div class="queue-item-title">${escapeHTML(s?.title || '')}</div>
                <div class="queue-item-artist">${escapeHTML(s?.artist || '')}</div>

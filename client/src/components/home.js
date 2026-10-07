@@ -1,5 +1,10 @@
 import { state } from '../config/config.js';
-import { renderHomeScrollCard, renderHomeGridCard } from './components.js';
+import {
+  renderHomeScrollCard,
+  renderHomeGridCard,
+  renderHomeGridSkeleton,
+  renderHomeScrollSkeleton,
+} from './components.js';
 import { escapeHTML } from '../utils/utils.js';
 import { getSongById } from '../core/details.js';
 
@@ -29,41 +34,114 @@ export function renderHomePage() {
     if (cat.songs[1])
       heroCandidates.push({ song: cat.songs[1], source: cat.id });
   });
-  // Shuffle heroes
-  heroCandidates = heroCandidates.sort(() => 0.5 - Math.random());
+  const hasLoadedContent =
+    (categories.length > 0 && categories.some((cat) => cat.songs && cat.songs.length > 0)) ||
+    rec.length > 0;
 
-  
   let sectionsHTML = '';
   let gridHTML = '';
 
-  if (state.isLoading) {
-    gridHTML = Array(6).fill('').map(() => `
-      <div class="home-grid-card" style="pointer-events:none;">
-        <div class="skeleton" style="width:56px; height:56px; flex-shrink:0;"></div>
-        <div class="skeleton skeleton-text-main" style="width: 70%; margin: 0; border-radius: 4px; height: 14px;"></div>
-      </div>
-    `).join('');
+  if (state.isLoading && !hasLoadedContent) {
+    gridHTML = Array(4).fill('').map(() => renderHomeGridSkeleton()).join('');
 
     sectionsHTML += Array(3).fill('').map(() => `
       <div class="home-section">
-        <div class="skeleton skeleton-text-main" style="width: 200px; height: 24px; margin-bottom: 16px; margin-left: 16px;"></div>
-        <div class="home-scroll" style="display:flex; overflow:hidden; gap:16px; padding:0 16px;">
-          ${Array(4).fill('').map(() => `
-            <div class="home-scroll-card" style="pointer-events:none; flex-shrink:0;">
-              <div class="skeleton" style="width:140px; height:140px; border-radius:var(--radius-md); margin-bottom:12px;"></div>
-              <div class="skeleton skeleton-text-main" style="width: 80%; margin: 0 0 8px 0; border-radius: 4px; height:14px;"></div>
-              <div class="skeleton skeleton-text-sub" style="width: 50%; margin: 0; border-radius: 4px; height:12px;"></div>
-            </div>
-          `).join('')}
+        <div class="skeleton skeleton-text-main" style="width: 180px; height: 22px; margin-bottom: 16px;"></div>
+        <div class="home-scroll">
+          ${Array(5).fill('').map(() => renderHomeScrollSkeleton()).join('')}
         </div>
       </div>
     `).join('');
   } else {
+    // Collect exactly four top banner/shortcut cards
+    const topShortcuts = [];
+    const addedSongIds = new Set();
+
+    if (state.favorites && state.favorites.length > 0) {
+      topShortcuts.push({
+        song: state.favorites[0],
+        source: 'favorites',
+        titleOverride: 'Liked Songs',
+      });
+      addedSongIds.add(state.favorites[0].id);
+    }
+
+    const activePlaylist = (state.playlists || []).find(
+      (p) => p.songs && p.songs.length > 0
+    );
+    if (activePlaylist && activePlaylist.songs[0]) {
+      const pSong = activePlaylist.songs[0];
+      topShortcuts.push({
+        song: pSong,
+        source: 'playlist',
+        playlistId: activePlaylist.id,
+        titleOverride: activePlaylist.name || pSong.title,
+      });
+      addedSongIds.add(pSong.id);
+    }
+
+    for (const h of heroCandidates) {
+      if (topShortcuts.length >= 4) break;
+      if (h.song && !addedSongIds.has(h.song.id)) {
+        topShortcuts.push({ song: h.song, source: h.source });
+        addedSongIds.add(h.song.id);
+      }
+    }
+
+    if (topShortcuts.length < 4 && rec.length) {
+      for (const s of rec) {
+        if (topShortcuts.length >= 4) break;
+        if (s && !addedSongIds.has(s.id)) {
+          topShortcuts.push({ song: s, source: 'recommended' });
+          addedSongIds.add(s.id);
+        }
+      }
+    }
+
+    if (topShortcuts.length < 4) {
+      for (const cat of categories) {
+        if (topShortcuts.length >= 4) break;
+        for (const s of (cat.songs || [])) {
+          if (topShortcuts.length >= 4) break;
+          if (s && !addedSongIds.has(s.id)) {
+            topShortcuts.push({ song: s, source: cat.id });
+            addedSongIds.add(s.id);
+          }
+        }
+      }
+    }
+
+    if (topShortcuts.length < 4 && state.recentlyPlayed.length) {
+      for (const id of state.recentlyPlayed) {
+        if (topShortcuts.length >= 4) break;
+        const s = getSongById(id);
+        if (s && !addedSongIds.has(s.id)) {
+          topShortcuts.push({ song: s, source: 'history' });
+          addedSongIds.add(s.id);
+        }
+      }
+    }
+
+    if (topShortcuts.length > 0) {
+      gridHTML = topShortcuts
+        .slice(0, 4)
+        .map((item) =>
+          renderHomeGridCard(
+            item.song,
+            item.source,
+            item.playlistId || '',
+            item.titleOverride || ''
+          )
+        )
+        .join('');
+    } else {
+      gridHTML = Array(4).fill('').map(() => renderHomeGridSkeleton()).join('');
+    }
 
     if (rec.length) {
       sectionsHTML += `
         <div class="home-section">
-          <h2 class="home-section-title">${state.userName ? `Made for ${escapeHTML(state.userName)}` : 'Recommended'}</h2>
+          <h2 class="home-section-title">${state.userName ? `Made for ${escapeHTML(state.userName)}` : 'Suggested for You'}</h2>
           <div class="home-scroll">
             ${rec.map((s, i) => renderHomeScrollCard(s, i, 'recommended')).join('')}
           </div>
@@ -87,7 +165,7 @@ export function renderHomePage() {
       if (recentSongs.length) {
         sectionsHTML += `
            <div class="home-section">
-             <h2 class="home-section-title">Recently played</h2>
+             <h2 class="home-section-title">Recently Played</h2>
              <div class="home-scroll">
                ${recentSongs.map((s, i) => renderHomeScrollCard(s, i, 'queue')).join('')}
              </div>
@@ -105,11 +183,7 @@ export function renderHomePage() {
         </button>
       </div>
 
-      <div class="home-grid">${gridHTML || `
-      ${state.favorites.length ? renderHomeGridCard(state.favorites[0], 'favorites') : ''}
-      ${state.playlists[0]?.songs?.length ? renderHomeGridCard(state.playlists[0].songs[0], 'playlist', state.playlists[0].id) : ''}
-      ${heroCandidates.slice(0, 4).map((h) => renderHomeGridCard(h.song, h.source)).join('')}
-    `}</div>
+      <div class="home-grid">${gridHTML}</div>
 
       ${sectionsHTML}
     </section>

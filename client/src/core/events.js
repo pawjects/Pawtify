@@ -20,18 +20,21 @@ import {
   getSongById,
   openSongDetails,
   shareCurrentSong,
+  shareSpecificSong,
+  sharePlaylist,
   saveRecentItem,
   dedupeSongs,
   rememberSongs,
   seedCatalog,
   saveRecentSearch,
 } from './details.js';
-import { state, STORAGE, showToast, globals } from '../config/config.js';
+import { state, STORAGE, showToast, globals, applyTheme } from '../config/config.js';
 import { renderOverlay } from '../components/overlay.js';
 import {
   renderSidebarPlaylists,
   refreshPlaybackUI,
   renderPlayerBar,
+  markActiveNav,
 } from '../components/playerBar.js';
 import {
   renderFullscreenPlayer,
@@ -52,6 +55,23 @@ import {
 import { loadTrendingSongs } from '../services/dataLoader.js';
 import { runSearch } from '../services/search.js';
 import { searchSongs } from '../services/apiMapping.js';
+import {
+  openFullscreenPlayer,
+  closeFullscreenPlayer,
+  openQueuePanel,
+  closeQueuePanel,
+  openLyricsPanel,
+  closeLyricsPanel,
+  closeArtistProfile,
+  openModal,
+  closeModal,
+  handleGlobalPopState,
+  isSearchModeActive,
+  exitSearchMode,
+  pushHistoryLayer,
+  popHistoryLayer,
+  dismissKeyboard,
+} from './navigationHistory.js';
 
 export function vibrate() {
   if (navigator.vibrate) {
@@ -63,22 +83,64 @@ export function vibrate() {
 
 export function bindGlobalEvents() {
   window.addEventListener('hashchange', renderCurrentRoute);
-  window.addEventListener('popstate', renderCurrentRoute);
+  window.addEventListener('popstate', handleGlobalPopState);
+  window.addEventListener('resize', () => markActiveNav());
+
+  // Instantaneous tactile feedback on touch/click: start moving liquid pill immediately
+  document.addEventListener(
+    'pointerdown',
+    (event) => {
+      const routeButton = event.target.closest(
+        '.nav-link, .mobile-nav-item, [data-route]'
+      );
+      if (routeButton && routeButton.dataset.route) {
+        markActiveNav(routeButton.dataset.route);
+      }
+    },
+    { passive: true }
+  );
+
+  // Image protection: Prevent accidental context menu & drag ghosting on media/artwork
+  document.addEventListener('contextmenu', (event) => {
+    if (event.target && event.target.closest('img, picture, video, canvas, .card-img-wrap, .scroll-cover-wrap, .fs-cover-wrap, .home-grid-cover-wrap')) {
+      event.preventDefault();
+    }
+  });
+
+  document.addEventListener('dragstart', (event) => {
+    if (
+      event.target &&
+      (event.target.tagName === 'IMG' ||
+        event.target.tagName === 'PICTURE' ||
+        event.target.closest('img, picture, video, canvas, svg, a img, .card-img-wrap, .scroll-cover-wrap, .fs-cover-wrap, .home-grid-cover-wrap, .you-avatar-wrap, .you-hub-cover-wrap'))
+    ) {
+      event.preventDefault();
+    }
+  });
 
   document.addEventListener('click', async (event) => {
     const btn = event.target.closest(
       'button, .song-row, .card, .home-scroll-card, .nav-link, .mobile-nav-item, .category-card, .queue-item, .list-item, .search-dropdown-item'
     );
     if (btn) vibrate();
+    const actionNode = event.target.closest('[data-action]');
     const routeButton = event.target.closest('[data-route]');
-    if (routeButton) {
+    if (actionNode && (!routeButton || routeButton.contains(actionNode))) {
+      // Prioritize specific action
+    } else if (routeButton) {
       event.preventDefault();
-      state.fullscreenPlayer = false;
-      navigate(routeButton.dataset.route);
+      dismissKeyboard();
+      if (state.modal) closeModal();
+      if (state.queuePanel) closeQueuePanel();
+      if (state.artistProfile) closeArtistProfile();
+      if (state.lyricsPanel) closeLyricsPanel();
+      if (state.fullscreenPlayer) closeFullscreenPlayer();
+      const targetRoute = routeButton.dataset.route;
+      markActiveNav(targetRoute);
+      navigate(targetRoute);
       return;
     }
 
-    const actionNode = event.target.closest('[data-action]');
     if (!actionNode) return;
 
     const action = actionNode.dataset.action;
@@ -89,16 +151,11 @@ export function bindGlobalEvents() {
     try {
       if (action === 'clear-search-input') {
         event.preventDefault();
-        state.searchQuery = ''; saveJSON(STORAGE.SEARCH_QUERY, '');
-        state.searchLoading = false;
-        state.searchResults = { songs: [], artists: [], playlists: [] }; state.searchSuggestions = [];
-        if (state.route.name === 'search') {
-          renderCurrentRoute();
-          const input = document.getElementById('search-input');
-          if (input) {
-            input.value = '';
-            input.focus();
-          }
+        exitSearchMode(true);
+        const input = document.getElementById('search-input');
+        if (input) {
+          input.value = '';
+          input.focus();
         }
         return;
       }
@@ -158,10 +215,19 @@ export function bindGlobalEvents() {
         await shareCurrentSong();
         return;
       }
+      if (action === 'share-specific-song' && songId) {
+        event.preventDefault();
+        await shareSpecificSong(songId);
+        return;
+      }
+      if (action === 'share-playlist' && playlistId) {
+        event.preventDefault();
+        await sharePlaylist(playlistId);
+        return;
+      }
       if (action === 'open-playlist-picker' && songId) {
         event.preventDefault();
-        state.modal = { type: 'playlistPicker', songId };
-        renderOverlay();
+        openModal({ type: 'playlistPicker', songId });
         return;
       }
       if (action === 'playlist-toggle-song' && songId && playlistId) {
@@ -183,26 +249,22 @@ export function bindGlobalEvents() {
 
       if (action === 'open-create-playlist') {
         event.preventDefault();
-        state.modal = { type: 'createPlaylist' };
-        renderOverlay();
+        openModal({ type: 'createPlaylist' });
         return;
       }
       if (action === 'close-modal') {
         event.preventDefault();
-        state.modal = null;
-        renderOverlay();
+        closeModal();
         return;
       }
       if (action === 'open-fullscreen-player') {
         event.preventDefault();
-        state.fullscreenPlayer = true;
-        renderFullscreenPlayer();
+        openFullscreenPlayer();
         return;
       }
       if (action === 'close-fullscreen-player') {
         event.preventDefault();
-        state.fullscreenPlayer = false;
-        renderFullscreenPlayer();
+        closeFullscreenPlayer();
         return;
       }
       if (action === 'toggle-video') {
@@ -216,16 +278,22 @@ export function bindGlobalEvents() {
         refreshPlaybackUI();
         renderPlayerBar();
         renderFullscreenPlayer();
+        renderOverlay();
+        if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
         return;
       }
       if (action === 'toggle-repeat') {
         event.preventDefault();
         toggleRepeat();
+        renderOverlay();
+        if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
         return;
       }
       if (action === 'toggle-shuffle') {
         event.preventDefault();
         toggleShuffle();
+        renderOverlay();
+        if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
         return;
       }
       if (action === 'download-song') {
@@ -235,13 +303,12 @@ export function bindGlobalEvents() {
       }
       if (action === 'open-lyrics') {
         event.preventDefault();
-        openLyrics();
+        openLyricsPanel();
         return;
       }
       if (action === 'close-lyrics') {
         event.preventDefault();
-        state.lyricsPanel = false;
-        renderLyricsPanel();
+        closeLyricsPanel();
         return;
       }
       if (action === 'open-artist-profile') {
@@ -294,20 +361,17 @@ export function bindGlobalEvents() {
       }
       if (action === 'close-artist-profile') {
         event.preventDefault();
-        state.artistProfile = null;
-        renderArtistProfile();
+        closeArtistProfile();
         return;
       }
       if (action === 'open-queue') {
         event.preventDefault();
-        state.queuePanel = true;
-        renderQueuePanel();
+        openQueuePanel();
         return;
       }
       if (action === 'close-queue') {
         event.preventDefault();
-        state.queuePanel = false;
-        renderQueuePanel();
+        closeQueuePanel();
         return;
       }
       if (action === 'remove-from-queue' && songId) {
@@ -317,7 +381,27 @@ export function bindGlobalEvents() {
       }
       if (action === 'navigate') {
         event.preventDefault();
-        navigate(actionNode.dataset.path || actionNode.dataset.route || '/');
+        dismissKeyboard();
+        if (state.modal) closeModal();
+        if (state.queuePanel) closeQueuePanel();
+        if (state.artistProfile) closeArtistProfile();
+        if (state.lyricsPanel) closeLyricsPanel();
+        if (state.fullscreenPlayer) closeFullscreenPlayer();
+        const target = actionNode.dataset.path || actionNode.dataset.route || '/';
+        markActiveNav(target);
+        navigate(target);
+        return;
+      }
+      if (action === 'go-back') {
+        event.preventDefault();
+        if (state.fullscreenPlayer) closeFullscreenPlayer();
+        const fallback = actionNode.dataset.fallback || (state.route.name === 'settings' ? '/you' : '/');
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          markActiveNav(fallback);
+          navigate(fallback);
+        }
         return;
       }
       if (action === 'clear-queue') {
@@ -332,14 +416,12 @@ export function bindGlobalEvents() {
       }
       if (action === 'open-app-info') {
         event.preventDefault();
-        state.modal = { type: 'appInfo' };
-        renderOverlay();
+        openModal({ type: 'appInfo' });
         return;
       }
       if (action === 'open-welcome-modal') {
         event.preventDefault();
-        state.modal = { type: 'welcome' };
-        renderOverlay();
+        openModal({ type: 'welcome' });
         return;
       }
       if (action === 'show-offline-info') {
@@ -349,10 +431,25 @@ export function bindGlobalEvents() {
       }
       if (action === 'clear-history') {
         event.preventDefault();
+        openModal({
+          type: 'confirm',
+          title: 'Clear History',
+          message: 'Are you sure you want to clear your listening history? This cannot be undone.',
+          confirmText: 'Clear History',
+          isDanger: true,
+          onConfirmAction: 'execute-clear-history',
+        });
+        return;
+      }
+
+      if (action === 'execute-clear-history') {
+        event.preventDefault();
+        closeModal();
         state.recentlyPlayed = [];
         saveJSON(STORAGE.RECENT_PLAYED, []);
-        showToast('Listening history cleared');
         renderCurrentRoute();
+        renderSidebarPlaylists();
+        showToast('Listening history cleared.');
         return;
       }
       if (action === 'set-search-tab') {
@@ -500,8 +597,38 @@ export function bindGlobalEvents() {
         return;
       }
 
+      if (action === 'clear-recent-searches') {
+        event.preventDefault();
+        state.recentSearches = [];
+        saveJSON(STORAGE.RECENT_SEARCHES, []);
+        showToast('Recent searches cleared.');
+        if (state.route.name === 'search' || state.route.name === 'you' || state.route.name === 'settings') {
+          renderCurrentRoute();
+        }
+        return;
+      }
+
       if (action === 'play-all-playlist' && playlistId) {
         event.preventDefault();
+        if (playlistId === 'liked' || playlistId === 'favorites') {
+          if (state.favorites && state.favorites.length > 0) {
+            await play(state.favorites[0], state.favorites, true);
+          } else {
+            showToast('No liked songs yet.');
+          }
+          return;
+        }
+        if (playlistId === 'history') {
+          const historySongs = (state.recentlyPlayed || [])
+            .map((id) => getSongById(id))
+            .filter(Boolean);
+          if (historySongs.length > 0) {
+            await play(historySongs[0], historySongs, true);
+          } else {
+            showToast('Listening history is empty.');
+          }
+          return;
+        }
         const playlist = state.playlists.find(
           (entry) => entry.id === playlistId
         );
@@ -512,6 +639,27 @@ export function bindGlobalEvents() {
 
       if (action === 'shuffle-playlist' && playlistId) {
         event.preventDefault();
+        if (playlistId === 'liked' || playlistId === 'favorites') {
+          if (state.favorites && state.favorites.length > 0) {
+            const shuffled = [...state.favorites].sort(() => Math.random() - 0.5);
+            await play(shuffled[0], shuffled, true);
+          } else {
+            showToast('No liked songs to shuffle.');
+          }
+          return;
+        }
+        if (playlistId === 'history') {
+          const historySongs = (state.recentlyPlayed || [])
+            .map((id) => getSongById(id))
+            .filter(Boolean);
+          if (historySongs.length > 0) {
+            const shuffled = [...historySongs].sort(() => Math.random() - 0.5);
+            await play(shuffled[0], shuffled, true);
+          } else {
+            showToast('Listening history is empty.');
+          }
+          return;
+        }
         if (playlistId.startsWith('artist-')) {
           const artistName = playlistId.replace('artist-', '');
           if (state.artistProfile?.songs?.length) {
@@ -537,10 +685,186 @@ export function bindGlobalEvents() {
         return;
       }
 
+      if (action === 'open-favorites') {
+        event.preventDefault();
+        navigate('/playlist/liked');
+        return;
+      }
+
+      if (action === 'play-favorites') {
+        event.preventDefault();
+        if (state.favorites && state.favorites.length > 0) {
+          await play(state.favorites[0], state.favorites, true);
+        } else {
+          showToast('No liked songs yet.');
+        }
+        return;
+      }
+
+      if (action === 'open-settings') {
+        event.preventDefault();
+        markActiveNav('/settings');
+        navigate('/settings');
+        return;
+      }
+
+      if (action === 'set-settings-tab') {
+        event.preventDefault();
+        const tab = actionNode.dataset.tab || 'all';
+        if (state.modal && state.modal.type === 'settings') {
+          state.modal.tab = tab;
+          renderOverlay();
+        }
+        return;
+      }
+
+      if (action === 'set-theme') {
+        event.preventDefault();
+        const newTheme = actionNode.dataset.theme || 'dark';
+        state.theme = newTheme;
+        saveJSON(STORAGE.THEME, newTheme);
+        applyTheme(newTheme);
+        renderOverlay();
+        if (state.route.name === 'you') renderCurrentRoute();
+        const labels = {
+          dark: 'Material Dark',
+          amoled: 'AMOLED Black',
+          light: 'Material Light',
+          system: 'System Mode',
+        };
+        if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
+        showToast(`Theme set to ${labels[newTheme] || newTheme}`);
+        return;
+      }
+
+      if (action === 'set-audio-quality') {
+        event.preventDefault();
+        const quality = actionNode.dataset.quality || 'high';
+        state.audioQuality = quality;
+        saveJSON(STORAGE.AUDIO_QUALITY, quality);
+        if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
+        const labels = {
+          normal: 'Normal (128 kbps)',
+          high: 'High (160 kbps Opus)',
+          'very-high': 'Very High (256 kbps Opus)',
+        };
+        showToast(`Audio quality set to ${labels[quality] || quality}`);
+        return;
+      }
+
+      if (action === 'toggle-autoplay') {
+        event.preventDefault();
+        state.autoplay = state.autoplay === false;
+        saveJSON(STORAGE.AUTOPLAY, state.autoplay);
+        renderOverlay();
+        if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
+        showToast(
+          state.autoplay
+            ? 'Continuous Autoplay enabled'
+            : 'Continuous Autoplay disabled'
+        );
+        return;
+      }
+
+      if (action === 'set-repeat') {
+        event.preventDefault();
+        const mode = actionNode.dataset.mode || 'none';
+        state.repeatMode = mode;
+        saveJSON(STORAGE.REPEAT, mode);
+        renderPlayerBar();
+        renderFullscreenPlayer();
+        renderOverlay();
+        if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
+        const labels = { none: 'Off', all: 'Repeat All', one: 'Repeat 1 Track' };
+        showToast(`Repeat mode: ${labels[mode] || mode}`);
+        return;
+      }
+
+      if (action === 'clear-cache') {
+        event.preventDefault();
+        openModal({
+          type: 'confirm',
+          title: 'Clear Cache',
+          message: 'Clear cached application data and temp storage? Your saved playlists and liked tracks will remain intact.',
+          confirmText: 'Clear Cache',
+          isDanger: false,
+          onConfirmAction: 'execute-clear-cache',
+        });
+        return;
+      }
+
+      if (action === 'execute-clear-cache') {
+        event.preventDefault();
+        closeModal();
+        if ('caches' in window) {
+          try {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+          } catch (err) {
+            console.warn('Cache clear error:', err);
+          }
+        }
+        showToast('App cache cleared successfully.');
+        if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
+        return;
+      }
+
+      if (action === 'install-pwa') {
+        event.preventDefault();
+        if (window.deferredPrompt) {
+          window.deferredPrompt.prompt();
+          window.deferredPrompt.userChoice.then(() => {
+            window.deferredPrompt = null;
+            renderOverlay();
+            if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
+          });
+        } else {
+          const isStandalone =
+            typeof window !== 'undefined' &&
+            window.matchMedia &&
+            window.matchMedia('(display-mode: standalone)').matches;
+          if (isStandalone) {
+            showToast('Pawtify is already installed and running in app mode.');
+          } else {
+            showToast('Install prompt is not supported by your browser or already active.');
+          }
+        }
+        return;
+      }
+
+      if (action === 'reset-all-data') {
+        event.preventDefault();
+        openModal({
+          type: 'confirm',
+          title: 'Reset All Data',
+          message: 'Are you sure you want to reset all data? This will permanently wipe all local playlists, favorites, listening history, and personal settings.',
+          confirmText: 'Reset Everything',
+          isDanger: true,
+          onConfirmAction: 'execute-reset-all-data',
+        });
+        return;
+      }
+
+      if (action === 'execute-reset-all-data') {
+        event.preventDefault();
+        closeModal();
+        localStorage.clear();
+        if (window.indexedDB) {
+          try {
+            window.indexedDB.deleteDatabase('pawtify_db');
+          } catch (e) {}
+        }
+        showToast('All data has been reset.');
+        setTimeout(() => {
+          window.location.hash = '#/';
+          window.location.reload();
+        }, 500);
+        return;
+      }
+
       if (action === 'edit-user-name') {
         event.preventDefault();
-        state.modal = { type: 'editName' };
-        renderOverlay();
+        openModal({ type: 'editName' });
         return;
       }
 
@@ -548,8 +872,7 @@ export function bindGlobalEvents() {
         event.preventDefault();
         state.userName = '';
         saveJSON(STORAGE.USER_NAME, '');
-        state.modal = null;
-        renderOverlay();
+        closeModal();
         renderCurrentRoute();
         showToast('Name reset to default.');
         return;
@@ -557,26 +880,45 @@ export function bindGlobalEvents() {
 
       if (action === 'delete-playlist' && playlistId) {
         event.preventDefault();
-        if (playlistId === 'default') return;
+        if (playlistId === 'default' || playlistId === 'history' || playlistId === 'liked') return;
         const playlist = state.playlists.find(
           (entry) => entry.id === playlistId
         );
         if (!playlist) return;
-        if (window.confirm(`Delete "${playlist.name}"?`)) {
-          deletePlaylist(playlistId);
+        openModal({
+          type: 'confirm',
+          title: 'Delete Playlist',
+          message: `Are you sure you want to delete "${playlist.name}"? This action cannot be undone.`,
+          confirmText: 'Delete',
+          isDanger: true,
+          onConfirmAction: 'execute-delete-playlist',
+          targetPlaylistId: playlistId,
+        });
+        return;
+      }
+
+      if (action === 'execute-delete-playlist') {
+        event.preventDefault();
+        const pId = state.modal?.targetPlaylistId;
+        closeModal();
+        if (pId) {
+          deletePlaylist(pId);
           if (
             state.route.name === 'playlist' &&
-            state.route.playlistId === playlistId
-          )
+            state.route.playlistId === pId
+          ) {
             navigate('/library');
-          else renderCurrentRoute();
+          } else {
+            renderCurrentRoute();
+          }
+          renderSidebarPlaylists();
+          showToast('Playlist deleted.');
         }
         return;
       }
       if (action === 'dismiss-overlay' && event.target === actionNode) {
         event.preventDefault();
-        state.modal = null;
-        renderOverlay();
+        closeModal();
         return;
       }
     } catch (err) {
@@ -584,9 +926,22 @@ export function bindGlobalEvents() {
     }
   });
 
+  document.addEventListener('focusin', (event) => {
+    if (event.target && event.target.id === 'search-input') {
+      if (!state.searchLayerActive && state.route?.name === 'search') {
+        state.searchLayerActive = true;
+        pushHistoryLayer('search');
+      }
+    }
+  });
+
   document.addEventListener('input', async (event) => {
     const target = event.target;
     if (target.id === 'search-input') {
+      if (!state.searchLayerActive && state.route?.name === 'search') {
+        state.searchLayerActive = true;
+        pushHistoryLayer('search');
+      }
       state.searchQuery = target.value; saveJSON(STORAGE.SEARCH_QUERY, target.value);
       if (!state.searchQuery.trim()) {
         state.searchLoading = false;
@@ -675,8 +1030,7 @@ export function bindGlobalEvents() {
       state.userName = name;
       saveJSON(STORAGE.USER_NAME, name);
       saveJSON('pawtify-welcome-seen', true);
-      state.modal = null;
-      renderOverlay();
+      closeModal();
       renderCurrentRoute();
       showToast(name ? `Welcome to Pawtify, ${name}!` : 'Welcome to Pawtify!');
       return;
@@ -687,9 +1041,8 @@ export function bindGlobalEvents() {
     const name = (input?.value || '').trim();
     if (!name) return;
     createPlaylist(name);
-    state.modal = null;
+    closeModal();
     renderCurrentRoute();
-    renderOverlay();
     renderSidebarPlaylists();
   });
 
@@ -704,29 +1057,29 @@ export function bindGlobalEvents() {
       }
     }
     if (event.key === 'Escape') {
-      if (state.lyricsPanel) {
-        state.lyricsPanel = false;
-        renderLyricsPanel();
-        return;
-      }
-      if (state.artistProfile) {
-        state.artistProfile = null;
-        renderArtistProfile();
+      if (state.modal) {
+        closeModal();
         return;
       }
       if (state.queuePanel) {
-        state.queuePanel = false;
-        renderQueuePanel();
+        closeQueuePanel();
+        return;
+      }
+      if (state.artistProfile) {
+        closeArtistProfile();
+        return;
+      }
+      if (state.lyricsPanel) {
+        closeLyricsPanel();
         return;
       }
       if (state.fullscreenPlayer) {
-        state.fullscreenPlayer = false;
-        renderFullscreenPlayer();
+        closeFullscreenPlayer();
         return;
       }
-      if (state.modal) {
-        state.modal = null;
-        renderOverlay();
+      if (isSearchModeActive()) {
+        exitSearchMode(true);
+        return;
       }
     }
   });

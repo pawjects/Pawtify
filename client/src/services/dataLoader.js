@@ -6,7 +6,7 @@ import {
   prioritizeMusic,
   mapServerSong,
 } from './youtube.js';
-import { saveJSON } from '../utils/utils.js';
+import { saveJSON, getOptimizedArtwork } from '../utils/utils.js';
 import { getSongRecommendations } from './apiMapping.js';
 
 export function getDiscoveryCategories() {
@@ -181,8 +181,8 @@ export async function fetchSongById(songId) {
         artist: oembed.author_name || 'YouTube Music',
         album: 'Single',
         coverUrl:
-          oembed.thumbnail_url ||
-          `https://i.ytimg.com/vi/${songId}/hqdefault.jpg`,
+          getOptimizedArtwork(oembed.thumbnail_url ||
+          `https://i.ytimg.com/vi/${songId}/hqdefault.jpg`, 540),
         audioUrl: songId,
         durationSec: 0,
         duration: '',
@@ -202,7 +202,7 @@ export async function fetchSongById(songId) {
     title: 'Track ' + songId,
     artist: 'Pawtify Stream',
     album: 'Single',
-    coverUrl: `https://i.ytimg.com/vi/${songId}/hqdefault.jpg`,
+    coverUrl: getOptimizedArtwork(`https://i.ytimg.com/vi/${songId}/hqdefault.jpg`, 540),
     audioUrl: songId,
     durationSec: 0,
     duration: '',

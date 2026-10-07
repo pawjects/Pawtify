@@ -7,7 +7,7 @@
     "start": "node server/index.js",
     "dev": "node server/index.js",
     "build": "echo 'No build step required for ES modules (Served directly)'",
-    "lint": "node --check server/index.js && node --check server/api/search.js && for file in client/src/*/*.js; do node --check \"$file\"; done",
+    "lint": "node --check server/index.js && node --check server/api/search.js && for file in client/src/*.js client/src/*/*.js; do node --check \"$file\"; done && node --experimental-vm-modules -e 'const fs=require(\"fs\"),path=require(\"path\"),vm=require(\"vm\");function c(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=path.join(d,e.name);if(e.isDirectory()){if(e.name!==\"node_modules\"&&e.name!==\"vendor\")c(f)}else if(e.name.endsWith(\".js\")){new vm.SourceTextModule(fs.readFileSync(f,\"utf8\"))}}}c(\"client\");'",
     "format": "prettier --write \"**/*.{html,css,js}\""
   },
   "repository": {

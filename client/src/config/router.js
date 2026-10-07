@@ -54,6 +54,18 @@ export function parseRoute() {
   if (normalized === '/library') {
     return { name: 'library', playlistId: null, songId: null };
   }
+  if (normalized === '/playlists') {
+    return { name: 'library', playlistId: null, songId: null, subTab: 'playlists' };
+  }
+  if (normalized === '/albums') {
+    return { name: 'library', playlistId: null, songId: null, subTab: 'albums' };
+  }
+  if (normalized === '/artists') {
+    return { name: 'library', playlistId: null, songId: null, subTab: 'artists' };
+  }
+  if (normalized === '/settings') {
+    return { name: 'settings', playlistId: null, songId: null };
+  }
   if (normalized === '/you') {
     return { name: 'you', playlistId: null, songId: null };
   }

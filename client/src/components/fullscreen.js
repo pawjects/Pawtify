@@ -1,6 +1,6 @@
 import { state, STORAGE, showToast } from '../config/config.js';
 import { fullscreenPlayer } from '../config/dom.js';
-import { escapeHTML, formatTime, saveJSON } from '../utils/utils.js';
+import { escapeHTML, formatTime, saveJSON, getOptimizedArtwork } from '../utils/utils.js';
 import { renderCurrentRoute } from './master.js';
 import { play } from './player.js';
 import {
@@ -14,11 +14,11 @@ export function renderFullscreenPlayer(force = false) {
   if (!state.currentSong || !state.fullscreenPlayer) {
     teardownWavyProgress();
     fullscreenPlayer.classList.remove('active');
-    fullscreenPlayer.innerHTML = '';
-    delete fullscreenPlayer.dataset.renderedTrackId;
+    document.body.classList.remove('has-fullscreen-open');
     return;
   }
   fullscreenPlayer.classList.add('active');
+  document.body.classList.add('has-fullscreen-open');
   const song = state.currentSong;
 
   // If already rendered with this song and not forced, avoid wiping DOM
@@ -56,7 +56,7 @@ export function renderFullscreenPlayer(force = false) {
        </div>
        <div class="fs-body">
          <div class="fs-cover-wrap">
-           <img class="fs-cover" src="${escapeHTML(song.coverUrl)}" alt="${escapeHTML(song.title)}" />
+           <img class="fs-cover" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 720))}" alt="${escapeHTML(song.title)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
          </div>
          <div class="fs-info">
            <div class="fs-text">
