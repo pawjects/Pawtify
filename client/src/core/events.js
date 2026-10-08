@@ -81,13 +81,15 @@ import {
   popHistoryLayer,
   dismissKeyboard,
 } from './navigationHistory.js';
+import {
+  hapticNavTap,
+  hapticSelection,
+  vibrate as hapticVibrate,
+} from '../utils/haptics.js';
+import { appMain } from '../config/dom.js';
 
-export function vibrate() {
-  if (navigator.vibrate) {
-    try {
-      navigator.vibrate(10);
-    } catch (e) {}
-  }
+export function vibrate(pattern = 8) {
+  hapticVibrate(pattern);
 }
 
 export function bindGlobalEvents() {
@@ -95,7 +97,7 @@ export function bindGlobalEvents() {
   window.addEventListener('popstate', handleGlobalPopState);
   window.addEventListener('resize', () => markActiveNav());
 
-  // Instantaneous tactile feedback on touch/click: start moving liquid pill immediately
+  // Instantaneous tactile feedback on touch/click: subtle haptic tick + immediate tab indicator shift
   document.addEventListener(
     'pointerdown',
     (event) => {
@@ -103,6 +105,7 @@ export function bindGlobalEvents() {
         '.nav-link, .mobile-nav-item, [data-route]'
       );
       if (routeButton && routeButton.dataset.route) {
+        hapticNavTap();
         markActiveNav(routeButton.dataset.route);
       }
     },
@@ -128,12 +131,16 @@ export function bindGlobalEvents() {
   });
 
   document.addEventListener('click', async (event) => {
-    const btn = event.target.closest(
-      'button, .song-row, .card, .home-scroll-card, .nav-link, .mobile-nav-item, .category-card, .queue-item, .list-item, .search-dropdown-item'
-    );
-    if (btn) vibrate();
-    const actionNode = event.target.closest('[data-action]');
     const routeButton = event.target.closest('[data-route]');
+    const actionNode = event.target.closest('[data-action]');
+
+    const btn = event.target.closest(
+      'button, .song-row, .card, .home-scroll-card, .category-card, .queue-item, .list-item, .search-dropdown-item'
+    );
+    if (btn && !routeButton) {
+      hapticSelection();
+    }
+
     if (actionNode && (!routeButton || routeButton.contains(actionNode))) {
       // Prioritize specific action
     } else if (routeButton) {
@@ -145,6 +152,23 @@ export function bindGlobalEvents() {
       if (state.lyricsPanel) closeLyricsPanel();
       if (state.fullscreenPlayer) closeFullscreenPlayer();
       const targetRoute = routeButton.dataset.route;
+
+      const currentHash = window.location.hash
+        ? window.location.hash.replace(/^#\/?/, '').trim()
+        : '';
+      const cleanTarget = targetRoute.replace(/^\//, '').trim();
+      const isSameRoute =
+        (cleanTarget === '' && (currentHash === '' || currentHash === '/')) ||
+        cleanTarget === currentHash;
+
+      if (isSameRoute) {
+        // Tapping already-active tab smoothly scrolls to top without reload or duplicate history
+        if (appMain && appMain.scrollTop > 5) {
+          appMain.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        return;
+      }
+
       markActiveNav(targetRoute);
       navigate(targetRoute);
       return;

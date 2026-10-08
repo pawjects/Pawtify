@@ -23,6 +23,7 @@ import { renderArtistProfile } from './artistProfile.js';
 import { renderQueuePanel } from './queuePanel.js';
 import { renderOverlay } from './overlay.js';
 import { fetchSongById } from '../services/dataLoader.js';
+import { hapticTabChange } from '../utils/haptics.js';
 import { play } from './player.js';
 
 let currentDeepLinkSongId = null;
@@ -151,6 +152,9 @@ export function renderCurrentRoute() {
     const newKey = state.route.name === 'playlist' ? `playlist-${state.route.playlistId}` : state.route.name;
     const targetScroll = tabScrollPositions.get(newKey) || 0;
     if (prevKey !== newKey) {
+      if (previousRoute) {
+        hapticTabChange();
+      }
       appMain.scrollTop = targetScroll;
       requestAnimationFrame(() => {
         if (appMain) appMain.scrollTop = targetScroll;

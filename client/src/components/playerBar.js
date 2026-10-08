@@ -267,6 +267,12 @@ export function markActiveNav(targetRoute = null, skipTransition = false) {
       (route === '/you' &&
         (routeName === 'you' || routeName === 'settings'));
     btn.classList.toggle('active', !!active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    if (active) {
+      btn.setAttribute('aria-current', 'page');
+    } else {
+      btn.removeAttribute('aria-current');
+    }
   });
 }
 

@@ -54,7 +54,7 @@
   --sidebar-width: 240px;
   --player-height: 76px;
   --mini-player-height: 56px;
-  --mobile-nav-height: 62px;
+  --mobile-nav-height: 52px;
 
   /* Aliases for System-wide Compatibility */
   --md-sys-color-background: var(--bg-app);
@@ -189,12 +189,15 @@
 }
 
 [data-theme="light"] .mobile-nav {
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.04);
 }
 [data-theme="light"] .mobile-nav-item {
-  color: #4e6152;
+  color: #556758;
 }
 [data-theme="light"] .mobile-nav-item.active {
   color: #101a12;
@@ -202,9 +205,16 @@
 [data-theme="light"] .mobile-nav-item.active i {
   color: var(--green);
 }
-[data-theme="light"] .mobile-nav-indicator {
-  background: linear-gradient(135deg, rgba(16, 142, 61, 0.16) 0%, rgba(16, 142, 61, 0.08) 100%);
-  border: 1px solid rgba(16, 142, 61, 0.28);
+[data-theme="light"] .mobile-nav-item.active span {
+  color: #101a12;
+  font-weight: 600;
+}
+[data-theme="light"] .mobile-nav-indicator::before {
+  background: var(--green);
+  box-shadow: 0 1px 4px rgba(16, 142, 61, 0.4);
+}
+[data-theme="light"] .mobile-nav-indicator::after {
+  background: radial-gradient(ellipse at 50% 0%, rgba(16, 142, 61, 0.1) 0%, transparent 75%);
 }
 [data-theme="light"] .mini-player {
   background: rgba(255, 255, 255, 0.95);
@@ -625,11 +635,12 @@ img {
 .search-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px 20px calc(var(--mobile-nav-height, 62px) + env(safe-area-inset-bottom, 0px) + 24px) 20px;
+  padding: 24px 20px calc(var(--mobile-nav-height, 52px) + env(safe-area-inset-bottom, 0px) + 20px) 20px;
+  transition: padding-bottom 0.22s cubic-bezier(0.2, 0.8, 0.25, 1);
 }
 
 body.has-active-track .search-page {
-  padding-bottom: calc(var(--mini-player-height, 60px) + var(--mobile-nav-height, 62px) + env(safe-area-inset-bottom, 0px) + 28px);
+  padding-bottom: calc(var(--mini-player-height, 56px) + var(--mobile-nav-height, 52px) + env(safe-area-inset-bottom, 0px) + 24px);
 }
 
 .search-header-container {
@@ -1239,11 +1250,11 @@ body.has-active-track .search-page {
   }
 @media (max-width: 480px) {
   .search-page {
-    padding: 16px 12px calc(var(--mobile-nav-height, 62px) + env(safe-area-inset-bottom, 0px) + 20px) 12px;
+    padding: 16px 12px calc(var(--mobile-nav-height, 52px) + env(safe-area-inset-bottom, 0px) + 16px) 12px;
   }
 
   body.has-active-track .search-page {
-    padding-bottom: calc(var(--mini-player-height, 60px) + var(--mobile-nav-height, 62px) + env(safe-area-inset-bottom, 0px) + 24px);
+    padding-bottom: calc(var(--mini-player-height, 54px) + var(--mobile-nav-height, 52px) + env(safe-area-inset-bottom, 0px) + 20px);
   }
 
   .search-header-container .page-title {
@@ -1924,43 +1935,72 @@ body.has-active-track .search-page {
   height: 5px;
 }
 
-/* ============ MOBILE BOTTOM NAV (MD3 Liquid Pill) ============ */
+/* ============ COMPACT SPOTIFY-INSPIRED MOBILE BOTTOM NAVIGATION ============ */
 .mobile-nav {
   display: none;
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-  left: 16px;
-  right: 16px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   z-index: 60;
-  background: rgba(17, 23, 19, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--md-shape-full);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-  height: var(--mobile-nav-height);
-  padding: 4px;
+  background: #090c0a;
+  background: linear-gradient(180deg, rgba(12, 16, 13, 0.98) 0%, rgba(7, 9, 8, 1) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 0;
+  box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.5);
+  height: calc(var(--mobile-nav-height, 52px) + env(safe-area-inset-bottom, 0px));
+  padding: 0 0 env(safe-area-inset-bottom, 0px) 0;
   box-sizing: border-box;
   grid-template-columns: repeat(4, 1fr);
   align-items: stretch;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  contain: layout paint;
 }
 
 .mobile-nav-indicator {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 4px;
-  width: calc((100% - 8px) / 4);
+  top: 0;
+  left: 0;
+  width: 25%;
+  height: 100%;
   transform: translate3d(calc(var(--active-tab-index, 0) * 100%), 0, 0);
-  background: linear-gradient(135deg, rgba(29, 185, 84, 0.22) 0%, rgba(29, 185, 84, 0.12) 100%);
-  border: 1px solid rgba(29, 185, 84, 0.32);
-  border-radius: var(--md-shape-full);
-  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.16);
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.25, 1);
   pointer-events: none;
   z-index: 0;
   will-change: transform;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Subtle Spotify-green top active indicator bar */
+.mobile-nav-indicator::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 24px;
+  height: 2.5px;
+  background: var(--green, #1db954);
+  border-radius: 0 0 3px 3px;
+  box-shadow: 0 1px 6px rgba(29, 185, 84, 0.55);
+}
+
+/* Very subtle ambient active glow - not a chunky pill */
+.mobile-nav-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 36px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(29, 185, 84, 0.12) 0%, transparent 75%);
+  pointer-events: none;
 }
 
 .mobile-nav-item {
@@ -1970,49 +2010,67 @@ body.has-active-track .search-page {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  color: var(--md-sys-color-on-surface-variant);
+  gap: 2.5px;
+  color: #8c9e91;
   font-size: 0.65rem;
   font-weight: 500;
-  height: 100%;
+  height: var(--mobile-nav-height, 52px);
   width: 100%;
   margin: 0;
-  border-radius: var(--md-shape-full);
-  transition: color 0.18s ease, transform 0.15s ease;
-  padding: 0;
+  padding: 0 4px;
+  border-radius: 0;
   border: none;
   background: transparent;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   user-select: none;
+  transition: color 0.16s ease, transform 0.12s ease;
 }
 
 .mobile-nav-item i {
   font-size: 1.15rem;
-  transition: color 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  color: inherit;
+  transition: color 0.16s ease, transform 0.2s cubic-bezier(0.2, 0.8, 0.25, 1), filter 0.16s ease;
 }
 
 .mobile-nav-item span {
-  transition: color 0.18s ease, font-weight 0.18s ease;
+  font-size: inherit;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: inherit;
+  transition: color 0.16s ease, font-weight 0.16s ease;
+  white-space: nowrap;
+}
+
+.mobile-nav-item:hover {
+  color: #c9d8cc;
 }
 
 .mobile-nav-item.active {
   color: #ffffff;
-  font-weight: 600;
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
 }
 
 .mobile-nav-item.active i {
-  color: var(--green);
-  transform: scale(1.08) translateY(-1px);
+  color: var(--green, #1db954);
+  transform: scale(1.06);
+  filter: drop-shadow(0 0 5px rgba(29, 185, 84, 0.35));
+}
+
+.mobile-nav-item.active span {
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .mobile-nav-item:active {
+  transform: scale(0.94);
   opacity: 0.85;
-  transform: scale(0.95);
 }
 
 /* ============ TABS ============ */
@@ -3024,17 +3082,18 @@ body.has-active-track .search-page {
 .mini-player {
   display: none;
   position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
+  left: 8px;
+  right: 8px;
+  bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 8px);
   z-index: 55;
   background: var(--surface-card);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
-  box-shadow: var(--elevation-3);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
   padding: 0;
   height: var(--mini-player-height);
   overflow: hidden;
+  transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.25, 1), opacity 0.2s ease;
 }
 
 .mini-player-inner {
@@ -3622,8 +3681,9 @@ body.has-active-track .search-page {
     padding: 18px 16px;
     gap: 20px;
     padding-bottom: calc(
-      var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 20px
+      var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 16px
     );
+    transition: padding-bottom 0.22s cubic-bezier(0.2, 0.8, 0.25, 1);
   }
 
   body.has-active-track .page {
@@ -3784,8 +3844,8 @@ body.has-active-track .search-page {
 /* ============ RESPONSIVE: SMALL PHONES (<=600px) ============ */
 @media (max-width: 600px) {
   :root {
-    --mini-player-height: 60px;
-    --mobile-nav-height: 62px;
+    --mini-player-height: 56px;
+    --mobile-nav-height: 52px;
   }
 
   html {
@@ -3991,23 +4051,23 @@ body.has-active-track .search-page {
   }
 
   .mobile-nav {
-    height: 62px;
+    height: calc(var(--mobile-nav-height, 52px) + env(safe-area-inset-bottom, 0px));
   }
 
   .mobile-nav-item {
-    font-size: 0.6875rem;
+    font-size: 0.65rem;
   }
 
   .mobile-nav-item i {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
   }
 }
 
 /* ============ RESPONSIVE: EXTRA SMALL (<=380px) ============ */
 @media (max-width: 380px) {
   :root {
-    --mini-player-height: 60px;
-    --mobile-nav-height: 62px;
+    --mini-player-height: 54px;
+    --mobile-nav-height: 50px;
   }
 
   html {
@@ -4139,15 +4199,24 @@ body.has-active-track .search-page {
   }
 
   .mobile-nav {
-    height: 48px;
+    height: calc(var(--mobile-nav-height, 50px) + env(safe-area-inset-bottom, 0px));
   }
 
   .mobile-nav-item {
+    height: var(--mobile-nav-height, 50px);
     gap: 2px;
   }
 
   .mobile-nav-item i {
-    font-size: 1rem;
+    font-size: 1.08rem;
+  }
+
+  .mobile-nav-item span {
+    font-size: 0.625rem;
+  }
+
+  .mobile-nav-indicator::before {
+    width: 20px;
   }
 
   .fs-cover-wrap {
@@ -6447,8 +6516,8 @@ input[type="range"] {
 /* ============ COMPREHENSIVE RESPONSIVENESS & 320px-430px MOBILE REFINEMENT ============ */
 @media (max-width: 480px) {
   :root {
-    --mobile-nav-height: 62px;
-    --mini-player-height: 60px;
+    --mobile-nav-height: 52px;
+    --mini-player-height: 54px;
   }
 
   .page {
@@ -6456,15 +6525,16 @@ input[type="range"] {
     padding-left: 12px;
     padding-right: 12px;
     padding-bottom: calc(
-      var(--mobile-nav-height, 62px) + env(safe-area-inset-bottom, 0px) + 20px
+      var(--mobile-nav-height, 52px) + env(safe-area-inset-bottom, 0px) + 16px
     );
     gap: 18px;
+    transition: padding-bottom 0.22s cubic-bezier(0.2, 0.8, 0.25, 1);
   }
 
   body.has-active-track .page {
     padding-bottom: calc(
-      var(--mini-player-height, 60px) + var(--mobile-nav-height, 62px) +
-        env(safe-area-inset-bottom, 0px) + 24px
+      var(--mini-player-height, 54px) + var(--mobile-nav-height, 52px) +
+        env(safe-area-inset-bottom, 0px) + 20px
     );
   }
 
@@ -6911,66 +6981,63 @@ input[type="range"] {
 
   /* Floating Mini Player & Clearance */
   .mini-player {
-    height: 60px;
-    min-height: 60px;
-    bottom: calc(var(--mobile-nav-height, 62px) + env(safe-area-inset-bottom, 0px) + 8px);
-    left: 10px;
-    right: 10px;
+    height: 54px;
+    min-height: 54px;
+    bottom: calc(var(--mobile-nav-height, 52px) + env(safe-area-inset-bottom, 0px) + 8px);
+    left: 8px;
+    right: 8px;
     border-radius: var(--radius-md);
   }
 
   .mini-player-inner {
-    padding: 6px 12px;
-    gap: 10px;
+    padding: 4px 10px;
+    gap: 8px;
   }
 
   .mini-player-cover {
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
-    min-height: 48px;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    min-height: 42px;
     border-radius: var(--radius-sm);
   }
 
   .mini-player-title {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 600;
   }
 
   .mini-player-artist {
-    font-size: 0.75rem;
+    font-size: 0.71875rem;
     color: var(--text-sub);
   }
 
   .mini-player-btn {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
-    min-height: 40px;
-    font-size: 1.05rem;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    font-size: 1rem;
   }
 
   .mobile-nav {
-    height: 62px;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-    left: 12px;
-    right: 12px;
+    height: calc(var(--mobile-nav-height, 52px) + env(safe-area-inset-bottom, 0px));
   }
 
   .mobile-nav-item {
-    font-size: 0.6875rem;
+    font-size: 0.65rem;
   }
 
   .mobile-nav-item i {
-    font-size: 1.2rem;
+    font-size: 1.125rem;
   }
 }
 
 /* ============ TARGET MOBILE: 320px-360px POLISH ============ */
 @media (max-width: 360px) {
   :root {
-    --mobile-nav-height: 60px;
-    --mini-player-height: 58px;
+    --mobile-nav-height: 50px;
+    --mini-player-height: 52px;
   }
 
   .page {
@@ -6978,15 +7045,16 @@ input[type="range"] {
     padding-left: 10px;
     padding-right: 10px;
     padding-bottom: calc(
-      var(--mobile-nav-height, 60px) + env(safe-area-inset-bottom, 0px) + 20px
+      var(--mobile-nav-height, 50px) + env(safe-area-inset-bottom, 0px) + 14px
     );
     gap: 14px;
+    transition: padding-bottom 0.22s cubic-bezier(0.2, 0.8, 0.25, 1);
   }
 
   body.has-active-track .page {
     padding-bottom: calc(
-      var(--mini-player-height, 58px) + var(--mobile-nav-height, 60px) +
-        env(safe-area-inset-bottom, 0px) + 24px
+      var(--mini-player-height, 52px) + var(--mobile-nav-height, 50px) +
+        env(safe-area-inset-bottom, 0px) + 18px
     );
   }
 
@@ -7189,37 +7257,126 @@ input[type="range"] {
   }
 
   .mini-player {
-    height: 58px;
-    min-height: 58px;
-    bottom: calc(var(--mobile-nav-height, 60px) + env(safe-area-inset-bottom, 0px) + 8px);
-    left: 8px;
-    right: 8px;
+    height: 52px;
+    min-height: 52px;
+    bottom: calc(var(--mobile-nav-height, 50px) + env(safe-area-inset-bottom, 0px) + 8px);
+    left: 6px;
+    right: 6px;
   }
 
   .mini-player-cover {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
   }
 
   .mini-player-title {
-    font-size: 0.8125rem;
+    font-size: 0.78125rem;
   }
 
   .mini-player-artist {
-    font-size: 0.71875rem;
+    font-size: 0.6875rem;
   }
 
   .mobile-nav {
-    height: 60px;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
-    left: 8px;
-    right: 8px;
+    height: calc(var(--mobile-nav-height, 50px) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-nav-item {
+    height: var(--mobile-nav-height, 50px);
+    gap: 2px;
+    padding: 0 2px;
+  }
+
+  .mobile-nav-item i {
+    font-size: 1.08rem;
+    width: 22px;
+    height: 20px;
+  }
+
+  .mobile-nav-item span {
+    font-size: 0.625rem;
+  }
+
+  .mobile-nav-indicator::before {
+    width: 20px;
   }
 }
 
 @media (max-width: 330px) {
+  :root {
+    --mobile-nav-height: 48px;
+    --mini-player-height: 50px;
+  }
+
+  .page {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: calc(
+      var(--mobile-nav-height, 48px) + env(safe-area-inset-bottom, 0px) + 12px
+    );
+  }
+
+  body.has-active-track .page {
+    padding-bottom: calc(
+      var(--mini-player-height, 50px) + var(--mobile-nav-height, 48px) +
+        env(safe-area-inset-bottom, 0px) + 16px
+    );
+  }
+
+  .mobile-nav {
+    height: calc(var(--mobile-nav-height, 48px) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-nav-item {
+    height: var(--mobile-nav-height, 48px);
+    gap: 1.5px;
+    padding: 0 1px;
+  }
+
+  .mobile-nav-item i {
+    font-size: 1.02rem;
+    width: 20px;
+    height: 18px;
+  }
+
+  .mobile-nav-item span {
+    font-size: 0.59375rem;
+  }
+
+  .mobile-nav-indicator::before {
+    width: 18px;
+  }
+
+  .mini-player {
+    height: 50px;
+    min-height: 50px;
+    left: 4px;
+    right: 4px;
+    bottom: calc(var(--mobile-nav-height, 48px) + env(safe-area-inset-bottom, 0px) + 6px);
+  }
+
+  .mini-player-inner {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+
+  .mini-player-cover {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+  }
+
+  .mini-player-btn {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    font-size: 0.95rem;
+  }
+
   .you-hub-grid {
     grid-template-columns: 1fr;
     gap: 8px;
