@@ -12,6 +12,7 @@ import {
   pause,
   previousTrack,
   nextTrack,
+  seekTo,
 } from '../components/player.js';
 import { persistPlayer } from '../core/details.js';
 import { loadJSON, saveJSON, getOptimizedArtwork } from '../utils/utils.js';
@@ -67,6 +68,40 @@ window.onYouTubeIframeAPIReady = function () {
   }
 };
 
+// Native HTMLMediaElement Audio Anchor for PWA & OS background playback
+let nativeAudioElement = null;
+
+export function getNativeAudio() {
+  if (typeof document === 'undefined') return null;
+  if (!nativeAudioElement) {
+    nativeAudioElement = document.getElementById('pawtify-native-audio');
+    if (!nativeAudioElement) {
+      nativeAudioElement = document.createElement('audio');
+      nativeAudioElement.id = 'pawtify-native-audio';
+      nativeAudioElement.playsInline = true;
+      nativeAudioElement.preload = 'metadata';
+      nativeAudioElement.style.display = 'none';
+      document.body.appendChild(nativeAudioElement);
+    }
+  }
+  return nativeAudioElement;
+}
+
+export function startBackgroundAudio() {
+  const audio = getNativeAudio();
+  if (!audio) return;
+  audio.volume = typeof state.volume === 'number' ? state.volume : 0.7;
+}
+
+export function stopBackgroundAudio() {
+  const audio = getNativeAudio();
+  if (audio && !audio.paused) {
+    try {
+      audio.pause();
+    } catch (e) {}
+  }
+}
+
 export function updateMediaSession(song) {
   if (!('mediaSession' in navigator)) return;
   if (!song) {
@@ -100,6 +135,13 @@ export function updateMediaSession(song) {
     if (globals.ytPlayerReady && globals.ytPlayer)
       globals.ytPlayer.seekTo(Math.max(0, state.progress - 10), true);
   });
+  try {
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details && typeof details.seekTime === 'number') {
+        seekTo(details.seekTime);
+      }
+    });
+  } catch (e) {}
 }
 
 export function onPlayerReady(event) {
@@ -134,6 +176,21 @@ export function startYTPoll() {
       const dur = globals.ytPlayer.getDuration();
       if (dur && dur > 0) state.duration = dur;
 
+      // Keep OS lock screen progress position synchronized
+      if (
+        'mediaSession' in navigator &&
+        'setPositionState' in navigator.mediaSession &&
+        state.duration > 0
+      ) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: Math.max(1, state.duration),
+            playbackRate: 1,
+            position: Math.max(0, Math.min(state.progress, state.duration)),
+          });
+        } catch (e) {}
+      }
+
       const now = Date.now();
       if (state.currentSong && now - lastSaveTime > 2000) {
         saveJSON(STORAGE.CURRENT_TIME, state.progress);
@@ -155,6 +212,7 @@ export function onPlayerStateChange(event) {
     if (state.currentSong) state.currentSong._triedFallback = false;
     if (navigator.mediaSession)
       navigator.mediaSession.playbackState = 'playing';
+    startBackgroundAudio();
     startYTPoll();
   } else if (event.data === 3) {
     // BUFFERING
@@ -162,10 +220,19 @@ export function onPlayerStateChange(event) {
     refreshPlaybackUI();
   } else if (event.data === 2) {
     // PAUSED
+    // If the browser/OS paused playback automatically because the tab or PWA
+    // was backgrounded, minimized, or the screen locked, but the app was in playing state:
+    if (document.hidden && state.isPlaying) {
+      if (navigator.mediaSession) {
+        navigator.mediaSession.playbackState = 'playing';
+      }
+      return;
+    }
     state.isPlaying = false;
     if (navigator.mediaSession) {
       navigator.mediaSession.playbackState = 'paused';
     }
+    stopBackgroundAudio();
     clearInterval(globals.ytPollInterval);
   } else if (event.data === 0) {
     // ENDED
@@ -177,10 +244,35 @@ export function onPlayerStateChange(event) {
       nextTrack();
     } else {
       state.isPlaying = false;
+      stopBackgroundAudio();
       refreshPlaybackUI();
     }
   }
   refreshPlaybackUI();
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      // PWA returned to foreground:
+      // If we are in playing state and the player was suspended by the background policy, resume
+      if (state.isPlaying) {
+        if (
+          globals.ytPlayerReady &&
+          globals.ytPlayer &&
+          typeof globals.ytPlayer.getPlayerState === 'function'
+        ) {
+          try {
+            const ps = globals.ytPlayer.getPlayerState();
+            if (ps === 2 || ps === -1 || ps === 5) {
+              globals.ytPlayer.playVideo();
+            }
+          } catch (e) {}
+        }
+        refreshPlaybackUI();
+      }
+    }
+  });
 }
 
 window.addEventListener('online', () => {

@@ -157,6 +157,9 @@ class YouTubePlayerEngine {
       this.callbacks?.onPlay();
     } else if (data === 2) {
       // PAUSED
+      if (typeof document !== 'undefined' && document.hidden) {
+        return;
+      }
       this.stopPolling();
       this.callbacks?.onPause();
     } else if (data === 3) {
@@ -342,6 +345,13 @@ class YouTubePlayerEngine {
       navigator.mediaSession.setActionHandler('nexttrack', actions.onNext);
       navigator.mediaSession.setActionHandler('seekforward', () => actions.onSeek(10));
       navigator.mediaSession.setActionHandler('seekbackward', () => actions.onSeek(-10));
+      try {
+        navigator.mediaSession.setActionHandler('seekto', (details: any) => {
+          if (details && typeof details.seekTime === 'number') {
+            this.seekTo(details.seekTime);
+          }
+        });
+      } catch {}
     } catch (e) {
       console.warn('MediaSession update error:', e);
     }

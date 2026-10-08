@@ -16,6 +16,7 @@ import { idbGet } from '../utils/idb.js';
 import {
   loadYTApi,
   updateMediaSession,
+  getNativeAudio,
 } from '../services/youtube.js';
 import { bindGlobalEvents } from '../core/events.js';
 import { renderCurrentRoute } from '../components/master.js';
@@ -41,7 +42,9 @@ export const STORAGE = {
   RECENT_SEARCHES: 'pawtify-recent-searches',
   SEARCH_QUERY: 'pawtify-search-query',
   RECENT_PLAYED: 'pawtify-recently-played',
-  ACTIVITY: 'pawtify-listening-activity',
+  FOLLOWED_ARTISTS: 'pawtify-followed-artists',
+  SAVED_PLAYLISTS: 'pawtify-saved-playlists',
+  SAVED_ALBUMS: 'pawtify-saved-albums',
   USER_NAME: 'pawtify-user-name',
   AUDIO_QUALITY: 'pawtify-audio-quality',
 };
@@ -251,7 +254,9 @@ Object.assign(state, {
   englishSongs: [],
   recommendedSongs: [],
   recentlyPlayed: loadJSON(STORAGE.RECENT_PLAYED, []),
-  listeningActivity: loadJSON(STORAGE.ACTIVITY, []),
+  followedArtists: loadJSON(STORAGE.FOLLOWED_ARTISTS, []),
+  savedPlaylists: loadJSON(STORAGE.SAVED_PLAYLISTS, []),
+  savedAlbums: loadJSON(STORAGE.SAVED_ALBUMS, []),
   pendingSearchQuery: '',
   modal: null,
   fullscreenPlayer: false,
@@ -278,8 +283,14 @@ export async function initApp() {
     const idbRecent = await idbGet(STORAGE.RECENT_PLAYED);
     if (idbRecent) state.recentlyPlayed = idbRecent;
 
-    const idbActivity = await idbGet(STORAGE.ACTIVITY);
-    if (idbActivity) state.listeningActivity = idbActivity;
+    const idbFollowedArtists = await idbGet(STORAGE.FOLLOWED_ARTISTS);
+    if (idbFollowedArtists) state.followedArtists = idbFollowedArtists;
+
+    const idbSavedPlaylists = await idbGet(STORAGE.SAVED_PLAYLISTS);
+    if (idbSavedPlaylists) state.savedPlaylists = idbSavedPlaylists;
+
+    const idbSavedAlbums = await idbGet(STORAGE.SAVED_ALBUMS);
+    if (idbSavedAlbums) state.savedAlbums = idbSavedAlbums;
 
     const idbSong = await idbGet(STORAGE.CURRENT_SONG);
     if (idbSong !== undefined) state.currentSong = idbSong;
@@ -297,6 +308,34 @@ export async function initApp() {
     if (typeof window !== 'undefined' && window.matchMedia) {
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
         if (state.theme === 'system') applyTheme('system');
+      });
+    }
+
+    // Prevent pause() calls on the global HTMLMediaElement when document.hidden becomes true
+    if (typeof window !== 'undefined') {
+      window.addEventListener('visibilitychange', () => {
+        const globalAudio =
+          getNativeAudio() ||
+          (typeof document !== 'undefined'
+            ? document.getElementById('pawtify-native-audio')
+            : null);
+        if (!globalAudio) return;
+
+        if (document.hidden) {
+          if (!globalAudio._originalPause) {
+            globalAudio._originalPause = globalAudio.pause;
+          }
+          globalAudio.pause = function preventedHiddenPause() {
+            if (document.hidden) {
+              return;
+            }
+            return globalAudio._originalPause.apply(this, arguments);
+          };
+        } else {
+          if (globalAudio._originalPause) {
+            globalAudio.pause = globalAudio._originalPause;
+          }
+        }
       });
     }
 

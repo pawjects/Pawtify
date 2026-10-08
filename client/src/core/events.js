@@ -14,6 +14,10 @@ import {
   seekTo,
   setVolume,
   createPlaylist,
+  dismissPlayer,
+  toggleFollowArtist,
+  toggleSavePlaylist,
+  toggleSaveAlbum,
 } from '../components/player.js';
 import {
   playSongById,
@@ -274,6 +278,45 @@ export function bindGlobalEvents() {
         if (song) toggleFavorite(song);
         return;
       }
+      if (action === 'toggle-follow-artist') {
+        event.preventDefault();
+        const artistName = actionNode.dataset.artist || '';
+        const imageUrl = actionNode.dataset.image || '';
+        if (artistName) {
+          toggleFollowArtist({ name: artistName, imageUrl });
+        }
+        return;
+      }
+      if (action === 'toggle-save-playlist') {
+        event.preventDefault();
+        const pid = actionNode.dataset.playlistId;
+        const name = actionNode.dataset.playlistName;
+        const uploader = actionNode.dataset.playlistUploader;
+        const cover = actionNode.dataset.playlistCover;
+        if (pid) {
+          toggleSavePlaylist({ id: pid, name, uploaderName: uploader, coverUrl: cover });
+        }
+        return;
+      }
+      if (action === 'toggle-save-album') {
+        event.preventDefault();
+        const aid = actionNode.dataset.albumId;
+        const name = actionNode.dataset.albumName;
+        const artist = actionNode.dataset.albumArtist;
+        const cover = actionNode.dataset.albumCover;
+        const year = actionNode.dataset.albumYear;
+        if (name) {
+          toggleSaveAlbum({ id: aid, name, artist, coverUrl: cover, year });
+        }
+        return;
+      }
+      if (action === 'play-favorites') {
+        event.preventDefault();
+        if (state.favorites && state.favorites.length > 0) {
+          await play(state.favorites[0], state.favorites, true);
+        }
+        return;
+      }
       if (action === 'open-song-details') {
         event.preventDefault();
         openSongDetails();
@@ -334,6 +377,12 @@ export function bindGlobalEvents() {
       if (action === 'close-fullscreen-player') {
         event.preventDefault();
         closeFullscreenPlayer();
+        return;
+      }
+      if (action === 'dismiss-player' || action === 'close-mini-player') {
+        event.preventDefault();
+        event.stopPropagation();
+        dismissPlayer();
         return;
       }
       if (action === 'toggle-video') {
@@ -532,36 +581,11 @@ export function bindGlobalEvents() {
         return;
       }
 
-      if (action === 'clear-activity') {
-        event.preventDefault();
-        openModal({
-          type: 'confirm',
-          title: 'Clear Activity Feed',
-          message: 'Are you sure you want to clear your listening activity feed? Your playlists and saved songs will remain intact.',
-          confirmText: 'Clear Activity',
-          isDanger: true,
-          onConfirmAction: 'execute-clear-activity',
-        });
-        return;
-      }
-
-      if (action === 'execute-clear-activity') {
-        event.preventDefault();
-        closeModal();
-        state.listeningActivity = [];
-        saveJSON(STORAGE.ACTIVITY, []);
-        renderCurrentRoute();
-        showToast('Listening activity cleared.');
-        return;
-      }
-
       if (action === 'execute-clear-history') {
         event.preventDefault();
         closeModal();
         state.recentlyPlayed = [];
-        state.listeningActivity = [];
         saveJSON(STORAGE.RECENT_PLAYED, []);
-        saveJSON(STORAGE.ACTIVITY, []);
         renderCurrentRoute();
         renderSidebarPlaylists();
         showToast('Listening history cleared.');
@@ -589,7 +613,13 @@ export function bindGlobalEvents() {
 
       if (action === 'export-library') {
         event.preventDefault();
-        const data = { favorites: state.favorites, playlists: state.playlists };
+        const data = {
+          favorites: state.favorites || [],
+          playlists: state.playlists || [],
+          followedArtists: state.followedArtists || [],
+          savedPlaylists: state.savedPlaylists || [],
+          savedAlbums: state.savedAlbums || [],
+        };
         const blob = new Blob([JSON.stringify(data, null, 2)], {
           type: 'application/json',
         });
@@ -646,6 +676,41 @@ export function bindGlobalEvents() {
                 });
                 saveJSON(STORAGE.PLAYLISTS, state.playlists);
                 seedCatalog();
+                imported = true;
+              }
+              if (data.followedArtists && Array.isArray(data.followedArtists)) {
+                const map = new Map();
+                [...(state.followedArtists || []), ...data.followedArtists].forEach((a) => {
+                  const name = (typeof a === 'string' ? a : a.name || '').trim();
+                  if (name && !map.has(name.toLowerCase())) {
+                    map.set(name.toLowerCase(), typeof a === 'object' ? a : { name, imageUrl: '', id: `artist-${encodeURIComponent(name)}` });
+                  }
+                });
+                state.followedArtists = Array.from(map.values());
+                saveJSON(STORAGE.FOLLOWED_ARTISTS, state.followedArtists);
+                imported = true;
+              }
+              if (data.savedPlaylists && Array.isArray(data.savedPlaylists)) {
+                const map = new Map();
+                [...(state.savedPlaylists || []), ...data.savedPlaylists].forEach((p) => {
+                  if (p && p.id && !map.has(String(p.id))) {
+                    map.set(String(p.id), p);
+                  }
+                });
+                state.savedPlaylists = Array.from(map.values());
+                saveJSON(STORAGE.SAVED_PLAYLISTS, state.savedPlaylists);
+                imported = true;
+              }
+              if (data.savedAlbums && Array.isArray(data.savedAlbums)) {
+                const map = new Map();
+                [...(state.savedAlbums || []), ...data.savedAlbums].forEach((a) => {
+                  const name = (a.name || a.title || '').trim().toLowerCase();
+                  if (name && !map.has(name)) {
+                    map.set(name, a);
+                  }
+                });
+                state.savedAlbums = Array.from(map.values());
+                saveJSON(STORAGE.SAVED_ALBUMS, state.savedAlbums);
                 imported = true;
               }
               if (imported) {

@@ -173,6 +173,14 @@
       <div id="yt-player-host"></div>
     </div>
 
+    <!-- Native HTMLMediaElement Audio Player for PWA Background Playback & OS Media Session -->
+    <audio
+      id="pawtify-native-audio"
+      preload="metadata"
+      playsinline
+      style="display: none"
+    ></audio>
+
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

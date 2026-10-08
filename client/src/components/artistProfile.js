@@ -9,6 +9,7 @@ import { searchSongs, searchArtists } from '../services/apiMapping.js';
 import { escapeHTML } from '../utils/utils.js';
 import { renderSongRow } from './components.js';
 import { pushHistoryLayer } from '../core/navigationHistory.js';
+import { isArtistFollowed } from './player.js';
 
 export async function openArtistProfile(artistName) {
   pushHistoryLayer('artist');
@@ -66,6 +67,7 @@ export function renderArtistProfile() {
   }
   artistProfile.classList.add('active');
   const artist = state.artistProfile;
+  const isFollowed = isArtistFollowed(artist.name);
   artistProfile.innerHTML = `
      <div class="artist-hero">
        <button class="artist-hero-back" data-action="close-artist-profile" type="button" aria-label="Back">
@@ -75,10 +77,14 @@ export function renderArtistProfile() {
        <div class="artist-hero-name">${escapeHTML(artist.name)}</div>
        <div class="artist-hero-meta">${escapeHTML(artist.type || 'Artist')} \u2022 ${artist.songs?.length || 0} songs</div>
        <div class="artist-hero-actions">
-         <button class="btn-play" data-action="play-song" data-song-id="${escapeHTML(artist.songs?.[0]?.id || '')}" data-source="artist" type="button">
+         <button class="btn-play" data-action="play-song" data-song-id="${escapeHTML(artist.songs?.[0]?.id || '')}" data-source="artist" type="button" aria-label="Play ${escapeHTML(artist.name)}">
            <i class="fa-solid fa-play"></i>
          </button>
-         <button class="btn-icon" data-action="shuffle-playlist" data-playlist-id="artist-${escapeHTML(artist.name)}" type="button">
+         <button class="btn-follow ${isFollowed ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(artist.imageUrl || '')}" type="button" aria-label="${isFollowed ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
+           <i class="fa-solid ${isFollowed ? 'fa-check' : 'fa-plus'}"></i>
+           <span>${isFollowed ? 'Following' : 'Follow'}</span>
+         </button>
+         <button class="btn-icon" data-action="shuffle-playlist" data-playlist-id="artist-${escapeHTML(artist.name)}" type="button" aria-label="Shuffle ${escapeHTML(artist.name)}">
            <i class="fa-solid fa-shuffle"></i>
          </button>
        </div>

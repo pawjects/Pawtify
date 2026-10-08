@@ -11,6 +11,7 @@ export const MiniPlayer: React.FC = () => {
     progress,
     duration,
     togglePlayPause,
+    pause,
     nextTrack,
     prevTrack,
     toggleFavorite,
@@ -81,31 +82,20 @@ export const MiniPlayer: React.FC = () => {
 
         <div className="mini-player-btns" onClick={(e) => e.stopPropagation()}>
           <button
-            className="mini-player-btn"
-            onClick={() => toggleFavorite(currentSong)}
-            title={liked ? 'Remove from favorites' : 'Add to favorites'}
-            aria-label="Like"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: liked ? 'var(--green)' : 'var(--text)',
-            }}
-          >
-            <i className={liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} />
-          </button>
-
-          <button
-            className="mini-player-btn"
+            className="mini-player-btn mini-player-play-btn"
             onClick={togglePlayPause}
             title={isPlaying ? 'Pause' : 'Play'}
             aria-label={isPlaying ? 'Pause' : 'Play'}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text)',
-            }}
           >
             <i className={isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play'} />
+          </button>
+          <button
+            className="mini-player-btn mini-player-dismiss-btn"
+            onClick={() => pause()}
+            title="Close player"
+            aria-label="Close player"
+          >
+            <i className="fa-solid fa-xmark" />
           </button>
         </div>
       </div>

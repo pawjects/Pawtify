@@ -2,6 +2,7 @@ import { escapeHTML, getOptimizedArtwork } from '../utils/utils.js';
 import { state } from '../config/config.js';
 import { getSongById, dedupeSongs, rememberSongs } from '../core/details.js';
 import { fetchPlaylistDetails } from '../services/apiMapping.js';
+import { isArtistFollowed, isPlaylistSaved, isAlbumSaved } from './player.js';
 
 export function renderSongRowSkeleton() {
   return `
@@ -457,56 +458,116 @@ export function renderLibraryPage() {
     }
   } else {
     if (state.libraryTab === 'playlists') {
-      tabContent = `<div class="card-grid">${state.playlists.length ? state.playlists.map((p, i) => renderPlaylistCard(p, i)).join('') : '<div class="empty-state"><i class="fa-solid fa-list-ul"></i><h2>No playlists yet</h2><p>Create a playlist to organize your favorite music.</p><button class="btn btn-primary" data-action="open-create-playlist" type="button" style="margin-top:12px;"><i class="fa-solid fa-plus"></i> New Playlist</button></div>'}</div>`;
+      const allPlaylists = [
+        ...(state.playlists || []),
+        ...(state.savedPlaylists || []).filter((sp) => !(state.playlists || []).some((p) => p.id === sp.id)),
+      ];
+      tabContent = `<div class="card-grid">${allPlaylists.length ? allPlaylists.map((p, i) => renderPlaylistCard(p, i)).join('') : '<div class="empty-state"><i class="fa-solid fa-list-ul"></i><h2>No playlists yet</h2><p>Create a playlist or bookmark community playlists to build your collection.</p><button class="btn btn-primary" data-action="open-create-playlist" type="button" style="margin-top:12px;"><i class="fa-solid fa-plus"></i> New Playlist</button></div>'}</div>`;
     } else if (state.libraryTab === 'albums') {
       const albumMap = new Map();
+      // 1. Explicitly saved albums
+      (state.savedAlbums || []).forEach((alb) => {
+        const key = (alb.name || alb.title || '').trim().toLowerCase();
+        if (key && !albumMap.has(key)) {
+          albumMap.set(key, {
+            id: alb.id || alb.albumId,
+            name: alb.name || alb.title,
+            artist: alb.artist || 'Unknown Artist',
+            coverUrl: getOptimizedArtwork(alb.coverUrl || alb.imageUrl, 320),
+            songCount: alb.songCount || 1,
+            isSaved: true,
+          });
+        }
+      });
+      // 2. Extracted album metadata from liked songs and playlists
       [...(state.favorites || []), ...(state.playlists || []).flatMap((p) => p.songs || [])].forEach((s) => {
         if (s && s.album && s.album !== 'Single' && s.album !== 'Unknown') {
-          if (!albumMap.has(s.album)) {
-            albumMap.set(s.album, {
+          const key = s.album.trim().toLowerCase();
+          if (!albumMap.has(key)) {
+            albumMap.set(key, {
               name: s.album,
               artist: s.artist,
               coverUrl: getOptimizedArtwork(s.coverUrl, 320),
               songCount: 1,
             });
           } else {
-            albumMap.get(s.album).songCount += 1;
+            albumMap.get(key).songCount += 1;
           }
         }
       });
       const savedAlbums = Array.from(albumMap.values());
       tabContent = savedAlbums.length
-        ? `<div class="card-grid">${savedAlbums.map((album) => `
-            <div class="card" data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}" role="button" tabindex="0">
+        ? `<div class="card-grid">${savedAlbums.map((album) => {
+            const isRemoteAlbum = album.id && !String(album.id).startsWith('album-');
+            return `
+            <div class="card" ${isRemoteAlbum ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} role="button" tabindex="0">
               <div class="card-img-wrap">
                 <img class="card-cover" src="${escapeHTML(album.coverUrl)}" alt="${escapeHTML(album.name)}" draggable="false" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-                <button class="card-play-btn" type="button" aria-label="View Album">
-                  <i class="fa-solid fa-compact-disc"></i>
+                <button class="card-play-btn" ${isRemoteAlbum ? `data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" aria-label="Play Album" onclick="event.stopPropagation();"` : `type="button" aria-label="View Artist"`}>
+                  <i class="fa-solid ${isRemoteAlbum ? 'fa-play' : 'fa-compact-disc'}"></i>
+                </button>
+                <button class="card-bookmark-btn ${isAlbumSaved({ name: album.name, artist: album.artist }) ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id || '')}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist)}" data-album-cover="${escapeHTML(album.coverUrl)}" type="button" aria-label="${isAlbumSaved({ name: album.name, artist: album.artist }) ? 'Unsave album' : 'Save album'}" onclick="event.stopPropagation();">
+                  <i class="fa-solid ${isAlbumSaved({ name: album.name, artist: album.artist }) ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
                 </button>
               </div>
               <div class="card-title">${escapeHTML(album.name)}</div>
               <div class="card-meta">${escapeHTML(album.artist)} &bull; ${album.songCount} track${album.songCount === 1 ? '' : 's'}</div>
             </div>
-          `).join('')}</div>`
-        : '<div class="empty-state"><i class="fa-solid fa-compact-disc"></i><h2>No saved albums</h2><p>Favorite tracks with album metadata to organize your personal discography here.</p></div>';
+          `;
+          }).join('')}</div>`
+        : '<div class="empty-state"><i class="fa-solid fa-compact-disc"></i><h2>No saved albums</h2><p>Bookmark albums from search or favorite tracks with album metadata to organize your personal discography here.</p></div>';
     } else if (state.libraryTab === 'artists') {
+      const artistMap = new Map();
+      // 1. Explicitly followed artists
+      (state.followedArtists || []).forEach((fa) => {
+        const name = (typeof fa === 'string' ? fa : fa.name || '').trim();
+        if (name && !artistMap.has(name.toLowerCase())) {
+          artistMap.set(name.toLowerCase(), {
+            name,
+            imageUrl: fa.imageUrl || '',
+            isFollowed: true,
+          });
+        }
+      });
+      // 2. Extracted artists from favorites, playlists, and history
       const rawArtists = [
         ...(state.favorites || []).map((s) => s.artist),
         ...(state.playlists || []).flatMap((p) => (p.songs || []).map((s) => s.artist)),
         ...(state.recentlyPlayed || []).map((id) => getSongById(id)?.artist),
       ].filter(Boolean);
-      const uniqueArtists = Array.from(new Set(rawArtists));
+      rawArtists.forEach((a) => {
+        const key = a.trim().toLowerCase();
+        if (!artistMap.has(key)) {
+          artistMap.set(key, {
+            name: a,
+            imageUrl: '',
+            isFollowed: isArtistFollowed(a),
+          });
+        }
+      });
+
+      const uniqueArtists = Array.from(artistMap.values());
       tabContent = uniqueArtists.length
         ? `<div class="card-grid">${uniqueArtists.map((artist) => `
-            <div class="card" data-action="open-artist-profile" data-artist="${escapeHTML(artist)}" tabindex="0" role="button">
+            <div class="card card-search-artist" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" tabindex="0" role="button">
               <div class="card-img-wrap" style="border-radius: 50%; overflow: hidden; margin-bottom: 12px; aspect-ratio: 1/1; background: var(--hover); display: flex; align-items: center; justify-content: center;">
-                <i class="fa-solid fa-user" style="font-size: 2.2rem; color: var(--muted);"></i>
+                ${
+                  artist.imageUrl
+                    ? `<img src="${escapeHTML(getOptimizedArtwork(artist.imageUrl, 240))}" alt="${escapeHTML(artist.name)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><i class="fa-solid fa-user" style="display:none; font-size: 2.2rem; color: var(--muted);"></i>`
+                    : `<i class="fa-solid fa-user" style="font-size: 2.2rem; color: var(--muted);"></i>`
+                }
               </div>
-              <div class="card-title" style="text-align: center;">${escapeHTML(artist)}</div>
-              <div class="card-meta" style="text-align: center;">Artist</div>
+              <div class="card-title" style="text-align: center;">${escapeHTML(artist.name)}</div>
+              <div class="card-meta" style="text-align: center; margin-bottom: 8px;">Artist</div>
+              <div style="display:flex; justify-content:center; margin-top:auto;">
+                <button class="btn-card-follow ${isArtistFollowed(artist.name) ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(artist.imageUrl || '')}" type="button" onclick="event.stopPropagation();" aria-label="${isArtistFollowed(artist.name) ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
+                  <i class="fa-solid ${isArtistFollowed(artist.name) ? 'fa-check' : 'fa-plus'}"></i>
+                  <span>${isArtistFollowed(artist.name) ? 'Following' : 'Follow'}</span>
+                </button>
+              </div>
             </div>
           `).join('')}</div>`
-        : '<div class="empty-state"><i class="fa-solid fa-user-astronaut"></i><h2>No saved artists</h2><p>Favorite tracks or playlists to populate your artists here.</p></div>';
+        : '<div class="empty-state"><i class="fa-solid fa-user-astronaut"></i><h2>No followed artists</h2><p>Follow artists to view them in your personal library.</p></div>';
     } else if (state.libraryTab === 'favorites') {
       tabContent = `<div class="song-table">${state.favorites.length ? state.favorites.map((s, i) => renderSongRow(s, i + 1, 'favorites')).join('') : '<div class="empty-state"><i class="fa-solid fa-heart"></i><h2>No favorites yet</h2><p>Like a song to add it here.</p></div>'}</div>`;
     } else {
@@ -614,6 +675,9 @@ export function renderPlaylistPage(playlistId) {
     };
   } else {
     playlist = state.playlists.find((p) => p.id === playlistId);
+    if (!playlist && state.savedPlaylists) {
+      playlist = state.savedPlaylists.find((p) => String(p.id) === String(playlistId));
+    }
     if (!playlist && state.ytPlaylists && state.ytPlaylists[playlistId]) {
       playlist = state.ytPlaylists[playlistId];
     }
@@ -691,7 +755,24 @@ export function renderPlaylistPage(playlistId) {
               <i class="fa-solid fa-share-nodes"></i> Share
             </button>
             ${
-              playlist.id !== 'default' && !playlist.isSystem
+              !playlist.isSystem && !state.playlists.some((p) => p.id === playlist.id)
+                ? (playlist.isAlbum
+                    ? `
+              <button class="btn btn-soft ${isAlbumSaved({ name: playlist.name, id: playlist.id }) ? 'saved-active' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(playlist.id)}" data-album-name="${escapeHTML(playlist.name)}" data-album-artist="${escapeHTML(playlist.uploaderName || '')}" data-album-cover="${escapeHTML(coverUrl)}" type="button" aria-label="${isAlbumSaved({ name: playlist.name, id: playlist.id }) ? 'Unsave Album' : 'Save Album'}">
+                <i class="fa-solid ${isAlbumSaved({ name: playlist.name, id: playlist.id }) ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
+                <span>${isAlbumSaved({ name: playlist.name, id: playlist.id }) ? 'Saved' : 'Save'}</span>
+              </button>
+            `
+                    : `
+              <button class="btn btn-soft ${isPlaylistSaved(playlist.id) ? 'saved-active' : ''}" data-action="toggle-save-playlist" data-playlist-id="${escapeHTML(playlist.id)}" data-playlist-name="${escapeHTML(playlist.name)}" data-playlist-uploader="${escapeHTML(playlist.uploaderName || '')}" data-playlist-cover="${escapeHTML(coverUrl)}" type="button" aria-label="${isPlaylistSaved(playlist.id) ? 'Unsave Playlist' : 'Save Playlist'}">
+                <i class="fa-solid ${isPlaylistSaved(playlist.id) ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
+                <span>${isPlaylistSaved(playlist.id) ? 'Saved' : 'Save'}</span>
+              </button>
+            `)
+                : ''
+            }
+            ${
+              playlist.id !== 'default' && !playlist.isSystem && state.playlists.some((p) => p.id === playlist.id)
                 ? `<button class="btn btn-danger" data-action="delete-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Delete Playlist"><i class="fa-solid fa-trash"></i></button>`
                 : ''
             }
@@ -743,6 +824,8 @@ export function renderPlaylistCard(playlist, index) {
       ? playlist.songs[0].coverUrl
       : 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=300&h=300';
   const coverUrl = getOptimizedArtwork(rawCover, 320);
+  const isSaved = isPlaylistSaved(playlist.id);
+  const isCustomUserPlaylist = state.playlists.some((p) => p.id === playlist.id);
   return `
     <div class="card" data-action="navigate" data-path="/playlist/${escapeHTML(playlist.id)}" tabindex="0">
       <div class="card-img-wrap">
@@ -750,6 +833,15 @@ export function renderPlaylistCard(playlist, index) {
         <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Play ${escapeHTML(playlist.name)}" onclick="event.stopPropagation();">
           <i class="fa-solid fa-play"></i>
         </button>
+        ${
+          !playlist.isSystem && !isCustomUserPlaylist
+            ? `
+          <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-playlist" data-playlist-id="${escapeHTML(playlist.id)}" data-playlist-name="${escapeHTML(playlist.name)}" data-playlist-uploader="${escapeHTML(playlist.uploaderName || '')}" data-playlist-cover="${escapeHTML(rawCover)}" type="button" aria-label="${isSaved ? 'Unsave playlist' : 'Save playlist'}" title="${isSaved ? 'Unsave Playlist' : 'Save Playlist'}" onclick="event.stopPropagation();">
+            <i class="fa-solid ${isSaved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
+          </button>
+        `
+            : ''
+        }
       </div>
       <div class="card-title">${escapeHTML(playlist.name)}</div>
       <div class="card-meta">${playlist.isSystem ? 'System Playlist' : (playlist.songs ? playlist.songs.length : 0) + ' songs'}</div>
@@ -763,12 +855,16 @@ export function renderPlaylistSearchCard(playlist, index) {
     playlist.imageUrl ||
     'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=300&h=300';
   const coverUrl = getOptimizedArtwork(rawCover, 320);
+  const isSaved = isPlaylistSaved(playlist.id);
   return `
     <div class="card" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(playlist.id)}" tabindex="0" role="button" aria-label="Open playlist ${escapeHTML(playlist.name)}">
       <div class="card-img-wrap">
         <img src="${escapeHTML(coverUrl)}" alt="${escapeHTML(playlist.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
         <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Play ${escapeHTML(playlist.name)}" onclick="event.stopPropagation();">
           <i class="fa-solid fa-play"></i>
+        </button>
+        <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-playlist" data-playlist-id="${escapeHTML(playlist.id)}" data-playlist-name="${escapeHTML(playlist.name)}" data-playlist-uploader="${escapeHTML(playlist.uploaderName || '')}" data-playlist-cover="${escapeHTML(rawCover)}" type="button" aria-label="${isSaved ? 'Unsave playlist' : 'Save playlist'}" title="${isSaved ? 'Unsave Playlist' : 'Save Playlist'}" onclick="event.stopPropagation();">
+          <i class="fa-solid ${isSaved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
         </button>
       </div>
       <div class="card-title">${escapeHTML(playlist.name)}</div>
@@ -781,12 +877,16 @@ export function renderAlbumSearchCard(album, index) {
   if (!album) return '';
   const rawCover = album.imageUrl || '/assets/pawtify.png';
   const coverUrl = getOptimizedArtwork(rawCover, 320);
+  const isSaved = isAlbumSaved({ name: album.name, artist: album.artist, id: album.id });
   return `
     <div class="card" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}" tabindex="0" role="button" aria-label="Open album ${escapeHTML(album.name)}">
       <div class="card-img-wrap">
         <img class="card-cover" src="${escapeHTML(coverUrl)}" alt="${escapeHTML(album.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
         <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" type="button" aria-label="Play ${escapeHTML(album.name)}" onclick="event.stopPropagation();">
           <i class="fa-solid fa-play"></i>
+        </button>
+        <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id)}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist || '')}" data-album-cover="${escapeHTML(rawCover)}" data-album-year="${escapeHTML(album.year || '')}" type="button" aria-label="${isSaved ? 'Unsave album' : 'Save album'}" title="${isSaved ? 'Unsave Album' : 'Save Album'}" onclick="event.stopPropagation();">
+          <i class="fa-solid ${isSaved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
         </button>
       </div>
       <div class="card-title">${escapeHTML(album.name)}</div>
@@ -801,13 +901,20 @@ export function renderArtistSearchCard(artist, index) {
     artist.imageUrl ||
     'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=300&h=300';
   const coverUrl = getOptimizedArtwork(rawCover, 320);
+  const isFollowed = isArtistFollowed(artist.name);
   return `
-    <div class="card" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" tabindex="0">
-      <div class="card-img-wrap" style="border-radius: 50%; overflow: hidden; margin-bottom: 12px; aspect-ratio: 1/1;">
+    <div class="card card-search-artist" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" tabindex="0" role="button" aria-label="View artist ${escapeHTML(artist.name)}">
+      <div class="card-img-wrap" style="border-radius: 50%; overflow: hidden; margin-bottom: 12px; aspect-ratio: 1/1; position: relative;">
         <img src="${escapeHTML(coverUrl)}" alt="${escapeHTML(artist.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" style="object-fit: cover; width: 100%; height: 100%;" />
       </div>
       <div class="card-title" style="text-align: center;">${escapeHTML(artist.name)}</div>
-      <div class="card-meta" style="text-align: center;">Artist</div>
+      <div class="card-meta" style="text-align: center; margin-bottom: 8px;">Artist</div>
+      <div style="display: flex; justify-content: center; margin-top: auto;">
+        <button class="btn-card-follow ${isFollowed ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(rawCover)}" type="button" onclick="event.stopPropagation();" aria-label="${isFollowed ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
+          <i class="fa-solid ${isFollowed ? 'fa-check' : 'fa-plus'}"></i>
+          <span>${isFollowed ? 'Following' : 'Follow'}</span>
+        </button>
+      </div>
     </div>
   `;
 }

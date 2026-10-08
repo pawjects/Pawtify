@@ -14,7 +14,14 @@ import {
   globals,
 } from '../config/config.js';
 import { saveJSON } from '../utils/utils.js';
-import { updateMediaSession, loadYTApi } from '../services/youtube.js';
+import { idbSet } from '../utils/idb.js';
+import {
+  updateMediaSession,
+  loadYTApi,
+  startBackgroundAudio,
+  stopBackgroundAudio,
+  getNativeAudio,
+} from '../services/youtube.js';
 import { loadRecommendations } from '../services/dataLoader.js';
 import { renderCurrentRoute } from './master.js';
 import {
@@ -47,6 +54,7 @@ export async function play(song, queue = null, autoplay = true) {
   state.duration = playableSong.durationSec || 0;
   state.isPlaying = autoplay;
   saveJSON(STORAGE.CURRENT_TIME, 0);
+  if (autoplay) startBackgroundAudio();
   updateMediaSession(playableSong);
   if (navigator.mediaSession)
     navigator.mediaSession.playbackState = autoplay ? 'playing' : 'paused';
@@ -75,6 +83,7 @@ export async function play(song, queue = null, autoplay = true) {
 }
 
 export function pause() {
+  stopBackgroundAudio();
   if (globals.ytPlayerReady && globals.ytPlayer) {
     try {
       if (typeof globals.ytPlayer.pauseVideo === 'function')
@@ -104,6 +113,7 @@ export async function togglePlay() {
   if (state.isPlaying) pause();
   else {
     startYtLoadTimeout();
+    startBackgroundAudio();
     if (globals.ytPlayerReady && globals.ytPlayer) {
       try {
         const pState =
@@ -216,6 +226,8 @@ export function setVolume(value) {
   state.volume = clamped;
   if (globals.ytPlayerReady && globals.ytPlayer)
     globals.ytPlayer.setVolume(clamped * 100);
+  const nativeAudio = getNativeAudio();
+  if (nativeAudio) nativeAudio.volume = clamped;
   saveJSON(STORAGE.VOLUME, clamped);
   refreshPlaybackUI();
 }
@@ -232,6 +244,7 @@ export function toggleFavorite(song) {
     showToast('Added to favorites');
   }
   saveJSON(STORAGE.FAVORITES, state.favorites);
+  idbSet(STORAGE.FAVORITES, state.favorites).catch(() => {});
   renderCurrentRoute();
   renderPlayerBar();
   renderMiniPlayer();
@@ -316,4 +329,157 @@ export function deletePlaylist(playlistId) {
     state.playlists = [{ id: 'default', name: 'My Playlist', songs: [] }];
   saveJSON(STORAGE.PLAYLISTS, state.playlists);
   renderSidebarPlaylists();
+}
+
+export function dismissPlayer() {
+  pause();
+  state.currentSong = null;
+  state.progress = 0;
+  state.duration = 0;
+  saveJSON(STORAGE.CURRENT_TIME, 0);
+  if (navigator.mediaSession) {
+    navigator.mediaSession.playbackState = 'none';
+    navigator.mediaSession.metadata = null;
+  }
+  stopBackgroundAudio();
+  if (globals.ytPlayerReady && globals.ytPlayer && typeof globals.ytPlayer.stopVideo === 'function') {
+    try {
+      globals.ytPlayer.stopVideo();
+    } catch (e) {}
+  }
+  document.body.classList.remove('has-active-track');
+  renderPlayerBar(true);
+  renderMiniPlayer(true);
+  persistPlayer();
+}
+
+export function isArtistFollowed(artistName) {
+  if (!artistName) return false;
+  const target = String(artistName).trim().toLowerCase();
+  return (state.followedArtists || []).some(
+    (a) => (a.name || a).toLowerCase() === target
+  );
+}
+
+export function toggleFollowArtist(artistData) {
+  const name = (typeof artistData === 'string' ? artistData : artistData?.name || '').trim();
+  if (!name) return false;
+  const target = name.toLowerCase();
+  const current = state.followedArtists || [];
+  const exists = current.some((a) => (a.name || a).toLowerCase() === target);
+
+  if (exists) {
+    state.followedArtists = current.filter(
+      (a) => (a.name || a).toLowerCase() !== target
+    );
+    showToast(`Unfollowed ${name}`);
+  } else {
+    const artistObj = typeof artistData === 'object' && artistData !== null
+      ? {
+          name,
+          imageUrl: artistData.imageUrl || '',
+          id: artistData.id || `artist-${encodeURIComponent(name)}`,
+          followedAt: Date.now(),
+        }
+      : {
+          name,
+          imageUrl: '',
+          id: `artist-${encodeURIComponent(name)}`,
+          followedAt: Date.now(),
+        };
+    state.followedArtists = [artistObj, ...current];
+    showToast(`Following ${name}`);
+  }
+  saveJSON(STORAGE.FOLLOWED_ARTISTS, state.followedArtists);
+  idbSet(STORAGE.FOLLOWED_ARTISTS, state.followedArtists).catch(() => {});
+  renderCurrentRoute();
+  renderSidebarPlaylists();
+  return !exists;
+}
+
+export function isPlaylistSaved(playlistId) {
+  if (!playlistId) return false;
+  const pId = String(playlistId);
+  return (state.savedPlaylists || []).some((p) => String(p.id) === pId);
+}
+
+export function toggleSavePlaylist(playlistData) {
+  if (!playlistData || !playlistData.id) return false;
+  const pId = String(playlistData.id);
+  const current = state.savedPlaylists || [];
+  const exists = current.some((p) => String(p.id) === pId);
+
+  if (exists) {
+    state.savedPlaylists = current.filter((p) => String(p.id) !== pId);
+    showToast(`Removed "${playlistData.name || 'Playlist'}" from library`);
+  } else {
+    const item = {
+      id: pId,
+      name: playlistData.name || 'Saved Playlist',
+      uploaderName: playlistData.uploaderName || playlistData.author || '',
+      coverUrl: playlistData.coverUrl || playlistData.imageUrl || '',
+      imageUrl: playlistData.imageUrl || playlistData.coverUrl || '',
+      songs: Array.isArray(playlistData.songs) ? playlistData.songs : [],
+      savedAt: Date.now(),
+      isAlbum: !!playlistData.isAlbum,
+    };
+    state.savedPlaylists = [item, ...current];
+    if (item.songs.length) rememberSongs(item.songs);
+    showToast(`Saved "${item.name}" to library`);
+  }
+  saveJSON(STORAGE.SAVED_PLAYLISTS, state.savedPlaylists);
+  idbSet(STORAGE.SAVED_PLAYLISTS, state.savedPlaylists).catch(() => {});
+  renderCurrentRoute();
+  renderSidebarPlaylists();
+  return !exists;
+}
+
+export function isAlbumSaved(albumKeyOrObj) {
+  if (!albumKeyOrObj) return false;
+  const albumName = (typeof albumKeyOrObj === 'string' ? albumKeyOrObj : albumKeyOrObj.name || albumKeyOrObj.title || '').trim().toLowerCase();
+  const artistName = (typeof albumKeyOrObj === 'object' && albumKeyOrObj.artist ? albumKeyOrObj.artist : '').trim().toLowerCase();
+  return (state.savedAlbums || []).some((a) => {
+    const aName = (a.name || a.title || '').trim().toLowerCase();
+    if (artistName && a.artist) {
+      return aName === albumName && a.artist.trim().toLowerCase() === artistName;
+    }
+    return aName === albumName;
+  });
+}
+
+export function toggleSaveAlbum(albumData) {
+  if (!albumData) return false;
+  const name = (albumData.name || albumData.title || '').trim();
+  if (!name) return false;
+  const artist = (albumData.artist || '').trim();
+  const current = state.savedAlbums || [];
+  const exists = isAlbumSaved({ name, artist });
+
+  if (exists) {
+    state.savedAlbums = current.filter((a) => {
+      const aName = (a.name || a.title || '').trim().toLowerCase();
+      if (artist && a.artist) {
+        return !(aName === name.toLowerCase() && a.artist.trim().toLowerCase() === artist.toLowerCase());
+      }
+      return aName !== name.toLowerCase();
+    });
+    showToast(`Removed album "${name}" from library`);
+  } else {
+    const item = {
+      id: String(albumData.id || albumData.albumId || `album-${encodeURIComponent(name)}`),
+      name,
+      artist: artist || 'Unknown Artist',
+      coverUrl: albumData.coverUrl || albumData.imageUrl || '',
+      imageUrl: albumData.imageUrl || albumData.coverUrl || '',
+      year: albumData.year ? String(albumData.year) : '',
+      songCount: albumData.songCount || (albumData.songs ? albumData.songs.length : 1),
+      savedAt: Date.now(),
+    };
+    state.savedAlbums = [item, ...current];
+    showToast(`Saved album "${name}" to library`);
+  }
+  saveJSON(STORAGE.SAVED_ALBUMS, state.savedAlbums);
+  idbSet(STORAGE.SAVED_ALBUMS, state.savedAlbums).catch(() => {});
+  renderCurrentRoute();
+  return !exists;
 }

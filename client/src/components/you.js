@@ -4,20 +4,18 @@ import {
   formatTime,
   getOptimizedArtwork,
   formatRelativeTime,
-  formatActivityDateTime,
 } from '../utils/utils.js';
 import { renderPlaylistCard, renderSongRow } from './components.js';
-import { getSongById, getListeningActivityList } from '../core/details.js';
+import { getSongById } from '../core/details.js';
+import { isArtistFollowed, isPlaylistSaved, isAlbumSaved } from './player.js';
 
 export function renderYouPage() {
-  const playlistsCount = state.playlists ? state.playlists.length : 0;
+  const playlistsCount = (state.playlists ? state.playlists.length : 0) + (state.savedPlaylists ? state.savedPlaylists.length : 0);
   const favoritesCount = state.favorites ? state.favorites.length : 0;
   const historyCount = state.recentlyPlayed ? state.recentlyPlayed.length : 0;
+  const albumsCount = (state.savedAlbums ? state.savedAlbums.length : 0);
+  const artistsCount = (state.followedArtists ? state.followedArtists.length : 0);
   const queueCount = state.queue ? state.queue.length : 0;
-
-  // Recent Listening Activity Feed
-  const activities = getListeningActivityList();
-  const activityCount = activities ? activities.length : 0;
 
   const hour = new Date().getHours();
   let greeting = 'Welcome back';
@@ -25,41 +23,217 @@ export function renderYouPage() {
   else if (hour >= 12 && hour < 18) greeting = 'Good afternoon';
   else greeting = 'Good evening';
 
-  // 1. Liked Songs cover art preview
+  // 1. Liked Songs cover art preview & songs (up to 4)
   const recentFavorites = (state.favorites || []).slice(0, 4);
   const firstFavCover =
     recentFavorites.length > 0
-      ? getOptimizedArtwork(recentFavorites[0].coverUrl, 300)
+      ? getOptimizedArtwork(recentFavorites[0].coverUrl, 320)
       : '';
 
-  // 2. User's custom playlists preview (up to 4 for clean spacing)
-  const userPlaylists = (state.playlists || []).slice(0, 4);
-  const playlistsHTML =
-    userPlaylists.length > 0
-      ? `<div class="card-grid">${userPlaylists.map((p, i) => renderPlaylistCard(p, i)).join('')}</div>`
-      : `
-        <div class="you-empty-card">
-          <div class="you-empty-icon"><i class="fa-solid fa-list-ul"></i></div>
-          <div class="you-empty-text">
-            <strong>No custom playlists</strong>
-            <span>Create playlists to organize your favorite songs and albums.</span>
-          </div>
-          <button class="btn btn-primary you-action-btn" data-action="open-create-playlist" type="button">
-            <i class="fa-solid fa-plus"></i> New Playlist
-          </button>
-        </div>
-      `;
-
-  // 3. Recently Played Tracks Preview (latest 4 tracks)
-  const recentSongObjects = (state.recentlyPlayed || [])
-    .map((id) => getSongById(id))
-    .filter(Boolean)
-    .slice(0, 4);
-
-  const recentTracksHTML = recentSongObjects.length
+  const likedSongsHTML = recentFavorites.length > 0
     ? `
       <div class="song-table">
-        ${recentSongObjects.map((song, i) => renderSongRow(song, i + 1, 'history')).join('')}
+        ${recentFavorites.map((song, i) => renderSongRow(song, i + 1, 'favorites')).join('')}
+      </div>
+    `
+    : `
+      <div class="you-empty-card">
+        <div class="you-empty-icon"><i class="fa-solid fa-heart"></i></div>
+        <div class="you-empty-text">
+          <strong>No liked songs yet</strong>
+          <span>Heart any track in the player or search to save it to your library.</span>
+        </div>
+        <button class="btn btn-soft you-action-btn" data-action="navigate" data-path="/search" type="button">
+          <i class="fa-solid fa-magnifying-glass"></i> Explore Music
+        </button>
+      </div>
+    `;
+
+  // 2. Saved Playlists (combining custom user playlists & bookmarked saved playlists)
+  const allUserAndSavedPlaylists = [
+    ...(state.playlists || []),
+    ...(state.savedPlaylists || []).filter((sp) => !(state.playlists || []).some((p) => p.id === sp.id)),
+  ];
+  const playlistsPreview = allUserAndSavedPlaylists.slice(0, 4);
+  const playlistsHTML = playlistsPreview.length > 0
+    ? `<div class="card-grid">${playlistsPreview.map((p, i) => renderPlaylistCard(p, i)).join('')}</div>`
+    : `
+      <div class="you-empty-card">
+        <div class="you-empty-icon"><i class="fa-solid fa-list-ul"></i></div>
+        <div class="you-empty-text">
+          <strong>No playlists saved</strong>
+          <span>Create custom playlists or bookmark playlists from search to access them here.</span>
+        </div>
+        <button class="btn btn-primary you-action-btn" data-action="open-create-playlist" type="button">
+          <i class="fa-solid fa-plus"></i> New Playlist
+        </button>
+      </div>
+    `;
+
+  // 3. Saved Albums
+  const albumMap = new Map();
+  // Add explicitly saved albums first
+  (state.savedAlbums || []).forEach((alb) => {
+    const key = (alb.name || alb.title || '').trim().toLowerCase();
+    if (key && !albumMap.has(key)) {
+      albumMap.set(key, {
+        id: alb.id || alb.albumId,
+        name: alb.name || alb.title,
+        artist: alb.artist || 'Unknown Artist',
+        coverUrl: getOptimizedArtwork(alb.coverUrl || alb.imageUrl, 320),
+        songCount: alb.songCount || 1,
+        isExplicitlySaved: true,
+      });
+    }
+  });
+  // Also collect albums from liked tracks and playlists if available
+  [
+    ...(state.favorites || []),
+    ...(state.playlists || []).flatMap((p) => p.songs || []),
+  ].forEach((s) => {
+    if (s && s.album && s.album !== 'Single' && s.album !== 'Unknown') {
+      const key = s.album.trim().toLowerCase();
+      if (!albumMap.has(key)) {
+        albumMap.set(key, {
+          name: s.album,
+          artist: s.artist,
+          coverUrl: getOptimizedArtwork(s.coverUrl, 320),
+          songCount: 1,
+          isExplicitlySaved: isAlbumSaved({ name: s.album, artist: s.artist }),
+        });
+      } else {
+        albumMap.get(key).songCount += 1;
+      }
+    }
+  });
+  const savedAlbums = Array.from(albumMap.values()).slice(0, 4);
+  const albumsHTML = savedAlbums.length
+    ? `
+      <div class="card-grid">
+        ${savedAlbums
+          .map(
+            (album) => {
+              const saved = isAlbumSaved({ name: album.name, artist: album.artist });
+              const isRemoteAlbum = album.id && !String(album.id).startsWith('album-');
+              return `
+              <div class="card" ${isRemoteAlbum ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} role="button" tabindex="0">
+                <div class="card-img-wrap">
+                  <img class="card-cover" src="${escapeHTML(album.coverUrl)}" alt="${escapeHTML(album.name)}" draggable="false" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+                  <button class="card-play-btn" ${isRemoteAlbum ? `data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" aria-label="Play Album" onclick="event.stopPropagation();"` : `type="button" aria-label="View Artist"`}>
+                    <i class="fa-solid ${isRemoteAlbum ? 'fa-play' : 'fa-compact-disc'}"></i>
+                  </button>
+                  <button class="card-bookmark-btn ${saved ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id || '')}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist)}" data-album-cover="${escapeHTML(album.coverUrl)}" type="button" aria-label="${saved ? 'Unsave album' : 'Save album'}" onclick="event.stopPropagation();">
+                    <i class="fa-solid ${saved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
+                  </button>
+                </div>
+                <div class="card-title">${escapeHTML(album.name)}</div>
+                <div class="card-meta">${escapeHTML(album.artist)} &bull; ${album.songCount} track${album.songCount === 1 ? '' : 's'}</div>
+              </div>
+            `;
+            }
+          )
+          .join('')}
+      </div>
+    `
+    : `
+      <div class="you-empty-card">
+        <div class="you-empty-icon"><i class="fa-solid fa-compact-disc"></i></div>
+        <div class="you-empty-text">
+          <strong>No albums saved</strong>
+          <span>Save albums from search results or like songs with album metadata.</span>
+        </div>
+        <button class="btn btn-soft you-action-btn" data-action="navigate" data-path="/search" type="button">
+          <i class="fa-solid fa-magnifying-glass"></i> Find Albums
+        </button>
+      </div>
+    `;
+
+  // 4. Followed Artists
+  const artistMap = new Map();
+  // Add explicitly followed artists first
+  (state.followedArtists || []).forEach((fa) => {
+    const name = (typeof fa === 'string' ? fa : fa.name || '').trim();
+    if (name && !artistMap.has(name.toLowerCase())) {
+      artistMap.set(name.toLowerCase(), {
+        name,
+        imageUrl: fa.imageUrl || '',
+        isFollowed: true,
+      });
+    }
+  });
+  // Supplement with artists from favorites, playlists, and history
+  const recentSongObjects = (state.recentlyPlayed || [])
+    .map((id) => getSongById(id))
+    .filter(Boolean);
+
+  const rawArtists = [
+    ...(state.favorites || []).map((s) => s.artist),
+    ...(state.playlists || []).flatMap((p) => (p.songs || []).map((s) => s.artist)),
+    ...recentSongObjects.map((s) => s.artist),
+  ].filter(Boolean);
+
+  rawArtists.forEach((artistName) => {
+    const key = artistName.trim().toLowerCase();
+    if (!artistMap.has(key)) {
+      artistMap.set(key, {
+        name: artistName,
+        imageUrl: '',
+        isFollowed: isArtistFollowed(artistName),
+      });
+    }
+  });
+
+  const uniqueArtists = Array.from(artistMap.values()).slice(0, 6);
+  const artistsHTML = uniqueArtists.length
+    ? `
+      <div class="card-grid">
+        ${uniqueArtists
+          .map(
+            (artist) => {
+              const followed = isArtistFollowed(artist.name);
+              return `
+              <div class="card card-search-artist" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" role="button" tabindex="0">
+                <div class="card-img-wrap" style="border-radius: 50%; overflow: hidden; margin-bottom: 12px; aspect-ratio: 1/1; background: var(--hover); display: flex; align-items: center; justify-content: center;">
+                  ${
+                    artist.imageUrl
+                      ? `<img src="${escapeHTML(getOptimizedArtwork(artist.imageUrl, 240))}" alt="${escapeHTML(artist.name)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><i class="fa-solid fa-user" style="display:none; font-size: 2.2rem; color: var(--muted);"></i>`
+                      : `<i class="fa-solid fa-user" style="font-size: 2.2rem; color: var(--muted);"></i>`
+                  }
+                </div>
+                <div class="card-title text-center">${escapeHTML(artist.name)}</div>
+                <div class="card-meta text-center" style="margin-bottom: 8px;">Artist</div>
+                <div style="display: flex; justify-content: center; margin-top: auto;">
+                  <button class="btn-card-follow ${followed ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(artist.imageUrl || '')}" type="button" onclick="event.stopPropagation();" aria-label="${followed ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
+                    <i class="fa-solid ${followed ? 'fa-check' : 'fa-plus'}"></i>
+                    <span>${followed ? 'Following' : 'Follow'}</span>
+                  </button>
+                </div>
+              </div>
+            `;
+            }
+          )
+          .join('')}
+      </div>
+    `
+    : `
+      <div class="you-empty-card">
+        <div class="you-empty-icon"><i class="fa-solid fa-user-astronaut"></i></div>
+        <div class="you-empty-text">
+          <strong>No followed artists</strong>
+          <span>Tap Follow on any artist page or search result to see them here.</span>
+        </div>
+        <button class="btn btn-soft you-action-btn" data-action="navigate" data-path="/search" type="button">
+          <i class="fa-solid fa-magnifying-glass"></i> Discover Artists
+        </button>
+      </div>
+    `;
+
+  // 5. Recently Played (latest 4 tracks)
+  const recentPreviewSongs = recentSongObjects.slice(0, 4);
+  const recentTracksHTML = recentPreviewSongs.length
+    ? `
+      <div class="song-table">
+        ${recentPreviewSongs.map((song, i) => renderSongRow(song, i + 1, 'history')).join('')}
       </div>
     `
     : `
@@ -75,202 +249,12 @@ export function renderYouPage() {
       </div>
     `;
 
-  // Listening Activity Feed HTML
-  const activitiesHTML = activityCount > 0
-    ? `
-      <div class="you-activity-feed-wrapper">
-        <div class="you-activity-feed" role="feed" aria-label="Recent listening activity feed">
-          ${activities
-            .map((act) => {
-              const cover = getOptimizedArtwork(act.coverUrl, 160);
-              const relTime = formatRelativeTime(act.timestamp);
-              const fullTime = formatActivityDateTime(act.timestamp);
-              const isCurrent =
-                state.currentSong &&
-                String(state.currentSong.id) === String(act.songId);
-              const isPlaying = isCurrent && state.isPlaying;
-              const isFav =
-                state.favorites &&
-                state.favorites.some((f) => String(f.id) === String(act.songId));
-              const albumName =
-                act.album && act.album !== 'Unknown' ? act.album : 'Single';
-              const contextLabel =
-                act.context === 'stream'
-                  ? 'Stream'
-                  : act.context || 'Library';
-
-              return `
-                <article class="you-activity-item ${isCurrent ? 'is-playing' : ''}" data-song-id="${escapeHTML(act.songId)}" tabindex="0">
-                  <div class="you-activity-cover-box" data-action="play-song" data-song-id="${escapeHTML(act.songId)}" role="button" aria-label="Play ${escapeHTML(act.title)}">
-                    <img class="you-activity-cover" src="${escapeHTML(cover)}" alt="${escapeHTML(act.title)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-                    <div class="you-activity-play-overlay" aria-hidden="true">
-                      <i class="fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}"></i>
-                    </div>
-                  </div>
-
-                  <div class="you-activity-info">
-                    <div class="you-activity-top-row">
-                      <strong class="you-activity-title" data-action="play-song" data-song-id="${escapeHTML(act.songId)}" role="button" title="${escapeHTML(act.title)}">
-                        ${escapeHTML(act.title)}
-                      </strong>
-                      <span class="you-activity-time" title="${escapeHTML(fullTime)}">
-                        <i class="fa-regular fa-clock" aria-hidden="true"></i> ${escapeHTML(relTime)}
-                      </span>
-                    </div>
-
-                    <div class="you-activity-context-row">
-                      <span class="you-activity-artist" data-action="open-artist-profile" data-artist="${escapeHTML(act.artist)}" role="button" title="View artist: ${escapeHTML(act.artist)}">
-                        <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i> ${escapeHTML(act.artist)}
-                      </span>
-                      <span class="you-activity-divider" aria-hidden="true">&bull;</span>
-                      <span class="you-activity-album" title="Album context: ${escapeHTML(albumName)}">
-                        <i class="fa-solid fa-compact-disc" aria-hidden="true"></i> ${escapeHTML(albumName)}
-                      </span>
-                    </div>
-
-                    <div class="you-activity-tags-row">
-                      <span class="you-activity-tag you-activity-tag-context">
-                        <i class="fa-solid fa-headphones" aria-hidden="true"></i> ${escapeHTML(contextLabel)}
-                      </span>
-                      ${
-                        act.duration && act.duration !== '0:00'
-                          ? `
-                        <span class="you-activity-tag you-activity-tag-duration">
-                          <i class="fa-regular fa-hourglass-half" aria-hidden="true"></i> ${escapeHTML(act.duration)}
-                        </span>
-                      `
-                          : ''
-                      }
-                      ${
-                        isCurrent
-                          ? `
-                        <span class="you-activity-tag you-activity-tag-live">
-                          <span class="activity-pulse-dot" aria-hidden="true"></span> Now Playing
-                        </span>
-                      `
-                          : ''
-                      }
-                    </div>
-                  </div>
-
-                  <div class="you-activity-actions">
-                    <button class="btn-icon you-activity-action-btn ${isPlaying ? 'playing' : ''}" data-action="play-song" data-song-id="${escapeHTML(act.songId)}" type="button" aria-label="Play ${escapeHTML(act.title)}" title="Play">
-                      <i class="fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}"></i>
-                    </button>
-                    <button class="btn-icon you-activity-action-btn ${isFav ? 'liked' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(act.songId)}" type="button" aria-label="Favorite ${escapeHTML(act.title)}" title="${isFav ? 'Remove from Liked' : 'Save to Liked'}">
-                      <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-                    </button>
-                  </div>
-                </article>
-              `;
-            })
-            .join('')}
-        </div>
-      </div>
-    `
-    : `
-      <div class="you-empty-card">
-        <div class="you-empty-icon"><i class="fa-solid fa-wave-square"></i></div>
-        <div class="you-empty-text">
-          <strong>No listening activity yet</strong>
-          <span>Tracks you stream will be recorded here in real-time with album details and timestamps.</span>
-        </div>
-        <button class="btn btn-soft you-action-btn" data-action="play-something" type="button">
-          <i class="fa-solid fa-play"></i> Start Listening
-        </button>
-      </div>
-    `;
-
-  // 4. Saved / Followed Artists in Library
-  const rawArtists = [
-    ...(state.favorites || []).map((s) => s.artist),
-    ...(state.playlists || []).flatMap((p) =>
-      (p.songs || []).map((s) => s.artist)
-    ),
-    ...recentSongObjects.map((s) => s.artist),
-  ].filter(Boolean);
-
-  const uniqueArtists = Array.from(new Set(rawArtists)).slice(0, 8);
-  const artistsHTML = uniqueArtists.length
-    ? `
-      <div class="card-grid">
-        ${uniqueArtists
-          .map(
-            (artist) => `
-            <div class="card card-artist" data-action="open-artist-profile" data-artist="${escapeHTML(artist)}" role="button" tabindex="0">
-              <div class="card-cover-wrap card-cover-circle">
-                <div class="card-artist-avatar">
-                  <i class="fa-solid fa-user"></i>
-                </div>
-              </div>
-              <div class="card-title text-center">${escapeHTML(artist)}</div>
-              <div class="card-meta text-center">Artist</div>
-            </div>
-          `
-          )
-          .join('')}
-      </div>
-    `
-    : `
-      <div class="you-empty-card compact">
-        <span>Save your favorite songs or playlists to view followed artists here.</span>
-      </div>
-    `;
-
-  // 5. Saved Albums & Discographies
-  const albumMap = new Map();
-  [
-    ...(state.favorites || []),
-    ...(state.playlists || []).flatMap((p) => p.songs || []),
-  ].forEach((s) => {
-    if (s && s.album && s.album !== 'Single' && s.album !== 'Unknown') {
-      if (!albumMap.has(s.album)) {
-        albumMap.set(s.album, {
-          name: s.album,
-          artist: s.artist,
-          coverUrl: getOptimizedArtwork(s.coverUrl, 300),
-          songCount: 1,
-        });
-      } else {
-        albumMap.get(s.album).songCount += 1;
-      }
-    }
-  });
-  const savedAlbums = Array.from(albumMap.values()).slice(0, 4);
-
-  const albumsHTML = savedAlbums.length
-    ? `
-      <div class="card-grid">
-        ${savedAlbums
-          .map(
-            (album) => `
-            <div class="card" data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}" role="button" tabindex="0">
-              <div class="card-cover-wrap">
-                <img class="card-cover" src="${escapeHTML(album.coverUrl)}" alt="${escapeHTML(album.name)}" draggable="false" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-                <button class="card-play-btn" type="button" aria-label="View Album">
-                  <i class="fa-solid fa-compact-disc"></i>
-                </button>
-              </div>
-              <div class="card-title">${escapeHTML(album.name)}</div>
-              <div class="card-meta">${escapeHTML(album.artist)} &bull; ${album.songCount} track${album.songCount === 1 ? '' : 's'}</div>
-            </div>
-          `
-          )
-          .join('')}
-      </div>
-    `
-    : `
-      <div class="you-empty-card compact">
-        <span>Save tracks with album metadata to organize your personal discography here.</span>
-      </div>
-    `;
-
   return `
     <section class="page you-page">
       <!-- 📌 1. Page Header -->
       <div class="you-header">
         <div class="you-header-titles">
-          <span class="you-header-kicker">Profile &amp; Library</span>
+          <span class="you-header-kicker">Personal Library</span>
           <h1 class="you-header-title">You</h1>
         </div>
         <div class="you-header-actions">
@@ -296,14 +280,16 @@ export function renderYouPage() {
             <span class="you-profile-greeting">${greeting}</span>
             <div class="you-title-row">
               <h2 class="you-name">${escapeHTML(state.userName || 'Pawtify Listener')}</h2>
-              <span class="you-badge-member"><i class="fa-solid fa-shield-cat"></i> Pawtify Free</span>
+              <span class="you-badge-member"><i class="fa-solid fa-shield-cat"></i> Pawtify Member</span>
             </div>
             <div class="you-tagline">
-              <span class="you-tagline-stat"><strong>${favoritesCount}</strong> Liked tracks</span>
+              <span class="you-tagline-stat"><strong>${favoritesCount}</strong> Liked</span>
               <span class="you-tagline-dot" aria-hidden="true">&bull;</span>
               <span class="you-tagline-stat"><strong>${playlistsCount}</strong> Playlists</span>
               <span class="you-tagline-dot" aria-hidden="true">&bull;</span>
-              <span class="you-tagline-stat"><strong>${activityCount}</strong> Activity</span>
+              <span class="you-tagline-stat"><strong>${albumsCount}</strong> Albums</span>
+              <span class="you-tagline-dot" aria-hidden="true">&bull;</span>
+              <span class="you-tagline-stat"><strong>${artistsCount}</strong> Artists</span>
             </div>
           </div>
         </div>
@@ -317,37 +303,37 @@ export function renderYouPage() {
         </div>
       </header>
 
-      <!-- ⚡ 3. Recent Listening Activity Feed -->
-      <section class="you-section you-activity-section">
+      <!-- 🎵 1. Liked Songs -->
+      <section class="you-section">
         <div class="you-section-head">
           <div class="you-section-head-titles">
-            <h2 class="you-section-title"><i class="fa-solid fa-chart-line"></i>Activity</h2>
-            <span class="you-section-sub">Scrollable feed of recent listening activity with song &amp; album context</span>
+            <h2 class="you-section-title"><i class="fa-solid fa-heart" style="color:var(--green);"></i>Liked Songs</h2>
+            <span class="you-section-sub">Your favorite tracks in one personal collection</span>
           </div>
           <div class="you-section-actions">
             ${
-              activityCount > 0
+              favoritesCount > 0
                 ? `
-                <button class="btn btn-soft btn-sm you-btn-danger" data-action="clear-activity" type="button" title="Clear activity feed">
-                  <i class="fa-solid fa-trash-can"></i> Clear
+                <button class="btn btn-soft btn-sm" data-action="play-favorites" type="button" aria-label="Play Liked Songs">
+                  <i class="fa-solid fa-play"></i> Play All
                 </button>
-                <span class="you-activity-count-badge">
-                  <span class="activity-pulse-dot" aria-hidden="true"></span> ${activityCount} ${activityCount === 1 ? 'event' : 'events'}
-                </span>
+                <button class="btn btn-soft btn-sm" data-action="open-favorites" type="button">
+                  View all (${favoritesCount})
+                </button>
               `
                 : ''
             }
           </div>
         </div>
-        ${activitiesHTML}
+        ${likedSongsHTML}
       </section>
 
-      <!-- 📋 4. Personal Music: Playlists -->
+      <!-- 📋 2. Saved Playlists -->
       <section class="you-section">
         <div class="you-section-head">
           <div class="you-section-head-titles">
-            <h2 class="you-section-title"><i class="fa-solid fa-list-ul"></i>Your Playlists</h2>
-            <span class="you-section-sub">Playlists created on this device</span>
+            <h2 class="you-section-title"><i class="fa-solid fa-list-ul"></i>Saved Playlists</h2>
+            <span class="you-section-sub">Your custom mixes and bookmarked playlists</span>
           </div>
           <div class="you-section-actions">
             <button class="btn btn-soft btn-sm" data-action="open-create-playlist" type="button">
@@ -361,12 +347,44 @@ export function renderYouPage() {
         ${playlistsHTML}
       </section>
 
-      <!-- 🕐 4. Personal Music: Recently Played -->
+      <!-- 💿 3. Saved Albums -->
+      <section class="you-section">
+        <div class="you-section-head">
+          <div class="you-section-head-titles">
+            <h2 class="you-section-title"><i class="fa-solid fa-compact-disc"></i>Saved Albums</h2>
+            <span class="you-section-sub">Bookmarked albums and personal discographies</span>
+          </div>
+          <div class="you-section-actions">
+            <button class="btn btn-soft btn-sm" data-action="navigate" data-path="/albums" type="button">
+              View all
+            </button>
+          </div>
+        </div>
+        ${albumsHTML}
+      </section>
+
+      <!-- 👨‍🎤 4. Followed Artists -->
+      <section class="you-section">
+        <div class="you-section-head">
+          <div class="you-section-head-titles">
+            <h2 class="you-section-title"><i class="fa-solid fa-user-group"></i>Followed Artists</h2>
+            <span class="you-section-sub">Artists you follow for new releases and updates</span>
+          </div>
+          <div class="you-section-actions">
+            <button class="btn btn-soft btn-sm" data-action="navigate" data-path="/artists" type="button">
+              View all
+            </button>
+          </div>
+        </div>
+        ${artistsHTML}
+      </section>
+
+      <!-- 🕐 5. Recently Played -->
       <section class="you-section">
         <div class="you-section-head">
           <div class="you-section-head-titles">
             <h2 class="you-section-title"><i class="fa-solid fa-clock-rotate-left"></i>Recently Played</h2>
-            <span class="you-section-sub">Your latest listening history</span>
+            <span class="you-section-sub">Your latest listening stream history</span>
           </div>
           <div class="you-section-actions">
             ${
@@ -386,29 +404,7 @@ export function renderYouPage() {
         ${recentTracksHTML}
       </section>
 
-      <!-- 💿 5. Personal Music: Saved Albums -->
-      <section class="you-section">
-        <div class="you-section-head">
-          <div class="you-section-head-titles">
-            <h2 class="you-section-title"><i class="fa-solid fa-compact-disc"></i>Saved Albums &amp; EPs</h2>
-            <span class="you-section-sub">Albums from your saved tracks</span>
-          </div>
-        </div>
-        ${albumsHTML}
-      </section>
-
-      <!-- 👨‍🎤 6. Personal Music: Followed Artists -->
-      <section class="you-section">
-        <div class="you-section-head">
-          <div class="you-section-head-titles">
-            <h2 class="you-section-title"><i class="fa-solid fa-user-group"></i>Artists in Your Library</h2>
-            <span class="you-section-sub">Artists from your saved music</span>
-          </div>
-        </div>
-        ${artistsHTML}
-      </section>
-
-      <!-- 🧭 7. Library Shortcuts Hub -->
+      <!-- 🧭 6. Library Shortcuts Hub -->
       <section class="you-section you-shortcuts-section">
         <div class="you-section-head">
           <div class="you-section-head-titles">
@@ -439,6 +435,20 @@ export function renderYouPage() {
             </div>
           </article>
 
+          <!-- Playlists -->
+          <article class="you-hub-card" data-action="navigate" data-path="/library" role="button" tabindex="0" aria-label="Open Playlists">
+            <div class="you-hub-cover-wrap">
+              <div class="you-hub-icon hub-icon-playlist"><i class="fa-solid fa-list-ul"></i></div>
+            </div>
+            <div class="you-hub-content">
+              <strong class="you-hub-title">Playlists</strong>
+              <span class="you-hub-sub">${playlistsCount} playlist${playlistsCount === 1 ? '' : 's'}</span>
+            </div>
+            <div class="you-hub-end">
+              <i class="fa-solid fa-chevron-right you-hub-arrow" aria-hidden="true"></i>
+            </div>
+          </article>
+
           <!-- Recently Played -->
           <article class="you-hub-card" data-action="navigate" data-path="/playlist/history" role="button" tabindex="0" aria-label="Open Recently Played">
             <div class="you-hub-cover-wrap">
@@ -447,20 +457,6 @@ export function renderYouPage() {
             <div class="you-hub-content">
               <strong class="you-hub-title">Recently Played</strong>
               <span class="you-hub-sub">${historyCount} track${historyCount === 1 ? '' : 's'}</span>
-            </div>
-            <div class="you-hub-end">
-              <i class="fa-solid fa-chevron-right you-hub-arrow" aria-hidden="true"></i>
-            </div>
-          </article>
-
-          <!-- Playlists -->
-          <article class="you-hub-card" data-action="navigate" data-path="/library" role="button" tabindex="0" aria-label="Open Playlists">
-            <div class="you-hub-cover-wrap">
-              <div class="you-hub-icon hub-icon-playlist"><i class="fa-solid fa-list-ul"></i></div>
-            </div>
-            <div class="you-hub-content">
-              <strong class="you-hub-title">Your Playlists</strong>
-              <span class="you-hub-sub">${playlistsCount} playlist${playlistsCount === 1 ? '' : 's'}</span>
             </div>
             <div class="you-hub-end">
               <i class="fa-solid fa-chevron-right you-hub-arrow" aria-hidden="true"></i>
@@ -483,7 +479,7 @@ export function renderYouPage() {
         </div>
       </section>
 
-      <!-- ⚙️ 8. Settings & Preferences Gateway Entry -->
+      <!-- ⚙️ 7. Settings Gateway Entry -->
       <section class="you-section you-settings-gateway-section">
         <div class="you-section-head">
           <div class="you-section-head-titles">

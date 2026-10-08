@@ -96,7 +96,7 @@ export function renderMiniPlayer(force = false) {
 
   miniPlayer.innerHTML = `
      <div class="mini-player-inner">
-       <div class="mini-player-main" data-action="open-fullscreen-player">
+       <div class="mini-player-main" data-action="open-fullscreen-player" role="button" aria-label="Open now playing">
          <img class="mini-player-cover" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
          <div class="mini-player-info">
            <div class="mini-player-title">${escapeHTML(song.title)}</div>
@@ -104,18 +104,15 @@ export function renderMiniPlayer(force = false) {
          </div>
        </div>
        <div class="mini-player-btns">
-         <button class="mini-player-btn" data-action="open-queue" type="button" aria-label="Queue">
-           <i class="fa-solid fa-list-ul"></i>
-         </button>
-         <button class="mini-player-btn ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Favorite" style="color: ${isFav ? 'var(--green)' : 'var(--muted)'};">
-           <i class="${isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}"></i>
-         </button>
-         <button class="mini-player-btn" data-action="toggle-play" type="button" aria-label="Play/Pause">
+         <button class="mini-player-btn mini-player-play-btn" data-action="toggle-play" type="button" aria-label="${state.isPlaying ? 'Pause' : 'Play'}">
            ${state.isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>'}
+         </button>
+         <button class="mini-player-btn mini-player-dismiss-btn" data-action="dismiss-player" type="button" aria-label="Close player">
+           <i class="fa-solid fa-xmark"></i>
          </button>
        </div>
      </div>
-     <div class="mini-progress">
+     <div class="mini-progress" role="progressbar" aria-valuenow="${Math.round(progressPercent)}" aria-valuemin="0" aria-valuemax="100">
        <div class="mini-progress-fill" style="width: ${progressPercent}%;"></div>
      </div>
    `;
@@ -137,12 +134,17 @@ export function renderSidebarPlaylists() {
      </button>
    `;
 
-  const userPlaylists = state.playlists
+  const allPlaylists = [
+    ...(state.playlists || []),
+    ...(state.savedPlaylists || []).filter((sp) => !(state.playlists || []).some((p) => p.id === sp.id)),
+  ];
+
+  const playlistElements = allPlaylists
     .map((playlist) => {
       const isActive =
         state.route.name === 'playlist' &&
         state.route.playlistId === playlist.id;
-      const cover = playlist.songs[0]?.coverUrl || '';
+      const cover = playlist.coverUrl || playlist.songs?.[0]?.coverUrl || '';
       return `
        <button class="sidebar-playlist-item ${isActive ? 'active' : ''}" data-route="/playlist/${encodeURIComponent(playlist.id)}" type="button">
          ${
@@ -156,7 +158,7 @@ export function renderSidebarPlaylists() {
     })
     .join('');
 
-  sidebarPlaylists.innerHTML = historyItem + userPlaylists;
+  sidebarPlaylists.innerHTML = historyItem + playlistElements;
 }
 
 let isInitialNav = true;
