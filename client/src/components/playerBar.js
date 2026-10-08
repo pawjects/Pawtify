@@ -75,6 +75,7 @@ export function renderPlayerBar(force = false) {
 
 export function renderMiniPlayer(force = false) {
   if (!miniPlayer) return;
+  document.body.classList.toggle('has-active-track', !!state.currentSong);
   if (!state.currentSong) {
     miniPlayer.innerHTML = '';
     miniPlayer.classList.add('hidden');

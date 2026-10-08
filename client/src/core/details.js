@@ -36,6 +36,9 @@ export async function shareSpecificSong(songId) {
 
 export async function sharePlaylist(playlistId) {
   let playlist = state.playlists.find((p) => p.id === playlistId);
+  if (!playlist && state.ytPlaylists?.[playlistId]) {
+    playlist = state.ytPlaylists[playlistId];
+  }
   if (playlistId === 'history') {
     playlist = { name: 'Listening History', id: 'history' };
   }
@@ -88,7 +91,17 @@ export async function shareCurrentSong() {
 }
 
 export async function playSongById(songId, source, playlistId) {
-  const song = getSongById(songId);
+  let song = getSongById(songId);
+  if (!song && playlistId && state.ytPlaylists?.[playlistId]?.songs) {
+    song = state.ytPlaylists[playlistId].songs.find((s) => s.id === songId);
+    if (song) rememberSongs([song]);
+  }
+  if (!song && state.searchResults?.songs) {
+    song = state.searchResults.songs.find((s) => s.id === songId);
+    if (song) rememberSongs([song]);
+  }
+  if (!song) return;
+
   if (source === 'search' && state.searchQuery.trim()) {
     saveRecentItem('track', {
       id: song.id,
@@ -97,7 +110,7 @@ export async function playSongById(songId, source, playlistId) {
       imageUrl: song.coverUrl,
     });
   }
-  if (!song) return;
+
   if (state.currentSong?.id === song.id) {
     await togglePlay();
     return;
@@ -111,7 +124,7 @@ export function resolveQueueBySource(source, playlistId, fallbackSong) {
     const cat = state.feedCategories?.find((c) => c.id === source);
     if (cat && cat.songs) return cat.songs;
   }
-  if (source === 'search') return state.searchResults.songs;
+  if (source === 'search') return state.searchResults.songs?.length ? state.searchResults.songs : [fallbackSong];
   if (source === 'favorites') return state.favorites;
   if (source === 'recommended') return state.recommendedSongs;
   if (source === 'trending') return state.trendingSongs;
@@ -144,12 +157,18 @@ export function resolveQueueBySource(source, playlistId, fallbackSong) {
     return state.artistProfile?.songs?.length
       ? state.artistProfile.songs
       : [fallbackSong];
-  if (source === 'playlist' && playlistId)
-    return (
-      state.playlists.find((playlist) => playlist.id === playlistId)?.songs || [
-        fallbackSong,
-      ]
-    );
+  if (source === 'playlist' && playlistId) {
+    if (playlistId === 'liked' || playlistId === 'favorites') return state.favorites?.length ? state.favorites : [fallbackSong];
+    if (playlistId === 'history') {
+      const historySongs = (state.recentlyPlayed || []).map((id) => getSongById(id)).filter(Boolean);
+      return historySongs.length ? historySongs : [fallbackSong];
+    }
+    const local = state.playlists.find((playlist) => playlist.id === playlistId);
+    if (local?.songs?.length) return local.songs;
+    const remote = state.ytPlaylists?.[playlistId];
+    if (remote?.songs?.length) return remote.songs;
+    return [fallbackSong];
+  }
   return state.queue.length ? state.queue : [fallbackSong];
 }
 

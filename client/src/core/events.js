@@ -54,7 +54,16 @@ import {
 } from '../components/queuePanel.js';
 import { loadTrendingSongs } from '../services/dataLoader.js';
 import { runSearch } from '../services/search.js';
-import { searchSongs } from '../services/apiMapping.js';
+import {
+  searchSongs,
+  searchAlbums,
+  fetchPlaylistDetails,
+  fetchSearchSuggestions,
+} from '../services/apiMapping.js';
+import {
+  updateSearchPageUI,
+  updateSearchDynamicUI,
+} from '../components/components.js';
 import {
   openFullscreenPlayer,
   closeFullscreenPlayer,
@@ -151,26 +160,62 @@ export function bindGlobalEvents() {
     try {
       if (action === 'clear-search-input') {
         event.preventDefault();
-        exitSearchMode(true);
+        state.searchQuery = '';
+        saveJSON(STORAGE.SEARCH_QUERY, '');
+        state.searchSuggestions = [];
+        state.searchLoading = false;
+        state.searchResults = { songs: [], artists: [], playlists: [], albums: [] };
         const input = document.getElementById('search-input');
         if (input) {
           input.value = '';
           input.focus();
         }
+        updateSearchPageUI();
+        return;
+      }
+      if (action === 'use-suggestion') {
+        event.preventDefault();
+        const query = (actionNode.dataset.query || '').trim();
+        if (query) {
+          state.searchQuery = query;
+          saveJSON(STORAGE.SEARCH_QUERY, query);
+          saveRecentSearch(query);
+          state.searchSuggestions = [];
+          state.searchDropdownOpen = false;
+          const input = document.getElementById('search-input');
+          if (input) {
+            input.value = query;
+            input.blur();
+          }
+          updateSearchPageUI();
+          runSearch(query);
+        }
+        return;
+      }
+      if (action === 'clear-search-history') {
+        event.preventDefault();
+        state.recentSearches = [];
+        saveJSON(STORAGE.RECENT_SEARCHES, []);
+        state.searchSuggestions = [];
+        showToast('Recent searches cleared.');
+        updateSearchPageUI();
         return;
       }
       if (action === 'search-category') {
         event.preventDefault();
         const category = actionNode.dataset.category;
         if (category) {
-          state.searchQuery = category; saveJSON(STORAGE.SEARCH_QUERY, category);
-          const searchInput = document.querySelector('.search-input');
-          if (searchInput) searchInput.value = category;
-          // Trigger search using performSearch or by dispatching an event
-          // It looks like search is handled elsewhere, let's trigger the input event
+          state.searchQuery = category;
+          saveJSON(STORAGE.SEARCH_QUERY, category);
+          saveRecentSearch(category);
+          state.searchSuggestions = [];
+          const searchInput = document.getElementById('search-input');
           if (searchInput) {
-            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            searchInput.value = category;
+            searchInput.blur();
           }
+          updateSearchPageUI();
+          runSearch(category);
         }
         return;
       }
@@ -322,11 +367,11 @@ export function bindGlobalEvents() {
         const pid = actionNode.dataset.playlistId;
         if (pid) {
           const titleNode =
-            actionNode.querySelector('span') ||
-            actionNode.querySelector('.card-title');
-          const name = titleNode ? titleNode.innerText : 'Playlist';
+            actionNode.querySelector('.card-title') ||
+            actionNode.querySelector('span');
+          const name = titleNode ? titleNode.innerText.trim() : 'Playlist';
           const img = actionNode.querySelector('img')?.src || '';
-          
+
           if (titleNode) {
             saveRecentItem('playlist', {
               id: pid,
@@ -335,27 +380,48 @@ export function bindGlobalEvents() {
               imageUrl: img,
             });
           }
-          
-          // Pre-populate temporary playlist to show loading state
+
           if (!state.ytPlaylists) state.ytPlaylists = {};
-          if (!state.ytPlaylists[pid]) {
-             state.ytPlaylists[pid] = { id: pid, name: name, coverUrl: img, songs: [], isLoading: true, isSystem: true };
-             
-             fetch(`/api/search?type=playlist_videos&q=${pid}`)
-               .then(res => res.json())
-               .then(data => {
-                  state.ytPlaylists[pid].songs = data.items || [];
-                  state.ytPlaylists[pid].isLoading = false;
-                  window.dispatchEvent(new CustomEvent('routechange'));
-               })
-               .catch(e => {
-                  state.ytPlaylists[pid].isLoading = false;
-                  showToast('Error loading playlist.');
-                  window.dispatchEvent(new CustomEvent('routechange'));
-               });
+          if (!state.ytPlaylists[pid] || (!state.ytPlaylists[pid].songs?.length && !state.ytPlaylists[pid].isLoading)) {
+            state.ytPlaylists[pid] = {
+              id: pid,
+              name: name,
+              coverUrl: img,
+              songs: [],
+              isLoading: true,
+              isSystem: true,
+            };
+
+            fetchPlaylistDetails(pid)
+              .then((data) => {
+                if (data && data.songs) {
+                  rememberSongs(data.songs);
+                  state.ytPlaylists[pid] = {
+                    ...state.ytPlaylists[pid],
+                    name: data.playlist.name || state.ytPlaylists[pid].name,
+                    coverUrl: data.playlist.coverUrl || state.ytPlaylists[pid].coverUrl,
+                    uploaderName: data.playlist.uploaderName || '',
+                    isAlbum: data.playlist.isAlbum,
+                    songs: data.songs,
+                    isLoading: false,
+                  };
+                } else {
+                  if (state.ytPlaylists[pid]) state.ytPlaylists[pid].isLoading = false;
+                }
+                if (state.route?.name === 'playlist' && state.route?.playlistId === pid) {
+                  renderCurrentRoute();
+                }
+              })
+              .catch(() => {
+                if (state.ytPlaylists[pid]) state.ytPlaylists[pid].isLoading = false;
+                showToast('Error loading playlist.');
+                if (state.route?.name === 'playlist' && state.route?.playlistId === pid) {
+                  renderCurrentRoute();
+                }
+              });
           }
-          
-          window.location.hash = '/playlist/' + pid;
+
+          navigate('/playlist/' + pid);
         }
         return;
       }
@@ -454,8 +520,8 @@ export function bindGlobalEvents() {
       }
       if (action === 'set-search-tab') {
         event.preventDefault();
-        state.searchTab = actionNode.dataset.value || 'songs';
-        if (state.route.name === 'search') renderCurrentRoute();
+        state.searchTab = actionNode.dataset.value || 'all';
+        if (state.route.name === 'search') updateSearchPageUI();
         return;
       }
       if (action === 'set-library-tab') {
@@ -567,20 +633,26 @@ export function bindGlobalEvents() {
       }
       if (action === 'use-recent-search') {
         event.preventDefault();
-        const query = actionNode.dataset.query || '';
-        state.searchQuery = query; saveJSON(STORAGE.SEARCH_QUERY, query);
-        if (state.route.name !== 'search') {
-          state.pendingSearchQuery = query;
-          navigate('/search');
-          return;
+        const query = (actionNode.dataset.query || '').trim();
+        if (query) {
+          state.searchQuery = query;
+          saveJSON(STORAGE.SEARCH_QUERY, query);
+          saveRecentSearch(query);
+          state.searchSuggestions = [];
+          state.searchDropdownOpen = false;
+          if (state.route.name !== 'search') {
+            state.pendingSearchQuery = query;
+            navigate('/search');
+            return;
+          }
+          const input = document.getElementById('search-input');
+          if (input) {
+            input.value = query;
+            input.blur();
+          }
+          updateSearchPageUI();
+          runSearch(query);
         }
-        renderCurrentRoute();
-        const input = document.getElementById('search-input');
-        if (input) {
-          input.value = query;
-          input.focus();
-        }
-        runSearch(query);
         return;
       }
       if (action === 'remove-recent-search') {
@@ -593,7 +665,7 @@ export function bindGlobalEvents() {
           return entry.type !== type || entry.id !== id;
         });
         saveJSON(STORAGE.RECENT_SEARCHES, state.recentSearches);
-        if (state.route.name === 'search') renderCurrentRoute();
+        if (state.route.name === 'search') updateSearchPageUI();
         return;
       }
 
@@ -629,11 +701,45 @@ export function bindGlobalEvents() {
           }
           return;
         }
-        const playlist = state.playlists.find(
+
+        const localPlaylist = state.playlists.find(
           (entry) => entry.id === playlistId
         );
-        if (playlist?.songs.length)
-          await play(playlist.songs[0], playlist.songs, true);
+        if (localPlaylist?.songs?.length) {
+          await play(localPlaylist.songs[0], localPlaylist.songs, true);
+          return;
+        }
+
+        if (state.ytPlaylists?.[playlistId]?.songs?.length) {
+          const remoteSongs = state.ytPlaylists[playlistId].songs;
+          await play(remoteSongs[0], remoteSongs, true);
+          return;
+        }
+
+        // Fetch remote playlist and play immediately
+        showToast('Loading tracks...');
+        try {
+          const data = await fetchPlaylistDetails(playlistId);
+          if (data && data.songs && data.songs.length > 0) {
+            rememberSongs(data.songs);
+            state.ytPlaylists = state.ytPlaylists || {};
+            state.ytPlaylists[playlistId] = {
+              id: playlistId,
+              name: data.playlist?.name || 'Playlist',
+              coverUrl: data.playlist?.coverUrl || '',
+              uploaderName: data.playlist?.uploaderName || '',
+              isAlbum: data.playlist?.isAlbum,
+              songs: data.songs,
+              isLoading: false,
+            };
+            await play(data.songs[0], data.songs, true);
+          } else {
+            showToast('Playlist has no playable songs.');
+          }
+        } catch (err) {
+          console.error('Failed to play all playlist:', err);
+          showToast('Could not load playlist tracks.');
+        }
         return;
       }
 
@@ -676,12 +782,42 @@ export function bindGlobalEvents() {
           }
           return;
         }
-        const playlist = state.playlists.find(
-          (entry) => entry.id === playlistId
-        );
-        if (!playlist?.songs.length) return;
-        const shuffled = [...playlist.songs].sort(() => Math.random() - 0.5);
-        await play(shuffled[0], shuffled, true);
+
+        let songsToShuffle = [];
+        const local = state.playlists.find((entry) => entry.id === playlistId);
+        if (local?.songs?.length) {
+          songsToShuffle = local.songs;
+        } else if (state.ytPlaylists?.[playlistId]?.songs?.length) {
+          songsToShuffle = state.ytPlaylists[playlistId].songs;
+        } else {
+          showToast('Loading tracks...');
+          try {
+            const data = await fetchPlaylistDetails(playlistId);
+            if (data?.songs?.length) {
+              rememberSongs(data.songs);
+              state.ytPlaylists = state.ytPlaylists || {};
+              state.ytPlaylists[playlistId] = {
+                id: playlistId,
+                name: data.playlist?.name || 'Playlist',
+                coverUrl: data.playlist?.coverUrl || '',
+                uploaderName: data.playlist?.uploaderName || '',
+                isAlbum: data.playlist?.isAlbum,
+                songs: data.songs,
+                isLoading: false,
+              };
+              songsToShuffle = data.songs;
+            }
+          } catch (err) {
+            console.error('Failed to load playlist for shuffle:', err);
+          }
+        }
+
+        if (songsToShuffle.length > 0) {
+          const shuffled = [...songsToShuffle].sort(() => Math.random() - 0.5);
+          await play(shuffled[0], shuffled, true);
+        } else {
+          showToast('No songs to shuffle.');
+        }
         return;
       }
 
@@ -932,6 +1068,52 @@ export function bindGlobalEvents() {
         state.searchLayerActive = true;
         pushHistoryLayer('search');
       }
+      state.searchDropdownOpen = true;
+      if (state.route?.name === 'search') {
+        updateSearchDynamicUI();
+      }
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    if (state.searchDropdownOpen && !event.target.closest('#search-bar-wrap')) {
+      state.searchDropdownOpen = false;
+      if (state.route?.name === 'search') {
+        updateSearchDynamicUI();
+      }
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    const target = event.target;
+    if (target && target.id === 'search-input') {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const q = target.value.trim();
+        state.searchSuggestions = [];
+        state.searchDropdownOpen = false;
+        if (globals.searchTimer) {
+          window.clearTimeout(globals.searchTimer);
+          globals.searchTimer = null;
+        }
+        if (globals.suggestionTimer) {
+          window.clearTimeout(globals.suggestionTimer);
+          globals.suggestionTimer = null;
+        }
+        if (q) {
+          saveRecentSearch(q);
+          runSearch(q);
+        }
+        updateSearchPageUI();
+        target.blur();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        state.searchSuggestions = [];
+        state.searchDropdownOpen = false;
+        if (state.route?.name === 'search') {
+          updateSearchDynamicUI();
+        }
+      }
     }
   });
 
@@ -942,44 +1124,52 @@ export function bindGlobalEvents() {
         state.searchLayerActive = true;
         pushHistoryLayer('search');
       }
-      state.searchQuery = target.value; saveJSON(STORAGE.SEARCH_QUERY, target.value);
+      state.searchDropdownOpen = true;
+      state.searchQuery = target.value;
+      saveJSON(STORAGE.SEARCH_QUERY, target.value);
+
       if (!state.searchQuery.trim()) {
         state.searchLoading = false;
-        state.searchResults = { songs: [], artists: [] };
+        state.searchResults = { songs: [], artists: [], playlists: [], albums: [] };
         state.searchSuggestions = [];
         globals.searchRequestToken += 1;
         if (globals.searchTimer) {
           window.clearTimeout(globals.searchTimer);
           globals.searchTimer = null;
         }
-        if (state.route.name === 'search') renderCurrentRoute();
+        if (globals.suggestionTimer) {
+          window.clearTimeout(globals.suggestionTimer);
+          globals.suggestionTimer = null;
+        }
+        if (state.route.name === 'search') updateSearchPageUI();
         return;
       }
-      state.searchLoading = true;
-      
-      // Fast fetch for suggestions
-      const currentQuery = state.searchQuery;
-      
+
+      // Fast update for clear button & dropdown state without re-rendering the route
       if (state.route.name === 'search') {
-        renderCurrentRoute();
+        updateSearchDynamicUI();
       }
-      
+
+      // Fast fetch for suggestions (150ms debounce)
+      const currentQuery = state.searchQuery.trim();
       if (globals.suggestionTimer) window.clearTimeout(globals.suggestionTimer);
       globals.suggestionTimer = window.setTimeout(async () => {
-         const { fetchSearchSuggestions } = await import('../services/apiMapping.js');
-         if (state.searchQuery === currentQuery) {
-            state.searchSuggestions = await fetchSearchSuggestions(currentQuery);
+        if (state.searchQuery.trim() === currentQuery) {
+          const suggestions = await fetchSearchSuggestions(currentQuery);
+          if (state.searchQuery.trim() === currentQuery) {
+            state.searchSuggestions = suggestions;
             if (state.route.name === 'search') {
-               const { updateSearchPageUI } = await import('../components/components.js');
-               updateSearchPageUI();
+              updateSearchDynamicUI();
             }
-         }
+          }
+        }
       }, 150);
 
+      // Debounced full search (350ms debounce)
       if (globals.searchTimer) window.clearTimeout(globals.searchTimer);
       globals.searchTimer = window.setTimeout(() => {
         runSearch(state.searchQuery);
-      }, 500);
+      }, 350);
     }
     if (target.id === 'seekbar' || target.id === 'fs-seekbar') {
       state.isSeeking = true;

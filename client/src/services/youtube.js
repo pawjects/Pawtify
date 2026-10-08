@@ -225,25 +225,48 @@ export function mapServerSong(x) {
   if (typeof x.uploaderName === 'string') {
     artistName = x.uploaderName;
   } else if (Array.isArray(x.uploaderName)) {
-    artistName = x.uploaderName.map(a => a.name || a).join(', ');
+    artistName = x.uploaderName.map(a => (typeof a === 'string' ? a : a?.name || '')).filter(Boolean).join(', ');
   } else if (x.uploaderName && typeof x.uploaderName === 'object') {
     artistName = x.uploaderName.name || 'Unknown Artist';
   } else if (x.artist) {
     if (typeof x.artist === 'string') artistName = x.artist;
-    else if (Array.isArray(x.artist)) artistName = x.artist.map(a => a.name || a).join(', ');
+    else if (Array.isArray(x.artist)) artistName = x.artist.map(a => (typeof a === 'string' ? a : a?.name || '')).filter(Boolean).join(', ');
     else if (typeof x.artist === 'object') artistName = x.artist.name || 'Unknown Artist';
   }
 
+  artistName = (artistName || 'Unknown Artist').trim();
+  if (artistName === 'undefined' || artistName === 'null' || artistName.startsWith('[object')) {
+    artistName = 'Unknown Artist';
+  }
+
+  let cleanTitle = (x.title || x.name || 'Unknown Track').trim();
+  if (cleanTitle === 'undefined' || cleanTitle === 'null' || cleanTitle.startsWith('[object')) {
+    cleanTitle = 'Unknown Track';
+  }
+
+  const durationSec = typeof x.duration === 'number' ? x.duration : (x.durationSec || 0);
+  let durationStr = x.durationString || '';
+  if (!durationStr && durationSec > 0) {
+    const m = Math.floor(durationSec / 60);
+    const s = durationSec % 60;
+    durationStr = m + ':' + s.toString().padStart(2, '0');
+  }
+
+  const rawCover = x.thumbnail || x.coverUrl || `https://i.ytimg.com/vi/${x.id}/hqdefault.jpg`;
+  const cleanCover = (typeof rawCover === 'string' && !rawCover.startsWith('[object') && rawCover !== 'undefined')
+    ? rawCover
+    : `https://i.ytimg.com/vi/${x.id}/hqdefault.jpg`;
+
   return {
-    id: x.id,
-    title: x.title || 'Unknown Song',
+    id: String(x.id),
+    title: cleanTitle,
     artist: artistName,
-    album: 'Single',
-    coverUrl: getOptimizedArtwork(x.thumbnail || `https://i.ytimg.com/vi/${x.id}/hqdefault.jpg`, 540),
-    audioUrl: x.id,
-    durationSec: x.duration || 0,
-    duration: x.durationString || '',
-    releaseDate: '',
+    album: (typeof x.album === 'string' && x.album.trim()) ? x.album.trim() : 'Single',
+    coverUrl: getOptimizedArtwork(cleanCover, 540),
+    audioUrl: String(x.id),
+    durationSec: durationSec,
+    duration: durationStr || '0:00',
+    releaseDate: x.releaseDate || '',
     genre: 'Streaming',
   };
 }

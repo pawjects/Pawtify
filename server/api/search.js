@@ -166,16 +166,159 @@ async function searchHandler(req, res) {
       });
     } else if (type === 'suggestions') {
       const results = await ytmusic.getSearchSuggestions(query).catch(() => []);
-      return res.status(200).json({ items: results });
-    } else if (type === 'playlist_videos') {
-      const results = await ytmusic.getPlaylistVideos(query).catch(() => []);
-      items = results
+      const cleanSuggestions = (Array.isArray(results) ? results : [])
+        .map((s) => (typeof s === 'string' ? s.trim() : (s?.query || '')))
+        .filter(Boolean);
+      return res.status(200).json({ items: cleanSuggestions });
+    } else if (type === 'playlist_videos' || type === 'playlist_details') {
+      let playlistMeta = {
+        id: query,
+        name: 'Playlist',
+        artist: 'Various Artists',
+        thumbnail: '',
+        songCount: 0,
+        isAlbum: false,
+      };
+      let rawSongs = [];
+
+      if (query.startsWith('MPREb_')) {
+        // It is an Album browse ID
+        try {
+          const album = await ytmusic.getAlbum(query);
+          if (album) {
+            playlistMeta.name = album.name || 'Unknown Album';
+            playlistMeta.artist = Array.isArray(album.artist)
+              ? album.artist.map((a) => a.name || a).join(', ')
+              : (album.artist?.name || album.artist || 'Unknown Artist');
+            playlistMeta.thumbnail =
+              album.thumbnails?.[album.thumbnails.length - 1]?.url || '';
+            playlistMeta.songCount = album.songs?.length || 0;
+            playlistMeta.isAlbum = true;
+            rawSongs = (album.songs || []).map((s) => ({
+              videoId: s.videoId,
+              name: s.name,
+              artist: s.artist || playlistMeta.artist,
+              album: album.name,
+              duration: s.duration,
+              thumbnails: s.thumbnails || album.thumbnails,
+            }));
+          }
+        } catch (albErr) {
+          console.warn('Failed to load album via getAlbum:', albErr?.message);
+        }
+      } else {
+        // It is a Playlist
+        try {
+          const [vids, pInfo] = await Promise.all([
+            ytmusic.getPlaylistVideos(query).catch(() => []),
+            ytmusic.getPlaylist(query).catch(() => null),
+          ]);
+          rawSongs = Array.isArray(vids) ? vids : [];
+          if (pInfo) {
+            playlistMeta.name = pInfo.name || playlistMeta.name;
+            playlistMeta.artist = Array.isArray(pInfo.artist)
+              ? pInfo.artist.map((a) => a.name || a).join(', ')
+              : (pInfo.artist?.name || pInfo.artist || playlistMeta.artist);
+            playlistMeta.thumbnail =
+              pInfo.thumbnails?.[pInfo.thumbnails.length - 1]?.url || '';
+            playlistMeta.songCount = pInfo.videoCount || rawSongs.length;
+          }
+        } catch (playErr) {
+          console.warn('Failed to load playlist:', playErr?.message);
+        }
+      }
+
+      items = rawSongs
         .map((item) => {
-          const durationSec = item.duration || 0;
+          const durationSec = typeof item.duration === 'number' ? item.duration : 0;
+          const uploader = Array.isArray(item.artist)
+            ? item.artist.map((a) => a.name || a).join(', ')
+            : (item.artist?.name || item.artist || item.author || playlistMeta.artist || 'Unknown Artist');
+          const thumb =
+            item.thumbnails?.[item.thumbnails.length - 1]?.url ||
+            (item.videoId ? `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg` : '');
+          return {
+            id: item.videoId,
+            title: item.name || 'Unknown Track',
+            uploaderName: uploader,
+            thumbnail: thumb,
+            duration: durationSec,
+            durationString: formatDurationString(durationSec),
+            album: item.album || playlistMeta.name,
+            resultType: 'song',
+            isVerified: true,
+            isOfficialArtist: true,
+            isTopic: true,
+            tags: ['official release'],
+          };
+        })
+        .filter((i) => i.id);
+
+      if (!playlistMeta.thumbnail && items.length > 0) {
+        playlistMeta.thumbnail = items[0].thumbnail;
+      }
+      if (!playlistMeta.songCount) {
+        playlistMeta.songCount = items.length;
+      }
+
+      return res.status(200).json({ playlist: playlistMeta, items });
+    } else if (type === 'playlists') {
+      const results = await ytmusic.searchPlaylists(query).catch(() => []);
+      items = (Array.isArray(results) ? results : [])
+        .map((item) => ({
+          id: item.playlistId,
+          title: item.name || 'Unknown Playlist',
+          uploaderName: Array.isArray(item.artist)
+            ? item.artist.map((a) => a.name || a).join(', ')
+            : (item.artist?.name || item.artist || item.author || 'Various Artists'),
+          thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
+          resultType: 'playlist',
+        }))
+        .filter((i) => i.id);
+    } else if (type === 'albums') {
+      const results = await ytmusic.searchAlbums(query).catch(() => []);
+      items = (Array.isArray(results) ? results : [])
+        .map((item) => ({
+          id: item.albumId,
+          albumId: item.albumId,
+          playlistId: item.playlistId || '',
+          title: item.name || 'Unknown Album',
+          uploaderName: Array.isArray(item.artist)
+            ? item.artist.map((a) => a.name || a).join(', ')
+            : (item.artist?.name || item.artist || 'Unknown Artist'),
+          thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
+          year: item.year || '',
+          resultType: 'album',
+        }))
+        .filter((i) => i.id);
+    } else if (type === 'artists') {
+      const results = await ytmusic.searchArtists(query).catch(() => []);
+      items = (Array.isArray(results) ? results : [])
+        .map((item) => ({
+          id: item.artistId,
+          title: item.name || 'Unknown Artist',
+          uploaderName: item.name || 'Artist',
+          thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
+          resultType: 'artist',
+        }))
+        .filter((i) => i.id);
+    } else if (type === 'all') {
+      const [songResults, artistResults, playlistResults, albumResults] = await Promise.all([
+        ytmusic.searchSongs(query).catch(() => []),
+        ytmusic.searchArtists(query).catch(() => []),
+        ytmusic.searchPlaylists(query).catch(() => []),
+        ytmusic.searchAlbums(query).catch(() => []),
+      ]);
+
+      const songs = (Array.isArray(songResults) ? songResults : [])
+        .map((item) => {
+          const durationSec = typeof item.duration === 'number' ? item.duration : 0;
           return {
             id: item.videoId,
             title: item.name || 'Unknown Title',
-            uploaderName: Array.isArray(item.artist) ? item.artist.map(a => a.name || a).join(', ') : (item.artist?.name || item.artist || 'Unknown Artist'),
+            uploaderName: Array.isArray(item.artist)
+              ? item.artist.map((a) => a.name || a).join(', ')
+              : (item.artist?.name || item.artist || 'Unknown Artist'),
             thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
             duration: durationSec,
             durationString: formatDurationString(durationSec),
@@ -187,36 +330,56 @@ async function searchHandler(req, res) {
           };
         })
         .filter((i) => i.id);
-    } else if (type === 'playlists') {
-      const results = await ytmusic.searchPlaylists(query).catch(() => []);
-      items = results
-        .map((item) => ({
-          id: item.playlistId,
-          title: item.name || 'Unknown Playlist',
-          uploaderName: Array.isArray(item.artist) ? item.artist.map(a => a.name || a).join(', ') : (item.artist?.name || item.artist || 'Various Artists'),
-          thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
-          resultType: 'playlist',
-        }))
-        .filter((i) => i.id);
-    } else if (type === 'artists') {
-      const results = await ytmusic.searchArtists(query).catch(() => []);
-      items = results
+
+      const artists = (Array.isArray(artistResults) ? artistResults : [])
         .map((item) => ({
           id: item.artistId,
           title: item.name || 'Unknown Artist',
+          uploaderName: item.name || 'Artist',
           thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
           resultType: 'artist',
         }))
         .filter((i) => i.id);
+
+      const playlists = (Array.isArray(playlistResults) ? playlistResults : [])
+        .map((item) => ({
+          id: item.playlistId,
+          title: item.name || 'Unknown Playlist',
+          uploaderName: Array.isArray(item.artist)
+            ? item.artist.map((a) => a.name || a).join(', ')
+            : (item.artist?.name || item.artist || item.author || 'Various Artists'),
+          thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
+          resultType: 'playlist',
+        }))
+        .filter((i) => i.id);
+
+      const albums = (Array.isArray(albumResults) ? albumResults : [])
+        .map((item) => ({
+          id: item.albumId,
+          albumId: item.albumId,
+          playlistId: item.playlistId || '',
+          title: item.name || 'Unknown Album',
+          uploaderName: Array.isArray(item.artist)
+            ? item.artist.map((a) => a.name || a).join(', ')
+            : (item.artist?.name || item.artist || 'Unknown Artist'),
+          thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
+          year: item.year || '',
+          resultType: 'album',
+        }))
+        .filter((i) => i.id);
+
+      return res.status(200).json({ songs, artists, playlists, albums });
     } else {
       const results = await ytmusic.searchSongs(query).catch(() => []);
-      items = results
+      items = (Array.isArray(results) ? results : [])
         .map((item) => {
-          const durationSec = item.duration || 0;
+          const durationSec = typeof item.duration === 'number' ? item.duration : 0;
           return {
             id: item.videoId,
             title: item.name || 'Unknown Title',
-            uploaderName: Array.isArray(item.artist) ? item.artist.map(a => a.name || a).join(', ') : (item.artist?.name || item.artist || 'Unknown Artist'),
+            uploaderName: Array.isArray(item.artist)
+              ? item.artist.map((a) => a.name || a).join(', ')
+              : (item.artist?.name || item.artist || 'Unknown Artist'),
             thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
             duration: durationSec,
             durationString: formatDurationString(durationSec),

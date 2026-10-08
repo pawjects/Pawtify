@@ -1,27 +1,27 @@
 import { escapeHTML, getOptimizedArtwork } from '../utils/utils.js';
 import { state } from '../config/config.js';
-import { getSongById, dedupeSongs } from '../core/details.js';
-
+import { getSongById, dedupeSongs, rememberSongs } from '../core/details.js';
+import { fetchPlaylistDetails } from '../services/apiMapping.js';
 
 export function renderSongRowSkeleton() {
   return `
-    <div class="skeleton-song-row">
+    <div class="skeleton-song-row" aria-hidden="true">
       <div class="skeleton skeleton-cover-sm"></div>
       <div class="skeleton-text-wrap">
-        <div class="skeleton skeleton-text-main" style="width: 60%;"></div>
+        <div class="skeleton skeleton-text-main" style="width: 65%;"></div>
         <div class="skeleton skeleton-text-sub" style="width: 40%;"></div>
       </div>
-      <div class="skeleton skeleton-text-sub" style="width: 32px; margin-left: auto;"></div>
+      <div class="skeleton skeleton-text-sub" style="width: 36px; margin-left: auto;"></div>
     </div>
   `;
 }
 
 export function renderCardSkeleton(isRound = false) {
   return `
-    <div class="skeleton-card">
+    <div class="skeleton-card" aria-hidden="true">
       <div class="skeleton skeleton-card-cover" style="border-radius: ${isRound ? '50%' : 'var(--radius-md)'}; margin-bottom: 12px; aspect-ratio: 1/1;"></div>
-      <div class="skeleton skeleton-card-title" style="margin-left: 0;"></div>
-      <div class="skeleton skeleton-card-meta" style="margin-left: 0;"></div>
+      <div class="skeleton skeleton-card-title" style="margin-left: 0; width: 80%;"></div>
+      <div class="skeleton skeleton-card-meta" style="margin-left: 0; width: 50%;"></div>
     </div>
   `;
 }
@@ -91,103 +91,313 @@ export function renderHomeScrollCard(song, index, source, playlistId = '') {
 }
 
 export function renderSearchResults() {
-  const songs = state.searchResults.songs || [];
-  const artists = state.searchResults.artists || [];
-  const playlists = state.searchResults.playlists || [];
+  const songs = state.searchResults?.songs || [];
+  const artists = state.searchResults?.artists || [];
+  const playlists = state.searchResults?.playlists || [];
+  const albums = state.searchResults?.albums || [];
+  const currentTab = state.searchTab || 'all';
+
+  const tabsBar = `
+    <div class="search-tabs-bar" role="tablist">
+      <button class="search-tab-pill ${currentTab === 'all' ? 'active' : ''}" data-action="set-search-tab" data-value="all" type="button" role="tab" aria-selected="${currentTab === 'all'}">All</button>
+      <button class="search-tab-pill ${currentTab === 'songs' ? 'active' : ''}" data-action="set-search-tab" data-value="songs" type="button" role="tab" aria-selected="${currentTab === 'songs'}">Songs</button>
+      <button class="search-tab-pill ${currentTab === 'artists' ? 'active' : ''}" data-action="set-search-tab" data-value="artists" type="button" role="tab" aria-selected="${currentTab === 'artists'}">Artists</button>
+      <button class="search-tab-pill ${currentTab === 'playlists' ? 'active' : ''}" data-action="set-search-tab" data-value="playlists" type="button" role="tab" aria-selected="${currentTab === 'playlists'}">Playlists</button>
+      <button class="search-tab-pill ${currentTab === 'albums' ? 'active' : ''}" data-action="set-search-tab" data-value="albums" type="button" role="tab" aria-selected="${currentTab === 'albums'}">Albums</button>
+    </div>
+  `;
+
+  if (state.searchLoading) {
+    if (currentTab === 'all') {
+      return `
+        ${tabsBar}
+        <div class="search-all-grid">
+          <div class="search-top-result-col">
+            <h2 class="search-section-title">Top Result</h2>
+            <div class="skeleton" style="height: 220px; border-radius: var(--radius-lg); width: 100%;"></div>
+          </div>
+          <div class="search-top-songs-col">
+            <h2 class="search-section-title">Songs</h2>
+            <div class="song-table">${Array(4).fill('').map(() => renderSongRowSkeleton()).join('')}</div>
+          </div>
+        </div>
+        <div style="margin-top: 24px;">
+          <h2 class="search-section-title">Artists</h2>
+          <div class="card-grid">${Array(4).fill('').map(() => renderCardSkeleton(true)).join('')}</div>
+        </div>
+      `;
+    }
+    if (currentTab === 'songs') {
+      return `${tabsBar}<div class="song-table">${Array(8).fill('').map(() => renderSongRowSkeleton()).join('')}</div>`;
+    }
+    if (currentTab === 'artists') {
+      return `${tabsBar}<div class="card-grid">${Array(8).fill('').map(() => renderCardSkeleton(true)).join('')}</div>`;
+    }
+    return `${tabsBar}<div class="card-grid">${Array(8).fill('').map(() => renderCardSkeleton(false)).join('')}</div>`;
+  }
+
+  const noResultsHTML = `
+    <div class="search-empty-state">
+      <div class="search-empty-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+      <h2 class="search-empty-title">No results found for "${escapeHTML(state.searchQuery)}"</h2>
+      <p class="search-empty-sub">Please check your spelling, try fewer keywords, or tap one of these trending suggestions:</p>
+      <div class="search-empty-chips">
+        <button class="btn btn-soft" data-action="use-recent-search" data-query="Prateek Kuhad" type="button">Prateek Kuhad</button>
+        <button class="btn btn-soft" data-action="use-recent-search" data-query="Arijit Singh" type="button">Arijit Singh</button>
+        <button class="btn btn-soft" data-action="use-recent-search" data-query="Lo-Fi Chill" type="button">Lo-Fi Chill</button>
+        <button class="btn btn-soft" data-action="use-recent-search" data-query="Coldplay" type="button">Coldplay</button>
+      </div>
+    </div>
+  `;
+
+  if (!songs.length && !artists.length && !playlists.length && !albums.length) {
+    return `${tabsBar}${noResultsHTML}`;
+  }
 
   let content = '';
 
-  if (state.searchLoading) {
-    if (state.searchTab === 'songs') {
-      content = `<div class="song-table">${Array(8).fill('').map(() => renderSongRowSkeleton()).join('')}</div>`;
-    } else {
-      content = `<div class="card-grid">${Array(8).fill('').map(() => renderCardSkeleton(state.searchTab === 'artists')).join('')}</div>`;
-    }
-  } else {
-    const noSongsMsg = `
-      <div class="empty-state">
-        <i class="fa-solid fa-magnifying-glass" style="font-size: 2rem; color: var(--muted); margin-bottom: 12px;"></i>
-        <h2>No results found</h2>
-        <p>We couldn't find anything matching "${escapeHTML(state.searchQuery)}". Check your spelling or try a different search.</p>
-        <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 480px;">
-          <button class="btn btn-soft" data-action="use-recent-search" data-query="Prateek Kuhad" type="button" style="font-size: 0.8125rem; padding: 6px 14px; border-radius: 999px;">Prateek Kuhad</button>
-          <button class="btn btn-soft" data-action="use-recent-search" data-query="Lo-Fi Chill" type="button" style="font-size: 0.8125rem; padding: 6px 14px; border-radius: 999px;">Lo-Fi Chill</button>
-          <button class="btn btn-soft" data-action="use-recent-search" data-query="Arijit Singh" type="button" style="font-size: 0.8125rem; padding: 6px 14px; border-radius: 999px;">Arijit Singh</button>
+  if (currentTab === 'all') {
+    // Determine Top Result
+    const qLower = state.searchQuery.trim().toLowerCase();
+    const artistExactMatch = artists.find((a) => (a.name || '').toLowerCase() === qLower);
+    const topArtist = artistExactMatch || null;
+    const topSong = songs[0] || null;
+
+    let topResultHTML = '';
+    if (topArtist) {
+      topResultHTML = `
+        <div class="search-top-card" data-action="open-artist-profile" data-artist="${escapeHTML(topArtist.name)}" role="button" tabindex="0">
+          <div class="search-top-avatar-wrap">
+            <img class="search-top-avatar" src="${escapeHTML(getOptimizedArtwork(topArtist.imageUrl, 280))}" alt="${escapeHTML(topArtist.name)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+          </div>
+          <div class="search-top-meta">
+            <span class="search-top-badge">Artist</span>
+            <h3 class="search-top-title">${escapeHTML(topArtist.name)}</h3>
+          </div>
         </div>
-      </div>
-    `;
-    if (state.searchTab === 'songs') {
-      content = `<div class="song-table">${songs.length ? songs.map((s, i) => renderSongRow(s, i + 1, 'search')).join('') : noSongsMsg}</div>`;
-    } else if (state.searchTab === 'artists') {
-      content = `<div class="card-grid">${artists.length ? artists.map((a, i) => renderArtistSearchCard(a, i)).join('') : '<div class="empty-state"><h2>No artists found</h2><p>Try searching for a different name.</p></div>'}</div>`;
-    } else {
-      content = `<div class="card-grid">${playlists.length ? playlists.map((p, i) => renderPlaylistSearchCard(p, i)).join('') : '<div class="empty-state"><h2>No playlists found</h2><p>Try searching with different keywords.</p></div>'}</div>`;
+      `;
+    } else if (topSong) {
+      topResultHTML = `
+        <div class="search-top-card" data-action="play-song" data-song-id="${escapeHTML(topSong.id)}" data-source="search" role="button" tabindex="0">
+          <img class="search-top-cover" src="${escapeHTML(getOptimizedArtwork(topSong.coverUrl, 320))}" alt="${escapeHTML(topSong.title)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+          <div class="search-top-meta">
+            <span class="search-top-badge">Song</span>
+            <h3 class="search-top-title">${escapeHTML(topSong.title)}</h3>
+            <p class="search-top-artist">${escapeHTML(topSong.artist)}</p>
+          </div>
+          <button class="search-top-play-btn" data-action="play-song" data-song-id="${escapeHTML(topSong.id)}" data-source="search" type="button" aria-label="Play ${escapeHTML(topSong.title)}" onclick="event.stopPropagation();">
+            <i class="fa-solid fa-play"></i>
+          </button>
+        </div>
+      `;
     }
+
+    const topSongs = songs.slice(0, 4);
+
+    content = `
+      <div class="search-all-grid">
+        ${
+          topResultHTML
+            ? `
+          <div class="search-top-result-col">
+            <h2 class="search-section-title">Top Result</h2>
+            ${topResultHTML}
+          </div>
+        `
+            : ''
+        }
+        ${
+          topSongs.length
+            ? `
+          <div class="search-top-songs-col">
+            <div class="search-section-head">
+              <h2 class="search-section-title">Songs</h2>
+              <button class="btn-text-see-all" data-action="set-search-tab" data-value="songs" type="button">Show all</button>
+            </div>
+            <div class="song-table">
+              ${topSongs.map((s, i) => renderSongRow(s, i + 1, 'search')).join('')}
+            </div>
+          </div>
+        `
+            : ''
+        }
+      </div>
+
+      ${
+        artists.length
+          ? `
+        <section class="search-section">
+          <div class="search-section-head">
+            <h2 class="search-section-title">Artists</h2>
+            <button class="btn-text-see-all" data-action="set-search-tab" data-value="artists" type="button">Show all</button>
+          </div>
+          <div class="card-grid">
+            ${artists.slice(0, 6).map((a, i) => renderArtistSearchCard(a, i)).join('')}
+          </div>
+        </section>
+      `
+          : ''
+      }
+
+      ${
+        playlists.length
+          ? `
+        <section class="search-section">
+          <div class="search-section-head">
+            <h2 class="search-section-title">Playlists</h2>
+            <button class="btn-text-see-all" data-action="set-search-tab" data-value="playlists" type="button">Show all</button>
+          </div>
+          <div class="card-grid">
+            ${playlists.slice(0, 6).map((p, i) => renderPlaylistSearchCard(p, i)).join('')}
+          </div>
+        </section>
+      `
+          : ''
+      }
+
+      ${
+        albums.length
+          ? `
+        <section class="search-section">
+          <div class="search-section-head">
+            <h2 class="search-section-title">Albums</h2>
+            <button class="btn-text-see-all" data-action="set-search-tab" data-value="albums" type="button">Show all</button>
+          </div>
+          <div class="card-grid">
+            ${albums.slice(0, 6).map((alb, i) => renderAlbumSearchCard(alb, i)).join('')}
+          </div>
+        </section>
+      `
+          : ''
+      }
+    `;
+  } else if (currentTab === 'songs') {
+    content = songs.length
+      ? `<div class="song-table">${songs.map((s, i) => renderSongRow(s, i + 1, 'search')).join('')}</div>`
+      : `<div class="search-empty-state"><p class="search-empty-sub">No songs found for "${escapeHTML(state.searchQuery)}".</p></div>`;
+  } else if (currentTab === 'artists') {
+    content = artists.length
+      ? `<div class="card-grid">${artists.map((a, i) => renderArtistSearchCard(a, i)).join('')}</div>`
+      : `<div class="search-empty-state"><p class="search-empty-sub">No artists found for "${escapeHTML(state.searchQuery)}".</p></div>`;
+  } else if (currentTab === 'playlists') {
+    content = playlists.length
+      ? `<div class="card-grid">${playlists.map((p, i) => renderPlaylistSearchCard(p, i)).join('')}</div>`
+      : `<div class="search-empty-state"><p class="search-empty-sub">No playlists found for "${escapeHTML(state.searchQuery)}".</p></div>`;
+  } else if (currentTab === 'albums') {
+    content = albums.length
+      ? `<div class="card-grid">${albums.map((alb, i) => renderAlbumSearchCard(alb, i)).join('')}</div>`
+      : `<div class="search-empty-state"><p class="search-empty-sub">No albums found for "${escapeHTML(state.searchQuery)}".</p></div>`;
   }
 
-  return `
-    <div class="tab-list">
-      <button class="tab-btn ${state.searchTab === 'songs' ? 'active' : ''}" data-action="set-search-tab" data-value="songs" type="button">Songs</button>
-      <button class="tab-btn ${state.searchTab === 'artists' ? 'active' : ''}" data-action="set-search-tab" data-value="artists" type="button">Artists</button>
-      <button class="tab-btn ${state.searchTab === 'playlists' ? 'active' : ''}" data-action="set-search-tab" data-value="playlists" type="button">Playlists</button>
-    </div>
-    ${content}
-  `;
+  return `${tabsBar}${content}`;
 }
 
 export function renderSearchDynamicUI() {
   const hasQuery = state.searchQuery.trim().length > 0;
   const recentQueries = (state.recentSearches || [])
     .filter((item) => item.type === 'query')
-    .slice(0, 5);
+    .slice(0, 8);
   const suggestions = state.searchSuggestions || [];
 
   let html = '';
   if (hasQuery) {
-    html += `<button class="clear-search" data-action="clear-search-input" type="button" aria-label="Clear Search"><i class="fa-solid fa-xmark" style="font-size: 1rem;"></i></button>`;
-  }
-  
-  if (hasQuery && suggestions.length > 0) {
     html += `
-      <div class="recent-searches-dropdown">
-        ${suggestions.map(s => `
-          <button class="recent-search-item" data-action="use-recent-search" data-query="${escapeHTML(s)}" type="button" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: transparent; border: none; color: var(--text-main); text-align: left; cursor: pointer; width: 100%; transition: background 0.2s;">
-            <div style="display: flex; align-items: center; gap: 12px; pointer-events: none;">
-              <i class="fa-solid fa-magnifying-glass" style="color: var(--muted);"></i>
-              <span>${escapeHTML(s)}</span>
-            </div>
-          </button>
-        `).join('')}
-      </div>
+      <button class="clear-search" data-action="clear-search-input" type="button" aria-label="Clear Search Input" title="Clear">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
     `;
-  } else if (!hasQuery && recentQueries.length > 0) {
-    html += `
-      <div class="recent-searches-dropdown">
-        <div style="padding: 12px 16px; font-size: 0.85rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border);">
-          Recent Searches
+  }
+
+  if (!state.searchDropdownOpen) {
+    return html;
+  }
+
+  const qLower = state.searchQuery.trim().toLowerCase();
+
+  // Find matching recent searches
+  const matchingRecent = hasQuery
+    ? recentQueries.filter((r) => r.query.toLowerCase().includes(qLower) && r.query.toLowerCase() !== qLower)
+    : recentQueries;
+
+  // Filter suggestions to not duplicate matching recent
+  const filteredSuggestions = suggestions.filter(
+    (s) => !matchingRecent.some((r) => r.query.toLowerCase() === s.toLowerCase())
+  );
+
+  const hasAnyDropdownContent = hasQuery
+    ? (matchingRecent.length > 0 || filteredSuggestions.length > 0)
+    : matchingRecent.length > 0;
+
+  if (!hasAnyDropdownContent && !hasQuery) {
+    return html;
+  }
+
+  html += `
+    <div class="search-suggestions-dropdown" role="listbox" id="search-suggestions-box">
+      ${!hasQuery && matchingRecent.length > 0 ? `
+        <div class="search-suggestions-header">
+          <span>Recent Searches</span>
+          <button class="btn-clear-recent-header" data-action="clear-search-history" type="button">Clear all</button>
         </div>
-        ${recentQueries.map(item => `
-          <button class="recent-search-item" data-action="use-recent-search" data-query="${escapeHTML(item.query)}" type="button" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: transparent; border: none; color: var(--text-main); text-align: left; cursor: pointer; width: 100%; transition: background 0.2s;">
-            <div style="display: flex; align-items: center; gap: 12px; pointer-events: none;">
-              <i class="fa-solid fa-clock-rotate-left" style="color: var(--muted);"></i>
-              <span>${escapeHTML(item.query)}</span>
-            </div>
-            <div data-action="remove-recent-search" data-type="query" data-id="${escapeHTML(item.query)}" style="padding: 4px; color: var(--muted); cursor: pointer;" title="Remove">
-              <i class="fa-solid fa-xmark" style="pointer-events: none;"></i>
-            </div>
+      ` : ''}
+
+      ${matchingRecent.map((item) => {
+        let highlighted = escapeHTML(item.query);
+        if (hasQuery && item.query.toLowerCase().includes(qLower)) {
+          const start = item.query.toLowerCase().indexOf(qLower);
+          const before = escapeHTML(item.query.slice(0, start));
+          const match = escapeHTML(item.query.slice(start, start + qLower.length));
+          const after = escapeHTML(item.query.slice(start + qLower.length));
+          highlighted = `${before}<strong class="search-match-text">${match}</strong>${after}`;
+        }
+        return `
+          <div class="search-suggestion-item recent-query-item" role="option">
+            <button class="recent-query-click" data-action="use-recent-search" data-query="${escapeHTML(item.query)}" type="button">
+              <i class="fa-solid fa-clock-rotate-left search-suggestion-icon" aria-hidden="true"></i>
+              <span class="search-suggestion-text">${highlighted}</span>
+              <span class="search-suggestion-badge">Recent</span>
+            </button>
+            <button class="recent-query-remove" data-action="remove-recent-search" data-type="query" data-id="${escapeHTML(item.query)}" type="button" title="Remove search" aria-label="Remove search">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        `;
+      }).join('')}
+
+      ${hasQuery ? filteredSuggestions.slice(0, 7).map((s) => {
+        let highlighted = escapeHTML(s);
+        const sLower = s.toLowerCase();
+        if (sLower.includes(qLower)) {
+          const start = sLower.indexOf(qLower);
+          const before = escapeHTML(s.slice(0, start));
+          const match = escapeHTML(s.slice(start, start + qLower.length));
+          const after = escapeHTML(s.slice(start + qLower.length));
+          highlighted = `${before}<strong class="search-match-text">${match}</strong>${after}`;
+        }
+        return `
+          <button class="search-suggestion-item" data-action="use-suggestion" data-query="${escapeHTML(s)}" type="button" role="option">
+            <i class="fa-solid fa-magnifying-glass search-suggestion-icon" aria-hidden="true"></i>
+            <span class="search-suggestion-text">${highlighted}</span>
+            <span class="search-suggestion-badge">Search</span>
           </button>
-        `).join('')}
-      </div>
-    `;
-  }
+        `;
+      }).join('') : ''}
+    </div>
+  `;
+
   return html;
 }
 
-export function updateSearchPageUI() {
+export function updateSearchDynamicUIOnly() {
   const dynamicUI = document.getElementById('search-dynamic-ui');
   if (dynamicUI) {
     dynamicUI.innerHTML = renderSearchDynamicUI();
   }
+}
+export const updateSearchDynamicUI = updateSearchDynamicUIOnly;
+
+export function updateSearchPageUI() {
+  updateSearchDynamicUIOnly();
   const contentArea = document.getElementById('search-content-area');
   if (contentArea) {
     const hasQuery = state.searchQuery.trim().length > 0;
@@ -197,28 +407,37 @@ export function updateSearchPageUI() {
 
 export function renderSearchPage() {
   const hasQuery = state.searchQuery.trim().length > 0;
-  
+
   return `
-    <section class="page">
-      <div class="page-header" style="flex-direction:column; align-items:flex-start; margin-bottom: 20px; gap: 14px;">
+    <section class="page search-page">
+      <div class="search-header-container">
         <h1 class="page-title">Search</h1>
-        <div class="search-container">
-          <i class="fa-solid fa-magnifying-glass search-icon"></i>
-          <input type="text" id="search-input" class="search-input" placeholder="What do you want to listen to?" value="${escapeHTML(state.searchQuery)}" autocomplete="off" />
+        <div class="search-container" id="search-bar-wrap">
+          <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+          <input
+            type="text"
+            id="search-input"
+            class="search-input"
+            placeholder="What do you want to listen to?"
+            value="${escapeHTML(state.searchQuery)}"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Search music, artists, playlists, albums"
+          />
           <div id="search-dynamic-ui">
             ${renderSearchDynamicUI()}
           </div>
         </div>
-        <div class="search-shortcuts-bar" style="display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; max-width: 100%; scrollbar-width: none;">
+        <div class="search-shortcuts-bar">
           ${TRENDING_SEARCH_SHORTCUTS.map(item => `
-            <button class="btn btn-soft search-shortcut-chip" data-action="use-recent-search" data-query="${escapeHTML(item.label)}" type="button" style="white-space: nowrap; font-size: 0.8125rem; padding: 6px 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px;">
-              <i class="fa-solid ${item.icon}" style="font-size: 0.75rem; color: var(--green);"></i>
+            <button class="btn btn-soft search-shortcut-chip" data-action="use-recent-search" data-query="${escapeHTML(item.label)}" type="button">
+              <i class="fa-solid ${item.icon}"></i>
               <span>${escapeHTML(item.label)}</span>
             </button>
           `).join('')}
         </div>
       </div>
-      <div id="search-content-area" style="width: 100%;">
+      <div id="search-content-area" class="search-content-wrapper">
         ${hasQuery ? renderSearchResults() : renderSearchCategories()}
       </div>
     </section>
@@ -327,6 +546,51 @@ export function renderLibraryPage() {
   `;
 }
 
+export function ensureRemotePlaylistLoaded(playlistId) {
+  if (!playlistId || playlistId === 'history' || playlistId === 'liked' || playlistId === 'favorites') return;
+  if (state.playlists.some((p) => p.id === playlistId)) return;
+  if (!state.ytPlaylists) state.ytPlaylists = {};
+  if (state.ytPlaylists[playlistId] && (!state.ytPlaylists[playlistId].isLoading || state.ytPlaylists[playlistId].songs?.length)) return;
+
+  state.ytPlaylists[playlistId] = {
+    id: playlistId,
+    name: 'Loading playlist...',
+    coverUrl: '',
+    songs: [],
+    isLoading: true,
+    isSystem: true,
+  };
+
+  fetchPlaylistDetails(playlistId)
+    .then((data) => {
+      if (data && data.songs) {
+        rememberSongs(data.songs);
+        state.ytPlaylists[playlistId] = {
+          ...state.ytPlaylists[playlistId],
+          name: data.playlist.name || 'Playlist',
+          coverUrl: data.playlist.coverUrl || '',
+          uploaderName: data.playlist.uploaderName || '',
+          isAlbum: data.playlist.isAlbum,
+          songs: data.songs,
+          isLoading: false,
+        };
+      } else {
+        if (state.ytPlaylists[playlistId]) state.ytPlaylists[playlistId].isLoading = false;
+      }
+      if (state.route?.name === 'playlist' && state.route?.playlistId === playlistId) {
+        const appMain = document.getElementById('app-main');
+        if (appMain) appMain.innerHTML = renderPlaylistPage(playlistId);
+      }
+    })
+    .catch(() => {
+      if (state.ytPlaylists[playlistId]) state.ytPlaylists[playlistId].isLoading = false;
+      if (state.route?.name === 'playlist' && state.route?.playlistId === playlistId) {
+        const appMain = document.getElementById('app-main');
+        if (appMain) appMain.innerHTML = renderPlaylistPage(playlistId);
+      }
+    });
+}
+
 export function renderPlaylistPage(playlistId) {
   let playlist;
   if (playlistId === 'history') {
@@ -354,26 +618,55 @@ export function renderPlaylistPage(playlistId) {
       playlist = state.ytPlaylists[playlistId];
     }
   }
-  if (!playlist) return '<div class="empty-state">Playlist not found.</div>';
+
+  if (!playlist) {
+    ensureRemotePlaylistLoaded(playlistId);
+    return `
+      <section class="page playlist-page" style="padding-top: 0;">
+        <div style="margin-bottom: 24px; margin-top: 16px;">
+          <button class="btn btn-soft" data-action="go-back" type="button" style="padding: 8px 16px; font-size: 0.875rem;">
+            <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i> Back
+          </button>
+        </div>
+        <div class="page-header" style="display:flex; align-items:center; gap:24px; padding-bottom:24px;">
+          <div class="skeleton" style="width:160px; height:160px; border-radius:var(--radius-md);"></div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:12px;">
+            <div class="skeleton skeleton-text-main" style="width:80px; height:14px; border-radius:4px;"></div>
+            <div class="skeleton skeleton-text-main" style="width:60%; height:40px; border-radius:8px;"></div>
+            <div class="skeleton skeleton-text-sub" style="width:35%; height:14px; border-radius:4px;"></div>
+          </div>
+        </div>
+        <div class="song-table">${Array(8).fill('').map(() => renderSongRowSkeleton()).join('')}</div>
+      </section>
+    `;
+  }
   
   if (playlist.isLoading) {
-    return `<section class="page">
-    <div class="page-header" style="display:flex; align-items:center; gap:24px; padding-bottom:24px;">
-      <div class="skeleton" style="width:160px; height:160px; border-radius:var(--radius-md);"></div>
-      <div style="flex:1; display:flex; flex-direction:column; gap:12px;">
-        <div class="skeleton skeleton-text-main" style="width:100px; height:14px; border-radius:4px;"></div>
-        <div class="skeleton skeleton-text-main" style="width:60%; height:48px; border-radius:8px;"></div>
-        <div class="skeleton skeleton-text-sub" style="width:40%; height:14px; border-radius:4px;"></div>
-      </div>
-    </div>
-    <div class="song-table">${Array(8).fill('').map(() => renderSongRowSkeleton()).join('')}</div>
-  </section>`;
+    return `
+      <section class="page playlist-page" style="padding-top: 0;">
+        <div style="margin-bottom: 24px; margin-top: 16px;">
+          <button class="btn btn-soft" data-action="go-back" type="button" style="padding: 8px 16px; font-size: 0.875rem;">
+            <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i> Back
+          </button>
+        </div>
+        <div class="page-header" style="display:flex; align-items:center; gap:24px; padding-bottom:24px;">
+          <div class="skeleton" style="width:160px; height:160px; border-radius:var(--radius-md);"></div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:12px;">
+            <div class="skeleton skeleton-text-main" style="width:80px; height:14px; border-radius:4px;"></div>
+            <div class="skeleton skeleton-text-main" style="width:60%; height:40px; border-radius:8px;"></div>
+            <div class="skeleton skeleton-text-sub" style="width:35%; height:14px; border-radius:4px;"></div>
+          </div>
+        </div>
+        <div class="song-table">${Array(8).fill('').map(() => renderSongRowSkeleton()).join('')}</div>
+      </section>
+    `;
   }
   
   const coverUrl = playlist.coverUrl || (playlist.songs && playlist.songs.length > 0 ? playlist.songs[0].coverUrl : 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=300&h=300');
+  const songCount = playlist.songs ? playlist.songs.length : 0;
   
   return `
-    <section class="page" style="padding-top: 0;">
+    <section class="page playlist-page" style="padding-top: 0;">
       <div style="margin-bottom: 24px; margin-top: 16px;">
         <button class="btn btn-soft" data-action="go-back" type="button" style="padding: 8px 16px; font-size: 0.875rem;">
           <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i> Back
@@ -382,14 +675,17 @@ export function renderPlaylistPage(playlistId) {
       <div class="hero-player">
         <img class="hero-cover" src="${escapeHTML(getOptimizedArtwork(coverUrl, 480))}" alt="${escapeHTML(playlist.name)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
         <div class="hero-info">
-          <span class="hero-tag">Playlist</span>
+          <span class="hero-tag">${playlist.isAlbum ? 'Album' : 'Playlist'}</span>
           <h1 class="hero-title">${escapeHTML(playlist.name)}</h1>
           <p class="hero-meta">
-            ${playlist.isSystem ? 'System Playlist' : (playlist.songs ? playlist.songs.length : 0) + ' songs'}
+            ${playlist.uploaderName ? `${escapeHTML(playlist.uploaderName)} &bull; ` : ''}${songCount} song${songCount === 1 ? '' : 's'}
           </p>
-          <div class="hero-actions" style="display: flex; gap: 12px;">
-            <button class="btn btn-primary" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button">
+          <div class="hero-actions" style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="btn btn-primary" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" ${songCount === 0 ? 'disabled' : ''}>
               <i class="fa-solid fa-play"></i> Play All
+            </button>
+            <button class="btn btn-soft" data-action="shuffle-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" ${songCount === 0 ? 'disabled' : ''} aria-label="Shuffle Playlist">
+              <i class="fa-solid fa-shuffle"></i> Shuffle
             </button>
             <button class="btn btn-soft" data-action="share-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Share Playlist">
               <i class="fa-solid fa-share-nodes"></i> Share
@@ -403,7 +699,7 @@ export function renderPlaylistPage(playlistId) {
         </div>
       </div>
       <div class="song-table">
-        ${playlist.songs && playlist.songs.length ? playlist.songs.map((s, i) => renderSongRow(s, i + 1, 'playlist', playlist.id)).join('') : '<div class="empty-state">This playlist is empty. Search for songs to add them.</div>'}
+        ${songCount ? playlist.songs.map((s, i) => renderSongRow(s, i + 1, 'playlist', playlist.id)).join('') : '<div class="empty-state">This playlist is empty. Search for songs to add them.</div>'}
       </div>
     </section>
   `;
@@ -468,12 +764,33 @@ export function renderPlaylistSearchCard(playlist, index) {
     'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=300&h=300';
   const coverUrl = getOptimizedArtwork(rawCover, 320);
   return `
-    <div class="card" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(playlist.id)}" tabindex="0">
+    <div class="card" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(playlist.id)}" tabindex="0" role="button" aria-label="Open playlist ${escapeHTML(playlist.name)}">
       <div class="card-img-wrap">
         <img src="${escapeHTML(coverUrl)}" alt="${escapeHTML(playlist.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+        <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Play ${escapeHTML(playlist.name)}" onclick="event.stopPropagation();">
+          <i class="fa-solid fa-play"></i>
+        </button>
       </div>
       <div class="card-title">${escapeHTML(playlist.name)}</div>
       <div class="card-meta">${escapeHTML(playlist.uploaderName || 'Playlist')}</div>
+    </div>
+  `;
+}
+
+export function renderAlbumSearchCard(album, index) {
+  if (!album) return '';
+  const rawCover = album.imageUrl || '/assets/pawtify.png';
+  const coverUrl = getOptimizedArtwork(rawCover, 320);
+  return `
+    <div class="card" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}" tabindex="0" role="button" aria-label="Open album ${escapeHTML(album.name)}">
+      <div class="card-img-wrap">
+        <img class="card-cover" src="${escapeHTML(coverUrl)}" alt="${escapeHTML(album.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+        <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" type="button" aria-label="Play ${escapeHTML(album.name)}" onclick="event.stopPropagation();">
+          <i class="fa-solid fa-play"></i>
+        </button>
+      </div>
+      <div class="card-title">${escapeHTML(album.name)}</div>
+      <div class="card-meta">${escapeHTML(album.artist || 'Album')}${album.year ? ` &bull; ${escapeHTML(album.year)}` : ''}</div>
     </div>
   `;
 }

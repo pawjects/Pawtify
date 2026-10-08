@@ -215,10 +215,12 @@ Object.assign(state, {
   audioQuality: loadJSON(STORAGE.AUDIO_QUALITY, 'high'),
   searchQuery: loadJSON(STORAGE.SEARCH_QUERY, ''),
   searchSuggestions: [],
-  searchTab: 'songs',
+  searchDropdownOpen: false,
+  searchTab: 'all',
   libraryTab: 'recent',
   searchLoading: false,
-  searchResults: { songs: [], artists: [] },
+  searchResults: { songs: [], artists: [], playlists: [], albums: [] },
+  ytPlaylists: {},
   recentSearches: normalizeRecentSearches(
     loadJSON(STORAGE.RECENT_SEARCHES, [])
   ),
