@@ -508,11 +508,36 @@ export function bindGlobalEvents() {
         return;
       }
 
+      if (action === 'clear-activity') {
+        event.preventDefault();
+        openModal({
+          type: 'confirm',
+          title: 'Clear Activity Feed',
+          message: 'Are you sure you want to clear your listening activity feed? Your playlists and saved songs will remain intact.',
+          confirmText: 'Clear Activity',
+          isDanger: true,
+          onConfirmAction: 'execute-clear-activity',
+        });
+        return;
+      }
+
+      if (action === 'execute-clear-activity') {
+        event.preventDefault();
+        closeModal();
+        state.listeningActivity = [];
+        saveJSON(STORAGE.ACTIVITY, []);
+        renderCurrentRoute();
+        showToast('Listening activity cleared.');
+        return;
+      }
+
       if (action === 'execute-clear-history') {
         event.preventDefault();
         closeModal();
         state.recentlyPlayed = [];
+        state.listeningActivity = [];
         saveJSON(STORAGE.RECENT_PLAYED, []);
+        saveJSON(STORAGE.ACTIVITY, []);
         renderCurrentRoute();
         renderSidebarPlaylists();
         showToast('Listening history cleared.');

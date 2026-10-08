@@ -41,6 +41,7 @@ export const STORAGE = {
   RECENT_SEARCHES: 'pawtify-recent-searches',
   SEARCH_QUERY: 'pawtify-search-query',
   RECENT_PLAYED: 'pawtify-recently-played',
+  ACTIVITY: 'pawtify-listening-activity',
   USER_NAME: 'pawtify-user-name',
   AUDIO_QUALITY: 'pawtify-audio-quality',
 };
@@ -250,6 +251,7 @@ Object.assign(state, {
   englishSongs: [],
   recommendedSongs: [],
   recentlyPlayed: loadJSON(STORAGE.RECENT_PLAYED, []),
+  listeningActivity: loadJSON(STORAGE.ACTIVITY, []),
   pendingSearchQuery: '',
   modal: null,
   fullscreenPlayer: false,
@@ -275,6 +277,9 @@ export async function initApp() {
 
     const idbRecent = await idbGet(STORAGE.RECENT_PLAYED);
     if (idbRecent) state.recentlyPlayed = idbRecent;
+
+    const idbActivity = await idbGet(STORAGE.ACTIVITY);
+    if (idbActivity) state.listeningActivity = idbActivity;
 
     const idbSong = await idbGet(STORAGE.CURRENT_SONG);
     if (idbSong !== undefined) state.currentSong = idbSong;

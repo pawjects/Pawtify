@@ -1,13 +1,23 @@
 import { state, LOGO_URL } from '../config/config.js';
-import { escapeHTML, formatTime, getOptimizedArtwork } from '../utils/utils.js';
+import {
+  escapeHTML,
+  formatTime,
+  getOptimizedArtwork,
+  formatRelativeTime,
+  formatActivityDateTime,
+} from '../utils/utils.js';
 import { renderPlaylistCard, renderSongRow } from './components.js';
-import { getSongById } from '../core/details.js';
+import { getSongById, getListeningActivityList } from '../core/details.js';
 
 export function renderYouPage() {
   const playlistsCount = state.playlists ? state.playlists.length : 0;
   const favoritesCount = state.favorites ? state.favorites.length : 0;
   const historyCount = state.recentlyPlayed ? state.recentlyPlayed.length : 0;
   const queueCount = state.queue ? state.queue.length : 0;
+
+  // Recent Listening Activity Feed
+  const activities = getListeningActivityList();
+  const activityCount = activities ? activities.length : 0;
 
   const hour = new Date().getHours();
   let greeting = 'Welcome back';
@@ -61,6 +71,112 @@ export function renderYouPage() {
         </div>
         <button class="btn btn-soft you-action-btn" data-action="play-something" type="button">
           <i class="fa-solid fa-play"></i> Play Something
+        </button>
+      </div>
+    `;
+
+  // Listening Activity Feed HTML
+  const activitiesHTML = activityCount > 0
+    ? `
+      <div class="you-activity-feed-wrapper">
+        <div class="you-activity-feed" role="feed" aria-label="Recent listening activity feed">
+          ${activities
+            .map((act) => {
+              const cover = getOptimizedArtwork(act.coverUrl, 160);
+              const relTime = formatRelativeTime(act.timestamp);
+              const fullTime = formatActivityDateTime(act.timestamp);
+              const isCurrent =
+                state.currentSong &&
+                String(state.currentSong.id) === String(act.songId);
+              const isPlaying = isCurrent && state.isPlaying;
+              const isFav =
+                state.favorites &&
+                state.favorites.some((f) => String(f.id) === String(act.songId));
+              const albumName =
+                act.album && act.album !== 'Unknown' ? act.album : 'Single';
+              const contextLabel =
+                act.context === 'stream'
+                  ? 'Stream'
+                  : act.context || 'Library';
+
+              return `
+                <article class="you-activity-item ${isCurrent ? 'is-playing' : ''}" data-song-id="${escapeHTML(act.songId)}" tabindex="0">
+                  <div class="you-activity-cover-box" data-action="play-song" data-song-id="${escapeHTML(act.songId)}" role="button" aria-label="Play ${escapeHTML(act.title)}">
+                    <img class="you-activity-cover" src="${escapeHTML(cover)}" alt="${escapeHTML(act.title)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+                    <div class="you-activity-play-overlay" aria-hidden="true">
+                      <i class="fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}"></i>
+                    </div>
+                  </div>
+
+                  <div class="you-activity-info">
+                    <div class="you-activity-top-row">
+                      <strong class="you-activity-title" data-action="play-song" data-song-id="${escapeHTML(act.songId)}" role="button" title="${escapeHTML(act.title)}">
+                        ${escapeHTML(act.title)}
+                      </strong>
+                      <span class="you-activity-time" title="${escapeHTML(fullTime)}">
+                        <i class="fa-regular fa-clock" aria-hidden="true"></i> ${escapeHTML(relTime)}
+                      </span>
+                    </div>
+
+                    <div class="you-activity-context-row">
+                      <span class="you-activity-artist" data-action="open-artist-profile" data-artist="${escapeHTML(act.artist)}" role="button" title="View artist: ${escapeHTML(act.artist)}">
+                        <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i> ${escapeHTML(act.artist)}
+                      </span>
+                      <span class="you-activity-divider" aria-hidden="true">&bull;</span>
+                      <span class="you-activity-album" title="Album context: ${escapeHTML(albumName)}">
+                        <i class="fa-solid fa-compact-disc" aria-hidden="true"></i> ${escapeHTML(albumName)}
+                      </span>
+                    </div>
+
+                    <div class="you-activity-tags-row">
+                      <span class="you-activity-tag you-activity-tag-context">
+                        <i class="fa-solid fa-headphones" aria-hidden="true"></i> ${escapeHTML(contextLabel)}
+                      </span>
+                      ${
+                        act.duration && act.duration !== '0:00'
+                          ? `
+                        <span class="you-activity-tag you-activity-tag-duration">
+                          <i class="fa-regular fa-hourglass-half" aria-hidden="true"></i> ${escapeHTML(act.duration)}
+                        </span>
+                      `
+                          : ''
+                      }
+                      ${
+                        isCurrent
+                          ? `
+                        <span class="you-activity-tag you-activity-tag-live">
+                          <span class="activity-pulse-dot" aria-hidden="true"></span> Now Playing
+                        </span>
+                      `
+                          : ''
+                      }
+                    </div>
+                  </div>
+
+                  <div class="you-activity-actions">
+                    <button class="btn-icon you-activity-action-btn ${isPlaying ? 'playing' : ''}" data-action="play-song" data-song-id="${escapeHTML(act.songId)}" type="button" aria-label="Play ${escapeHTML(act.title)}" title="Play">
+                      <i class="fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}"></i>
+                    </button>
+                    <button class="btn-icon you-activity-action-btn ${isFav ? 'liked' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(act.songId)}" type="button" aria-label="Favorite ${escapeHTML(act.title)}" title="${isFav ? 'Remove from Liked' : 'Save to Liked'}">
+                      <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                    </button>
+                  </div>
+                </article>
+              `;
+            })
+            .join('')}
+        </div>
+      </div>
+    `
+    : `
+      <div class="you-empty-card">
+        <div class="you-empty-icon"><i class="fa-solid fa-wave-square"></i></div>
+        <div class="you-empty-text">
+          <strong>No listening activity yet</strong>
+          <span>Tracks you stream will be recorded here in real-time with album details and timestamps.</span>
+        </div>
+        <button class="btn btn-soft you-action-btn" data-action="play-something" type="button">
+          <i class="fa-solid fa-play"></i> Start Listening
         </button>
       </div>
     `;
@@ -187,7 +303,7 @@ export function renderYouPage() {
               <span class="you-tagline-dot" aria-hidden="true">&bull;</span>
               <span class="you-tagline-stat"><strong>${playlistsCount}</strong> Playlists</span>
               <span class="you-tagline-dot" aria-hidden="true">&bull;</span>
-              <span class="you-tagline-stat"><strong>${historyCount}</strong> Streamed</span>
+              <span class="you-tagline-stat"><strong>${activityCount}</strong> Activity</span>
             </div>
           </div>
         </div>
@@ -201,7 +317,32 @@ export function renderYouPage() {
         </div>
       </header>
 
-      <!-- 📋 3. Personal Music: Playlists -->
+      <!-- ⚡ 3. Recent Listening Activity Feed -->
+      <section class="you-section you-activity-section">
+        <div class="you-section-head">
+          <div class="you-section-head-titles">
+            <h2 class="you-section-title"><i class="fa-solid fa-chart-line"></i>Activity</h2>
+            <span class="you-section-sub">Scrollable feed of recent listening activity with song &amp; album context</span>
+          </div>
+          <div class="you-section-actions">
+            ${
+              activityCount > 0
+                ? `
+                <button class="btn btn-soft btn-sm you-btn-danger" data-action="clear-activity" type="button" title="Clear activity feed">
+                  <i class="fa-solid fa-trash-can"></i> Clear
+                </button>
+                <span class="you-activity-count-badge">
+                  <span class="activity-pulse-dot" aria-hidden="true"></span> ${activityCount} ${activityCount === 1 ? 'event' : 'events'}
+                </span>
+              `
+                : ''
+            }
+          </div>
+        </div>
+        ${activitiesHTML}
+      </section>
+
+      <!-- 📋 4. Personal Music: Playlists -->
       <section class="you-section">
         <div class="you-section-head">
           <div class="you-section-head-titles">

@@ -188,12 +188,115 @@ export function persistPlayer() {
   saveJSON(STORAGE.QUEUE, state.queue);
   saveJSON(STORAGE.CURRENT_TIME, state.progress);
   saveJSON(STORAGE.RECENT_PLAYED, state.recentlyPlayed);
+  saveJSON(STORAGE.ACTIVITY, state.listeningActivity);
 }
 
-export function addRecentlyPlayed(songId) {
+export function recordListeningActivity(song, source = 'stream') {
+  if (!song || !song.id) return;
+  rememberSongs([song]);
+  const now = Date.now();
+  state.listeningActivity = Array.isArray(state.listeningActivity)
+    ? state.listeningActivity
+    : [];
+
+  // Deduplicate if the exact same song was recorded within the last 15 seconds
+  const last = state.listeningActivity[0];
+  if (
+    last &&
+    String(last.songId) === String(song.id) &&
+    now - Number(last.timestamp || 0) < 15000
+  ) {
+    return;
+  }
+
+  const activityItem = {
+    id: `act_${song.id}_${now}`,
+    songId: song.id,
+    title: song.title || 'Unknown Song',
+    artist: song.artist || 'Unknown Artist',
+    album: song.album && song.album !== 'Unknown' ? song.album : 'Single',
+    coverUrl: song.coverUrl || '/assets/pawtify.png',
+    duration: song.duration || '0:00',
+    timestamp: now,
+    context: source || 'stream',
+  };
+
+  state.listeningActivity = [activityItem, ...state.listeningActivity].slice(
+    0,
+    100
+  );
+  saveJSON(STORAGE.ACTIVITY, state.listeningActivity);
+}
+
+export function getListeningActivityList() {
+  state.listeningActivity = Array.isArray(state.listeningActivity)
+    ? state.listeningActivity
+    : [];
+
+  // Bootstrap initial listening history entries if user has recentlyPlayed songs but empty activity feed
+  if (state.listeningActivity.length === 0) {
+    const candidateSongs = [
+      ...(state.recentlyPlayed || [])
+        .map((id) => getSongById(id))
+        .filter(Boolean),
+      ...(state.favorites || []).slice(0, 8),
+      ...(state.trendingSongs || []).slice(0, 6),
+      ...(state.recommendedSongs || []).slice(0, 6),
+    ];
+    const unique = dedupeSongs(candidateSongs);
+    if (unique.length > 0) {
+      const now = Date.now();
+      const offsets = [
+        4 * 60 * 1000,
+        22 * 60 * 1000,
+        65 * 60 * 1000,
+        3 * 3600 * 1000,
+        7 * 3600 * 1000,
+        18 * 3600 * 1000,
+        26 * 3600 * 1000,
+        48 * 3600 * 1000,
+      ];
+      state.listeningActivity = unique.slice(0, 10).map((s, idx) => ({
+        id: `act_${s.id}_${now - (offsets[idx] || (idx + 1) * 3600000)}`,
+        songId: s.id,
+        title: s.title || 'Unknown Song',
+        artist: s.artist || 'Unknown Artist',
+        album: s.album && s.album !== 'Unknown' ? s.album : 'Single',
+        coverUrl: s.coverUrl || '/assets/pawtify.png',
+        duration: s.duration || '0:00',
+        timestamp: now - (offsets[idx] || (idx + 1) * 3600000),
+        context: idx % 2 === 0 ? 'stream' : (s.album && s.album !== 'Single' ? s.album : 'Daily Mix'),
+      }));
+      saveJSON(STORAGE.ACTIVITY, state.listeningActivity);
+    }
+  }
+
+  // Ensure all activity songs are cached in the catalog so clicking play immediately works
+  if (state.listeningActivity.length > 0) {
+    const actSongs = state.listeningActivity.map((act) => ({
+      id: act.songId,
+      title: act.title,
+      artist: act.artist,
+      album: act.album,
+      coverUrl: act.coverUrl,
+      duration: act.duration || '0:00',
+      durationSec: 0,
+    }));
+    rememberSongs(actSongs);
+  }
+
+  return state.listeningActivity;
+}
+
+export function addRecentlyPlayed(songId, songObj = null) {
   const without = state.recentlyPlayed.filter((id) => id !== songId);
   state.recentlyPlayed = [songId, ...without].slice(0, 50);
   saveJSON(STORAGE.RECENT_PLAYED, state.recentlyPlayed);
+
+  const song = songObj || getSongById(songId);
+  if (song) {
+    recordListeningActivity(song);
+  }
 }
 
 export function getSongById(id) {
@@ -208,6 +311,18 @@ export function seedCatalog() {
       Array.isArray(playlist.songs) ? playlist.songs : []
     )
   );
+  if (Array.isArray(state.listeningActivity)) {
+    const activitySongs = state.listeningActivity.map((act) => ({
+      id: act.songId,
+      title: act.title,
+      artist: act.artist,
+      album: act.album,
+      coverUrl: act.coverUrl,
+      duration: act.duration || '0:00',
+      durationSec: 0,
+    }));
+    rememberSongs(activitySongs);
+  }
   const recentTracks = state.recentSearches
     .filter((i) => i.type === 'track')
     .map((t) => ({

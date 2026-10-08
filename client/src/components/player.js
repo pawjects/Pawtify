@@ -68,7 +68,7 @@ export async function play(song, queue = null, autoplay = true) {
     globals.pendingAutoplay = autoplay;
     loadYTApi();
   }
-  addRecentlyPlayed(playableSong.id);
+  addRecentlyPlayed(playableSong.id, playableSong);
   persistPlayer();
   await loadRecommendations();
   renderCurrentRoute();

@@ -5628,6 +5628,325 @@ input[type="range"] {
   white-space: nowrap;
 }
 
+/* --- 5a. Listening Activity Feed --- */
+.you-activity-section {
+  width: 100%;
+}
+
+.you-activity-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  letter-spacing: 0.02em;
+}
+
+.activity-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  display: inline-block;
+  box-shadow: 0 0 8px rgba(29, 185, 84, 0.8);
+  animation: pulseGreen 2s infinite ease-in-out;
+}
+
+@keyframes pulseGreen {
+  0% { transform: scale(0.9); opacity: 0.7; box-shadow: 0 0 4px rgba(29, 185, 84, 0.5); }
+  50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 10px rgba(29, 185, 84, 0.9); }
+  100% { transform: scale(0.9); opacity: 0.7; box-shadow: 0 0 4px rgba(29, 185, 84, 0.5); }
+}
+
+.you-activity-feed-wrapper {
+  width: 100%;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-1);
+  overflow: hidden;
+  position: relative;
+}
+
+.you-activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.you-activity-feed::-webkit-scrollbar {
+  width: 6px;
+}
+
+.you-activity-feed::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.you-activity-feed::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+}
+
+.you-activity-feed::-webkit-scrollbar-thumb:hover {
+  background: rgba(29, 185, 84, 0.5);
+}
+
+.you-activity-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+  min-width: 0;
+  width: 100%;
+  position: relative;
+}
+
+.you-activity-item:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-subtle);
+}
+
+.you-activity-item.is-playing {
+  background: rgba(29, 185, 84, 0.08);
+  border-left: 3px solid var(--green);
+  border-color: rgba(29, 185, 84, 0.25);
+}
+
+.you-activity-cover-box {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  background: var(--surface-elevated);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.you-activity-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.you-activity-cover-box:hover .you-activity-cover {
+  transform: scale(1.06);
+}
+
+.you-activity-play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-size: 0.9rem;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.you-activity-cover-box:hover .you-activity-play-overlay,
+.you-activity-item:hover .you-activity-play-overlay,
+.you-activity-item.is-playing .you-activity-play-overlay {
+  opacity: 1;
+}
+
+.you-activity-item.is-playing .you-activity-play-overlay i {
+  color: var(--green);
+}
+
+.you-activity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.you-activity-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.you-activity-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.you-activity-title:hover {
+  color: var(--green);
+  text-decoration: underline;
+}
+
+.you-activity-item.is-playing .you-activity-title {
+  color: var(--green);
+}
+
+.you-activity-time {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-sub);
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.you-activity-context-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-sub);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.you-activity-artist {
+  color: var(--text-sub);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.you-activity-artist:hover {
+  color: var(--text-main);
+  text-decoration: underline;
+}
+
+.you-activity-divider {
+  color: var(--text-sub);
+  opacity: 0.5;
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+.you-activity-album {
+  color: var(--text-sub);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.775rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.you-activity-album i {
+  color: var(--green);
+  font-size: 0.75rem;
+}
+
+.you-activity-tags-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.you-activity-tag {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-sub);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.01em;
+}
+
+.you-activity-tag-context i {
+  color: var(--green);
+}
+
+.you-activity-tag-live {
+  background: rgba(29, 185, 84, 0.15);
+  color: var(--green);
+  border: 1px solid rgba(29, 185, 84, 0.3);
+}
+
+.you-activity-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.you-activity-action-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-sub);
+  display: grid;
+  place-items: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.you-activity-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  transform: scale(1.08);
+}
+
+.you-activity-action-btn.playing {
+  color: var(--green);
+}
+
+.you-activity-action-btn.liked {
+  color: var(--green);
+}
+
 /* --- 5b. Settings Gateway Card on You Tab --- */
 .you-settings-gateway-section {
   width: 100%;
@@ -6547,6 +6866,49 @@ input[type="range"] {
     font-size: 0.75rem;
   }
 
+  /* Activity Feed on Mobile */
+  .you-activity-feed {
+    max-height: 380px;
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .you-activity-item {
+    padding: 8px 10px;
+    gap: 10px;
+  }
+
+  .you-activity-cover-box {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  .you-activity-title {
+    font-size: 0.875rem;
+  }
+
+  .you-activity-time {
+    font-size: 0.71875rem;
+  }
+
+  .you-activity-artist {
+    font-size: 0.75rem;
+  }
+
+  .you-activity-album {
+    font-size: 0.71875rem;
+    max-width: 130px;
+  }
+
+  .you-activity-action-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
   /* Floating Mini Player & Clearance */
   .mini-player {
     height: 60px;
@@ -6675,6 +7037,46 @@ input[type="range"] {
     height: 54px;
     min-width: 54px;
     font-size: 1.05rem;
+  }
+
+  /* Activity Feed on 360px Mobile */
+  .you-activity-feed {
+    max-height: 340px;
+    padding: 4px;
+    gap: 3px;
+  }
+
+  .you-activity-item {
+    padding: 6px 6px;
+    gap: 8px;
+  }
+
+  .you-activity-cover-box {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .you-activity-title {
+    font-size: 0.8125rem;
+  }
+
+  .you-activity-time {
+    font-size: 0.6875rem;
+  }
+
+  .you-activity-artist {
+    font-size: 0.71875rem;
+  }
+
+  .you-activity-album {
+    font-size: 0.6875rem;
+    max-width: 96px;
+  }
+
+  .you-activity-tag-duration {
+    display: none;
   }
 
   .home-grid {
