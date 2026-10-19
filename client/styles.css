@@ -1012,6 +1012,137 @@ img {
   color: var(--md-sys-color-primary);
 }
 
+/* ============ TRACK OVERFLOW MENU (MATERIAL YOU POPUP) ============ */
+.track-menu-popup {
+  position: fixed;
+  z-index: 140;
+  background-color: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-shape-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  padding: 6px;
+  display: none;
+  flex-direction: column;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  user-select: none;
+  animation: trackMenuFade 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+
+[data-theme="light"] .track-menu-popup {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+@keyframes trackMenuFade {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.track-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 8px;
+}
+
+.track-menu-thumb {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: var(--md-shape-xs);
+  object-fit: cover;
+  background-color: var(--md-sys-color-surface-container-highest);
+  flex-shrink: 0;
+}
+
+.track-menu-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.track-menu-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-menu-artist {
+  font-size: 0.71875rem;
+  color: var(--md-sys-color-on-surface-variant);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-menu-divider {
+  height: 1px;
+  background-color: var(--md-sys-color-outline-variant);
+  margin: 4px 6px;
+}
+
+.track-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.track-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  min-height: 40px;
+  border-radius: var(--md-shape-sm);
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+  user-select: none;
+}
+
+.track-menu-item i {
+  width: 18px;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface-variant);
+  flex-shrink: 0;
+}
+
+.track-menu-item:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.track-menu-item:active {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.track-menu-item-danger {
+  color: var(--danger);
+}
+
+.track-menu-item-danger i {
+  color: var(--danger);
+}
+
 /* ============ DESKTOP PLAYER BAR ============ */
 .player-bar {
   grid-area: player;

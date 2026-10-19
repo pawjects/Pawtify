@@ -803,14 +803,8 @@ export function renderSongRow(song, index, source, playlistId = '') {
        </div>
        <div class="song-duration">${escapeHTML(song.duration || '0:00')}</div>
        <div class="song-actions">
-         <button class="song-action-btn ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" onclick="event.stopPropagation();" title="Toggle Favorite">
-           <i class="${isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}"></i>
-         </button>
-         <button class="song-action-btn" data-action="open-playlist-picker" data-song-id="${escapeHTML(song.id)}" type="button" onclick="event.stopPropagation();" title="Add to Playlist">
-           <i class="fa-solid fa-plus"></i>
-         </button>
-         <button class="song-action-btn" data-action="share-specific-song" data-song-id="${escapeHTML(song.id)}" type="button" onclick="event.stopPropagation();" title="Share Song">
-           <i class="fa-solid fa-share-nodes"></i>
+         <button class="song-action-btn song-menu-trigger" data-action="open-track-menu" data-song-id="${escapeHTML(song.id)}" data-playlist-id="${escapeHTML(playlistId)}" type="button" aria-label="More options for ${escapeHTML(song.title)}" title="More options" onclick="event.stopPropagation();">
+           <i class="fa-solid fa-ellipsis-vertical"></i>
          </button>
        </div>
      </div>
