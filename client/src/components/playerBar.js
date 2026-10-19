@@ -1,10 +1,11 @@
-import { state } from '../config/config.js';
+import { state, globals } from '../config/config.js';
 import { playerBar, miniPlayer, sidebarPlaylists } from '../config/dom.js';
 import { escapeHTML, formatTime, getOptimizedArtwork } from '../utils/utils.js';
 import { getSongById } from '../core/details.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
 import { renderQueuePanel } from './queuePanel.js';
 import { updateWavyProgress } from './wavyProgress.js';
+import { startYTPoll } from '../services/youtube.js';
 
 export function renderPlayerBar(force = false) {
   if (!playerBar) return;
@@ -292,7 +293,7 @@ export function refreshPlaybackUI() {
       seek.value = String(Math.floor(state.progress || 0));
       const pct =
         maxVal > 0 ? (Math.floor(state.progress || 0) / maxVal) * 100 : 0;
-      seek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${pct}%, rgba(255,255,255,0.15) ${pct}%)`;
+      seek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${pct}%, rgba(255,255,255,0.16) ${pct}%)`;
     }
     const fsSeek = document.getElementById('fs-seekbar');
     if (fsSeek) {
@@ -304,7 +305,7 @@ export function refreshPlaybackUI() {
       fsSeek.value = String(Math.floor(state.progress || 0));
       const fsPct =
         fsMax > 0 ? (Math.floor(state.progress || 0) / fsMax) * 100 : 0;
-      fsSeek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${fsPct}%, rgba(255,255,255,0.15) ${fsPct}%)`;
+      fsSeek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${fsPct}%, rgba(255,255,255,0.16) ${fsPct}%)`;
     }
 
     const currentLabel = document.getElementById('time-current');
@@ -343,13 +344,13 @@ export function refreshPlaybackUI() {
   if (volumeSlider && document.activeElement !== volumeSlider) {
     volumeSlider.value = String(Math.round(state.volume * 100));
     const volPct = Math.round(state.volume * 100);
-    volumeSlider.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${volPct}%, rgba(255,255,255,0.15) ${volPct}%)`;
+    volumeSlider.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${volPct}%, rgba(255,255,255,0.16) ${volPct}%)`;
   }
   const fsVol = document.getElementById('fs-volume-slider');
   if (fsVol && document.activeElement !== fsVol) {
     fsVol.value = String(Math.round(state.volume * 100));
     const volPct = Math.round(state.volume * 100);
-    fsVol.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${volPct}%, rgba(255,255,255,0.15) ${volPct}%)`;
+    fsVol.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${volPct}%, rgba(255,255,255,0.16) ${volPct}%)`;
   }
 
   // Ensure active-track class is kept in sync on document body
@@ -378,6 +379,11 @@ export function refreshPlaybackUI() {
       icon.className = isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
     }
   });
+
+  // Ensure playback poll interval is running if actively playing
+  if (state.isPlaying && !globals.ytPollInterval && globals.ytPlayerReady) {
+    startYTPoll();
+  }
 
   // Re-render components only if their rendered track ID differs from current state
   renderPlayerBar(false);

@@ -8,11 +8,12 @@ import {
 import { searchSongs, searchArtists } from '../services/apiMapping.js';
 import { escapeHTML } from '../utils/utils.js';
 import { renderSongRow } from './components.js';
-import { pushHistoryLayer } from '../core/navigationHistory.js';
+import { pushHistoryLayer, updatePanelBackdrop } from '../core/navigationHistory.js';
 import { isArtistFollowed } from './player.js';
 
 export async function openArtistProfile(artistName) {
   pushHistoryLayer('artist');
+  updatePanelBackdrop();
   if (state.route.name === 'search' && state.searchQuery.trim()) {
     // Save as query for now since we don't have full artist data immediately, but wait, we have artistName.
     // If we can get image from searchResults we save as item

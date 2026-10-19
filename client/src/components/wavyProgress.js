@@ -32,16 +32,17 @@ function resizeCanvas() {
   if (!waveCanvas || !containerElement) return;
   const rect = containerElement.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const width = Math.max(rect.width, 100);
+  const width = Math.max(rect.width, 10);
   const height = Math.max(rect.height, 28);
 
-  waveCanvas.width = Math.floor(width * dpr);
-  waveCanvas.height = Math.floor(height * dpr);
-  waveCanvas.style.width = `${width}px`;
-  waveCanvas.style.height = `${height}px`;
-
-  if (waveCtx) {
-    waveCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const targetW = Math.floor(width * dpr);
+  const targetH = Math.floor(height * dpr);
+  if (waveCanvas.width !== targetW || waveCanvas.height !== targetH) {
+    waveCanvas.width = targetW;
+    waveCanvas.height = targetH;
+    if (waveCtx) {
+      waveCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
   }
 }
 
@@ -60,6 +61,12 @@ export function teardownWavyProgress() {
 }
 
 export function updateWavyProgress() {
+  if (state.fullscreenPlayer) {
+    const fsContainer = document.getElementById('fs-wave-container');
+    if (fsContainer && (!waveCanvas || !waveCtx || containerElement !== fsContainer)) {
+      initWavyProgress(fsContainer);
+    }
+  }
   drawFrame();
   if (state.isPlaying && !animFrameId && state.fullscreenPlayer) {
     startWaveLoop();
@@ -79,8 +86,10 @@ function startWaveLoop() {
 
     drawFrame();
 
-    if (state.isPlaying && !isReduced) {
-      phase += 0.055;
+    if (state.isPlaying) {
+      if (!isReduced) {
+        phase += 0.055;
+      }
       animFrameId = requestAnimationFrame(loop);
     } else if (currentAmp > 0.05 && !isReduced) {
       // Smoothly settle wave to 0 when paused
@@ -94,17 +103,44 @@ function startWaveLoop() {
 }
 
 function drawFrame() {
-  if (!waveCanvas || !waveCtx || !containerElement) return;
+  if (!waveCanvas || !waveCtx || !containerElement) {
+    if (state.fullscreenPlayer) {
+      const fsContainer = document.getElementById('fs-wave-container');
+      if (fsContainer) initWavyProgress(fsContainer);
+    }
+    if (!waveCanvas || !waveCtx || !containerElement) return;
+  }
   const rect = containerElement.getBoundingClientRect();
   const W = rect.width;
   const H = rect.height;
   if (W <= 0 || H <= 0) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const targetW = Math.floor(W * dpr);
+  const targetH = Math.floor(H * dpr);
+  if (waveCanvas.width !== targetW || waveCanvas.height !== targetH) {
+    waveCanvas.width = targetW;
+    waveCanvas.height = targetH;
+    if (waveCtx) {
+      waveCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+  }
 
   const cy = Math.round(H / 2);
   const maxSec = Math.max(1, state.duration || state.currentSong?.durationSec || 1);
   const curSec = Math.max(0, Math.min(maxSec, state.progress || 0));
   const progressRatio = curSec / maxSec;
   const scrubX = Math.max(0, Math.min(W, progressRatio * W));
+
+  // Keep fs-seekbar and time label synchronized with actual playback position
+  const fsSeek = document.getElementById('fs-seekbar');
+  if (fsSeek && !state.isSeeking) {
+    fsSeek.value = String(curSec);
+  }
+  const fsCurrentLabel = document.getElementById('fs-time-current');
+  if (fsCurrentLabel && !state.isSeeking) {
+    fsCurrentLabel.textContent = formatTime(curSec);
+  }
 
   const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const targetAmp = (state.isPlaying && !isReduced) ? 4.5 : 0;
@@ -145,31 +181,22 @@ function drawFrame() {
       waveCtx.lineTo(scrubX, cy);
     }
 
-    const waveGrad = waveCtx.createLinearGradient(0, cy, Math.max(1, scrubX), cy);
-    waveGrad.addColorStop(0, '#1db954');
-    waveGrad.addColorStop(1, '#1ed760');
-    waveCtx.strokeStyle = waveGrad;
+    waveCtx.strokeStyle = '#1db954';
     waveCtx.lineWidth = 3.5;
     waveCtx.lineCap = 'round';
     waveCtx.lineJoin = 'round';
-    waveCtx.shadowColor = 'rgba(29, 185, 84, 0.45)';
-    waveCtx.shadowBlur = 6;
     waveCtx.stroke();
-    waveCtx.shadowBlur = 0;
   }
 
-  // 3. Dynamic Scrubber Bead (White circle with emerald center and glow)
-  const beadRadius = state.isSeeking ? 7.5 : 6;
+  // 3. Dynamic Scrubber Bead (Crisp Material 3 thumb)
+  const beadRadius = state.isSeeking ? 7 : 5.5;
   waveCtx.beginPath();
   waveCtx.arc(scrubX, cy, beadRadius, 0, Math.PI * 2);
-  waveCtx.fillStyle = '#ffffff';
-  waveCtx.shadowColor = 'rgba(29, 185, 84, 0.8)';
-  waveCtx.shadowBlur = 8;
+  waveCtx.fillStyle = '#1db954';
   waveCtx.fill();
 
   waveCtx.beginPath();
-  waveCtx.arc(scrubX, cy, beadRadius - 2.8, 0, Math.PI * 2);
-  waveCtx.fillStyle = '#1db954';
-  waveCtx.shadowBlur = 0;
+  waveCtx.arc(scrubX, cy, Math.max(1, beadRadius - 3), 0, Math.PI * 2);
+  waveCtx.fillStyle = '#000000';
   waveCtx.fill();
 }

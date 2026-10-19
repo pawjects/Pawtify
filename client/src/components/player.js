@@ -21,6 +21,7 @@ import {
   startBackgroundAudio,
   stopBackgroundAudio,
   getNativeAudio,
+  startYTPoll,
 } from '../services/youtube.js';
 import { loadRecommendations } from '../services/dataLoader.js';
 import { renderCurrentRoute } from './master.js';
@@ -32,6 +33,7 @@ import {
 } from './playerBar.js';
 import { getNextSong } from '../services/apiMapping.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
+import { updateWavyProgress } from './wavyProgress.js';
 
 export async function play(song, queue = null, autoplay = true) {
   if (!song) return;
@@ -145,6 +147,7 @@ export async function togglePlay() {
       loadYTApi();
     }
     state.isPlaying = true;
+    startYTPoll();
   }
   persistPlayer();
   refreshPlaybackUI();
@@ -219,6 +222,9 @@ export function seekTo(seconds) {
   state.progress = Math.max(0, seconds);
   saveJSON(STORAGE.CURRENT_TIME, state.progress);
   refreshPlaybackUI();
+  if (state.fullscreenPlayer) {
+    updateWavyProgress();
+  }
 }
 
 export function setVolume(value) {

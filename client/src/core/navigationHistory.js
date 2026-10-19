@@ -7,6 +7,7 @@ import { renderArtistProfile } from '../components/artistProfile.js';
 import { renderOverlay } from '../components/overlay.js';
 import { renderCurrentRoute } from '../components/master.js';
 import { navigate } from '../config/router.js';
+import { refreshPlaybackUI } from '../components/playerBar.js';
 
 /**
  * Intelligent Mobile Back-Button & Layer Manager for Pawtify
@@ -54,17 +55,32 @@ export function popHistoryLayer(layerName) {
   return false;
 }
 
+export function updatePanelBackdrop() {
+  const backdrop = document.getElementById('panel-backdrop');
+  if (!backdrop) return;
+  const isAnyPanelOpen = Boolean(state.queuePanel || state.lyricsPanel || state.artistProfile);
+  backdrop.classList.toggle('active', isAnyPanelOpen);
+}
+
 export function openFullscreenPlayer() {
   if (!state.currentSong) return;
   if (state.fullscreenPlayer) return;
   state.fullscreenPlayer = true;
   pushHistoryLayer('fullscreen');
   renderFullscreenPlayer();
+  refreshPlaybackUI();
+  requestAnimationFrame(() => {
+    const container = document.getElementById('fs-wave-container');
+    if (container) {
+      import('../components/wavyProgress.js').then((m) => m.updateWavyProgress());
+    }
+  });
 }
 
 export function closeFullscreenPlayer(syncHistory = true) {
   state.fullscreenPlayer = false;
   renderFullscreenPlayer();
+  refreshPlaybackUI();
   if (syncHistory) {
     popHistoryLayer('fullscreen');
   }
@@ -89,11 +105,13 @@ export function openQueuePanel() {
   state.queuePanel = true;
   pushHistoryLayer('queue');
   renderQueuePanel();
+  updatePanelBackdrop();
 }
 
 export function closeQueuePanel(syncHistory = true) {
   state.queuePanel = false;
   renderQueuePanel();
+  updatePanelBackdrop();
   if (syncHistory) {
     popHistoryLayer('queue');
   }
@@ -104,11 +122,13 @@ export function openLyricsPanel() {
   state.lyricsPanel = true;
   pushHistoryLayer('lyrics');
   renderLyricsPanel();
+  updatePanelBackdrop();
 }
 
 export function closeLyricsPanel(syncHistory = true) {
   state.lyricsPanel = false;
   renderLyricsPanel();
+  updatePanelBackdrop();
   if (syncHistory) {
     popHistoryLayer('lyrics');
   }
@@ -117,6 +137,7 @@ export function closeLyricsPanel(syncHistory = true) {
 export function closeArtistProfile(syncHistory = true) {
   state.artistProfile = null;
   renderArtistProfile();
+  updatePanelBackdrop();
   if (syncHistory) {
     popHistoryLayer('artist');
   }

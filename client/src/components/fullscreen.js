@@ -21,8 +21,12 @@ export function renderFullscreenPlayer(force = false) {
   document.body.classList.add('has-fullscreen-open');
   const song = state.currentSong;
 
-  // If already rendered with this song and not forced, avoid wiping DOM
+  // If already rendered with this song and not forced, rebind canvas and avoid wiping DOM
   if (!force && fullscreenPlayer.dataset.renderedTrackId === String(song.id) && fullscreenPlayer.querySelector('.fs-title')) {
+    const waveContainer = fullscreenPlayer.querySelector('#fs-wave-container');
+    if (waveContainer) {
+      initWavyProgress(waveContainer);
+    }
     updateWavyProgress();
     return;
   }

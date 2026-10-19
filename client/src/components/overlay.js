@@ -295,20 +295,14 @@ export function renderOverlay() {
                   <div class="you-setting-row">
                     <div class="you-setting-info">
                       <div class="you-setting-label">Theme Mode</div>
-                      <div class="you-setting-desc">Choose between deep AMOLED Black or Material Dark.</div>
+                      <div class="you-setting-desc">Choose between pitch-black AMOLED Dark or clean Light mode.</div>
                     </div>
                     <div class="you-theme-selector" style="display:flex; gap:8px; flex-wrap:wrap;">
-                      <button class="btn btn-soft you-theme-btn ${state.theme === 'dark' || !state.theme ? 'active' : ''}" data-action="set-theme" data-theme="dark" type="button">
-                        <i class="fa-solid fa-moon"></i> Material Dark
-                      </button>
-                      <button class="btn btn-soft you-theme-btn ${state.theme === 'amoled' ? 'active' : ''}" data-action="set-theme" data-theme="amoled" type="button">
-                        <i class="fa-solid fa-circle" style="color:#000; -webkit-text-stroke: 1px #666;"></i> AMOLED
+                      <button class="btn btn-soft you-theme-btn ${state.theme === 'amoled' || state.theme === 'dark' || !state.theme ? 'active' : ''}" data-action="set-theme" data-theme="amoled" type="button">
+                        <i class="fa-solid fa-circle" style="color:#000; -webkit-text-stroke: 1px #888;"></i> AMOLED Dark
                       </button>
                       <button class="btn btn-soft you-theme-btn ${state.theme === 'light' ? 'active' : ''}" data-action="set-theme" data-theme="light" type="button">
                         <i class="fa-solid fa-sun" style="color:#eab308;"></i> Light
-                      </button>
-                      <button class="btn btn-soft you-theme-btn ${state.theme === 'system' ? 'active' : ''}" data-action="set-theme" data-theme="system" type="button">
-                        <i class="fa-solid fa-laptop"></i> System
                       </button>
                     </div>
                   </div>

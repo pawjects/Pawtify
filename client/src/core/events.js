@@ -135,6 +135,14 @@ export function bindGlobalEvents() {
   });
 
   document.addEventListener('click', async (event) => {
+    if (event.target.id === 'panel-backdrop' || event.target.closest('#panel-backdrop')) {
+      event.preventDefault();
+      if (state.queuePanel) closeQueuePanel();
+      if (state.lyricsPanel) closeLyricsPanel();
+      if (state.artistProfile) closeArtistProfile();
+      return;
+    }
+
     const routeButton = event.target.closest('[data-route]');
     const actionNode = event.target.closest('[data-action]');
 
@@ -970,20 +978,17 @@ export function bindGlobalEvents() {
 
       if (action === 'set-theme') {
         event.preventDefault();
-        const newTheme = actionNode.dataset.theme || 'dark';
+        const newTheme = actionNode.dataset.theme === 'light' ? 'light' : 'amoled';
         state.theme = newTheme;
         saveJSON(STORAGE.THEME, newTheme);
         applyTheme(newTheme);
         renderOverlay();
-        if (state.route.name === 'you') renderCurrentRoute();
-        const labels = {
-          dark: 'Material Dark',
-          amoled: 'AMOLED Black',
-          light: 'Material Light',
-          system: 'System Mode',
-        };
         if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
-        showToast(`Theme set to ${labels[newTheme] || newTheme}`);
+        const labels = {
+          amoled: 'AMOLED Dark',
+          light: 'Light',
+        };
+        showToast(`Theme set to ${labels[newTheme]}`);
         return;
       }
 
@@ -1292,7 +1297,7 @@ export function bindGlobalEvents() {
         state.progress = nextTime;
         const maxVal = Number.parseFloat(target.max) || 1;
         const pct = maxVal > 0 ? (nextTime / maxVal) * 100 : 0;
-        target.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green-hover) ${pct}%, rgba(255,255,255,0.15) ${pct}%)`;
+        target.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${pct}%, rgba(255,255,255,0.16) ${pct}%)`;
         const currentLabel = document.getElementById('time-current');
         if (currentLabel) currentLabel.textContent = formatTime(nextTime);
         const fsCurrentLabel = document.getElementById('fs-time-current');
@@ -1317,9 +1322,22 @@ export function bindGlobalEvents() {
     }
   });
 
-  const endSeeking = () => {
+  const endSeeking = (event) => {
     if (state.isSeeking) {
       state.isSeeking = false;
+      const target = event.target;
+      if (target && (target.id === 'seekbar' || target.id === 'fs-seekbar')) {
+        const nextTime = Number.parseFloat(target.value);
+        if (!Number.isNaN(nextTime)) seekTo(nextTime);
+      } else {
+        const fsSeek = document.getElementById('fs-seekbar');
+        const seek = document.getElementById('seekbar');
+        const activeSeek = state.fullscreenPlayer ? fsSeek : seek;
+        if (activeSeek) {
+          const nextTime = Number.parseFloat(activeSeek.value);
+          if (!Number.isNaN(nextTime)) seekTo(nextTime);
+        }
+      }
     }
   };
   document.addEventListener('pointerup', endSeeking);

@@ -36,7 +36,6 @@
     "d3": "^7.9.0",
     "express": "^5.2.1",
     "play-dl": "^1.9.7",
-    "youtube-dl-exec": "^3.1.15",
     "youtubei.js": "^18.0.0",
     "ytdl-core": "^4.11.5",
     "ytmusic-api": "^5.3.1"

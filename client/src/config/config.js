@@ -50,15 +50,18 @@ export const STORAGE = {
 };
 
 export function applyTheme(themeName) {
-  let effective = themeName || 'amoled';
-  if (effective === 'system') {
-    const prefersDark =
-      typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches;
-    effective = prefersDark ? 'amoled' : 'light';
-  }
+  const effective = themeName === 'light' ? 'light' : 'amoled';
   document.documentElement.setAttribute('data-theme', effective);
+  if (typeof document !== 'undefined') {
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute('content', effective === 'light' ? '#f7faf7' : '#000000');
+    }
+    const metaScheme = document.querySelector('meta[name="color-scheme"]');
+    if (metaScheme) {
+      metaScheme.setAttribute('content', effective === 'light' ? 'light' : 'dark');
+    }
+  }
 }
 
 export const songCatalog = new Map();
@@ -212,7 +215,7 @@ Object.assign(state, {
   feedCategories: [],
   userName: loadJSON(STORAGE.USER_NAME, '') || '',
   route: { name: 'home', playlistId: null },
-  theme: loadJSON(STORAGE.THEME, 'dark'),
+  theme: loadJSON(STORAGE.THEME, 'amoled') === 'light' ? 'light' : 'amoled',
   repeatMode: loadJSON(STORAGE.REPEAT, 'none'),
   shuffleMode: loadJSON(STORAGE.SHUFFLE, false),
   autoplay: loadJSON(STORAGE.AUTOPLAY, true),

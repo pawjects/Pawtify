@@ -524,17 +524,11 @@ export function renderSettingsSections() {
             <div class="you-setting-desc">AMOLED pitch-black optimizes OLED battery life and visual comfort.</div>
           </div>
           <div class="you-theme-btn-group">
-            <button class="btn btn-soft you-theme-pill ${activeTheme === 'amoled' ? 'active' : ''}" data-action="set-theme" data-theme="amoled" type="button">
-              <i class="fa-solid fa-circle theme-icon-amoled"></i> AMOLED
-            </button>
-            <button class="btn btn-soft you-theme-pill ${activeTheme === 'dark' ? 'active' : ''}" data-action="set-theme" data-theme="dark" type="button">
-              <i class="fa-solid fa-moon"></i> Dark
+            <button class="btn btn-soft you-theme-pill ${activeTheme === 'amoled' || activeTheme === 'dark' ? 'active' : ''}" data-action="set-theme" data-theme="amoled" type="button">
+              <i class="fa-solid fa-circle theme-icon-amoled"></i> AMOLED Dark
             </button>
             <button class="btn btn-soft you-theme-pill ${activeTheme === 'light' ? 'active' : ''}" data-action="set-theme" data-theme="light" type="button">
               <i class="fa-solid fa-sun theme-icon-light"></i> Light
-            </button>
-            <button class="btn btn-soft you-theme-pill ${activeTheme === 'system' ? 'active' : ''}" data-action="set-theme" data-theme="system" type="button">
-              <i class="fa-solid fa-laptop"></i> System
             </button>
           </div>
         </div>

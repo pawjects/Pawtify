@@ -859,7 +859,7 @@ export function renderPlaylistSearchCard(playlist, index) {
   return `
     <div class="card" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(playlist.id)}" tabindex="0" role="button" aria-label="Open playlist ${escapeHTML(playlist.name)}">
       <div class="card-img-wrap">
-        <img src="${escapeHTML(coverUrl)}" alt="${escapeHTML(playlist.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+        <img class="card-cover" src="${escapeHTML(coverUrl)}" alt="${escapeHTML(playlist.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
         <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Play ${escapeHTML(playlist.name)}" onclick="event.stopPropagation();">
           <i class="fa-solid fa-play"></i>
         </button>
@@ -931,18 +931,18 @@ const TRENDING_SEARCH_SHORTCUTS = [
 ];
 
 const SEARCH_CATEGORIES = [
-  { name: 'Bollywood Hits', color: 'linear-gradient(135deg, #f97316, #c2410c)' },
-  { name: 'Punjabi Pop', color: 'linear-gradient(135deg, #f43f5e, #c026d3)' },
-  { name: 'Lo-Fi Chill', color: 'linear-gradient(135deg, #6366f1, #3b82f6)' },
-  { name: 'Desi Hip Hop', color: 'linear-gradient(135deg, #10b981, #059669)' },
-  { name: 'Sufi Soul', color: 'linear-gradient(135deg, #f59e0b, #d97706)' },
-  { name: 'Workout', color: 'linear-gradient(135deg, #ef4444, #b91c1c)' },
-  { name: 'Tamil Classics', color: 'linear-gradient(135deg, #8b5cf6, #6d28d9)' },
-  { name: 'Telugu Top 50', color: 'linear-gradient(135deg, #14b8a6, #0f766e)' },
-  { name: 'Indie India', color: 'linear-gradient(135deg, #ec4899, #be185d)' },
-  { name: 'Devotional', color: 'linear-gradient(135deg, #0ea5e9, #0369a1)' },
-  { name: 'Romantic', color: 'linear-gradient(135deg, #fb7185, #e11d48)' },
-  { name: 'Ghazals', color: 'linear-gradient(135deg, #a855f7, #7e22ce)' },
+  { name: 'Bollywood Hits', color: '#b83914' },
+  { name: 'Punjabi Pop', color: '#9b1b6e' },
+  { name: 'Lo-Fi Chill', color: '#32489e' },
+  { name: 'Desi Hip Hop', color: '#137a4d' },
+  { name: 'Sufi Soul', color: '#a86010' },
+  { name: 'Workout', color: '#a82424' },
+  { name: 'Tamil Classics', color: '#5b32a8' },
+  { name: 'Telugu Top 50', color: '#13756b' },
+  { name: 'Indie India', color: '#a82065' },
+  { name: 'Devotional', color: '#1466a8' },
+  { name: 'Romantic', color: '#a81f3e' },
+  { name: 'Ghazals', color: '#6820a8' },
 ];
 
 export function renderSearchCategories() {
