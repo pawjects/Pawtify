@@ -170,6 +170,95 @@ async function searchHandler(req, res) {
         .map((s) => (typeof s === 'string' ? s.trim() : (s?.query || '')))
         .filter(Boolean);
       return res.status(200).json({ items: cleanSuggestions });
+    } else if (type === 'recommendations' || type === 'upnext' || type === 'related') {
+      let upNexts = [];
+      if (/^[a-zA-Z0-9_-]{11}$/.test(query)) {
+        try {
+          upNexts = await ytmusic.getUpNexts(query);
+        } catch (e) {
+          console.warn('Failed getUpNexts for', query, e?.message);
+        }
+      }
+
+      if (Array.isArray(upNexts) && upNexts.length > 0) {
+        items = upNexts
+          .map((item) => {
+            let sec = 0;
+            if (typeof item.duration === 'string') {
+              const parts = item.duration.split(':').map(Number);
+              if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                sec = parts[0] * 60 + parts[1];
+              } else if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+                sec = parts[0] * 3600 + parts[1] * 60 + parts[2];
+              }
+            } else if (typeof item.duration === 'number') {
+              sec = item.duration;
+            }
+            const uploader = typeof item.artists === 'string'
+              ? item.artists
+              : Array.isArray(item.artists)
+              ? item.artists.map((a) => (typeof a === 'string' ? a : a?.name || '')).filter(Boolean).join(', ')
+              : (item.artist?.name || item.artist || 'Unknown Artist');
+            const thumb =
+              item.thumbnail ||
+              item.thumbnails?.[item.thumbnails.length - 1]?.url ||
+              (item.videoId ? `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg` : '');
+
+            return {
+              id: item.videoId,
+              title: item.title || item.name || 'Unknown Title',
+              uploaderName: uploader,
+              thumbnail: thumb,
+              duration: sec,
+              durationString: item.duration || formatDurationString(sec),
+              resultType: 'song',
+              isVerified: true,
+              isOfficialArtist: true,
+              isTopic: true,
+              tags: ['recommended', 'musical-similarity'],
+            };
+          })
+          .filter((i) => i.id && i.id !== query);
+      }
+
+      // Fallback: search by artist style/radio if getUpNexts didn't return items
+      if (items.length === 0) {
+        let fallbackQuery = query;
+        if (/^[a-zA-Z0-9_-]{11}$/.test(query)) {
+          try {
+            const songMeta = await ytmusic.getSong(query).catch(() => null);
+            if (songMeta?.artist) {
+              const aName = Array.isArray(songMeta.artist)
+                ? songMeta.artist[0]?.name || songMeta.artist[0]
+                : (songMeta.artist.name || songMeta.artist);
+              if (aName) fallbackQuery = `${aName} radio`;
+            }
+          } catch (_) {}
+        }
+        const searchResults = await ytmusic.searchSongs(fallbackQuery).catch(() => []);
+        items = (Array.isArray(searchResults) ? searchResults : [])
+          .map((item) => {
+            const durationSec = typeof item.duration === 'number' ? item.duration : 0;
+            return {
+              id: item.videoId,
+              title: item.name || 'Unknown Title',
+              uploaderName: Array.isArray(item.artist)
+                ? item.artist.map((a) => a.name || a).join(', ')
+                : (item.artist?.name || item.artist || 'Unknown Artist'),
+              thumbnail: item.thumbnails?.[item.thumbnails.length - 1]?.url || '',
+              duration: durationSec,
+              durationString: formatDurationString(durationSec),
+              resultType: 'song',
+              isVerified: true,
+              isOfficialArtist: true,
+              isTopic: true,
+              tags: ['recommended'],
+            };
+          })
+          .filter((i) => i.id && i.id !== query);
+      }
+
+      return res.status(200).json({ items });
     } else if (type === 'playlist_videos' || type === 'playlist_details') {
       let playlistMeta = {
         id: query,

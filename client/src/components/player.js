@@ -34,6 +34,7 @@ import {
 import { getNextSong } from '../services/apiMapping.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
 import { updateWavyProgress } from './wavyProgress.js';
+import { renderQueuePanel } from './queuePanel.js';
 
 export async function play(song, queue = null, autoplay = true) {
   if (!song) return;
@@ -255,6 +256,29 @@ export function toggleFavorite(song) {
   renderPlayerBar();
   renderMiniPlayer();
   renderFullscreenPlayer();
+}
+
+export function addToQueue(song) {
+  if (!song) return;
+  state.queue = dedupeSongs([...state.queue, song]);
+  saveJSON(STORAGE.QUEUE, state.queue);
+  idbSet(STORAGE.QUEUE, state.queue).catch(() => {});
+  showToast(`Added "${song.title}" to queue`);
+  renderQueuePanel();
+}
+
+export function playNext(song) {
+  if (!song) return;
+  const currentIdx = state.currentSongIndex;
+  const queue = [...state.queue];
+  const filtered = queue.filter((s) => s.id !== song.id);
+  const insertAt = Math.max(0, currentIdx + 1);
+  filtered.splice(insertAt, 0, song);
+  state.queue = filtered;
+  saveJSON(STORAGE.QUEUE, state.queue);
+  idbSet(STORAGE.QUEUE, state.queue).catch(() => {});
+  showToast(`"${song.title}" will play next`);
+  renderQueuePanel();
 }
 
 export function toggleRepeat() {

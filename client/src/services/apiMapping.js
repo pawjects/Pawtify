@@ -248,10 +248,63 @@ export async function fetchPlaylistDetails(playlistId, signal = null) {
   }
 }
 
-export async function getSongRecommendations(id, limit = 10) {
-  if (!state.currentSong) return [];
-  const query = state.currentSong.artist + ' ' + state.currentSong.title;
-  return await searchSongs(query, 0, limit);
+export async function getSongRecommendations(id, limit = 12) {
+  const targetId = id || state.currentSong?.id;
+  if (!targetId) return [];
+
+  const currentSong =
+    state.currentSong?.id === targetId ? state.currentSong : null;
+  const currentTitleLower = (currentSong?.title || '').toLowerCase().trim();
+
+  try {
+    const res = await fetch(
+      `/api/search?type=recommendations&q=${encodeURIComponent(targetId)}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.items) && data.items.length > 0) {
+        const mapped = data.items
+          .filter(isValidMusicContent)
+          .map(mapServerSong)
+          .filter((s) => s && s.id && s.id !== targetId)
+          // Exclude exact title matches or duplicate remixes of the current track
+          .filter((s) => {
+            if (!currentTitleLower) return true;
+            const t = (s.title || '').toLowerCase().trim();
+            if (t === currentTitleLower) return false;
+            const cleanT = t.replace(/\(.*?\)|\[.*?\]/g, '').trim();
+            const cleanCur = currentTitleLower
+              .replace(/\(.*?\)|\[.*?\]/g, '')
+              .trim();
+            if (cleanT && cleanCur && cleanT === cleanCur) return false;
+            return true;
+          });
+
+        if (mapped.length > 0) {
+          return mapped.slice(0, limit);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Recommendation API fetch error:', err);
+  }
+
+  // Musical similarity fallback: search artist mix/radio, excluding current title
+  if (currentSong?.artist) {
+    try {
+      const query = `${currentSong.artist} mix`;
+      const searchRes = await searchSongs(query, 0, limit + 6);
+      const filtered = searchRes
+        .filter((s) => s && s.id && s.id !== targetId)
+        .filter((s) => {
+          if (!currentTitleLower) return true;
+          return !s.title.toLowerCase().includes(currentTitleLower);
+        });
+      if (filtered.length > 0) return filtered.slice(0, limit);
+    } catch (_) {}
+  }
+
+  return [];
 }
 
 export async function getNextSong(currentSongId) {

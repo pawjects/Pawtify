@@ -57,6 +57,7 @@ import {
   clearQueue,
 } from '../components/queuePanel.js';
 import { loadTrendingSongs } from '../services/dataLoader.js';
+import { openTrackMenu, closeTrackMenu } from '../components/trackMenu.js';
 import { runSearch } from '../services/search.js';
 import {
   searchSongs,
@@ -278,6 +279,12 @@ export function bindGlobalEvents() {
       if (action === 'play-song' && songId) {
         event.preventDefault();
         await playSongById(songId, source, playlistId);
+        return;
+      }
+      if (action === 'open-track-menu' && songId) {
+        event.preventDefault();
+        event.stopPropagation();
+        openTrackMenu(songId, playlistId, actionNode);
         return;
       }
       if (action === 'toggle-favorite' && songId) {
