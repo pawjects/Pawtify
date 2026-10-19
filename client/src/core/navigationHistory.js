@@ -7,6 +7,7 @@ import { renderArtistProfile } from '../components/artistProfile.js';
 import { renderOverlay } from '../components/overlay.js';
 import { renderCurrentRoute } from '../components/master.js';
 import { navigate } from '../config/router.js';
+import { refreshPlaybackUI } from '../components/playerBar.js';
 
 /**
  * Intelligent Mobile Back-Button & Layer Manager for Pawtify
@@ -60,11 +61,13 @@ export function openFullscreenPlayer() {
   state.fullscreenPlayer = true;
   pushHistoryLayer('fullscreen');
   renderFullscreenPlayer();
+  refreshPlaybackUI();
 }
 
 export function closeFullscreenPlayer(syncHistory = true) {
   state.fullscreenPlayer = false;
   renderFullscreenPlayer();
+  refreshPlaybackUI();
   if (syncHistory) {
     popHistoryLayer('fullscreen');
   }

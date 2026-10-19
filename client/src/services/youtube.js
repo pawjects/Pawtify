@@ -53,6 +53,7 @@ window.onYouTubeIframeAPIReady = function () {
         enablejsapi: 1,
         iv_load_policy: 3,
         modestbranding: 1,
+        origin: typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null' ? window.location.origin : undefined,
       },
       events: {
         onReady: onPlayerReady,
@@ -169,35 +170,42 @@ export function startYTPoll() {
     if (
       globals.ytPlayerReady &&
       globals.ytPlayer &&
-      typeof globals.ytPlayer.getPlayerState === 'function' &&
-      globals.ytPlayer.getPlayerState() === 1
+      typeof globals.ytPlayer.getCurrentTime === 'function'
     ) {
-      state.progress = globals.ytPlayer.getCurrentTime() || 0;
-      const dur = globals.ytPlayer.getDuration();
-      if (dur && dur > 0) state.duration = dur;
+      const pState = typeof globals.ytPlayer.getPlayerState === 'function' ? globals.ytPlayer.getPlayerState() : -1;
+      if (pState === 1 || pState === 3 || state.isPlaying) {
+        if (!state.isSeeking) {
+          const cur = globals.ytPlayer.getCurrentTime();
+          if (typeof cur === 'number' && !isNaN(cur)) {
+            state.progress = cur;
+          }
+        }
+        const dur = globals.ytPlayer.getDuration();
+        if (dur && dur > 0) state.duration = dur;
 
-      // Keep OS lock screen progress position synchronized
-      if (
-        'mediaSession' in navigator &&
-        'setPositionState' in navigator.mediaSession &&
-        state.duration > 0
-      ) {
-        try {
-          navigator.mediaSession.setPositionState({
-            duration: Math.max(1, state.duration),
-            playbackRate: 1,
-            position: Math.max(0, Math.min(state.progress, state.duration)),
-          });
-        } catch (e) {}
-      }
+        // Keep OS lock screen progress position synchronized
+        if (
+          'mediaSession' in navigator &&
+          'setPositionState' in navigator.mediaSession &&
+          state.duration > 0
+        ) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration: Math.max(1, state.duration),
+              playbackRate: 1,
+              position: Math.max(0, Math.min(state.progress, state.duration)),
+            });
+          } catch (e) {}
+        }
 
-      const now = Date.now();
-      if (state.currentSong && now - lastSaveTime > 2000) {
-        saveJSON(STORAGE.CURRENT_TIME, state.progress);
-        lastSaveTime = now;
+        const now = Date.now();
+        if (state.currentSong && now - lastSaveTime > 2000) {
+          saveJSON(STORAGE.CURRENT_TIME, state.progress);
+          lastSaveTime = now;
+        }
+        refreshPlaybackUI();
+        syncLyricsWithPlayback();
       }
-      refreshPlaybackUI();
-      syncLyricsWithPlayback();
     }
   }, 250);
 }
@@ -233,10 +241,16 @@ export function onPlayerStateChange(event) {
       navigator.mediaSession.playbackState = 'paused';
     }
     stopBackgroundAudio();
-    clearInterval(globals.ytPollInterval);
+    if (globals.ytPollInterval) {
+      clearInterval(globals.ytPollInterval);
+      globals.ytPollInterval = null;
+    }
   } else if (event.data === 0) {
     // ENDED
-    clearInterval(globals.ytPollInterval);
+    if (globals.ytPollInterval) {
+      clearInterval(globals.ytPollInterval);
+      globals.ytPollInterval = null;
+    }
     if (state.repeatMode === 'one') {
       globals.ytPlayer.seekTo(0);
       globals.ytPlayer.playVideo();
