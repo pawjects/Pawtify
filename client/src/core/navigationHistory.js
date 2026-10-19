@@ -55,6 +55,13 @@ export function popHistoryLayer(layerName) {
   return false;
 }
 
+export function updatePanelBackdrop() {
+  const backdrop = document.getElementById('panel-backdrop');
+  if (!backdrop) return;
+  const isAnyPanelOpen = Boolean(state.queuePanel || state.lyricsPanel || state.artistProfile);
+  backdrop.classList.toggle('active', isAnyPanelOpen);
+}
+
 export function openFullscreenPlayer() {
   if (!state.currentSong) return;
   if (state.fullscreenPlayer) return;
@@ -62,6 +69,12 @@ export function openFullscreenPlayer() {
   pushHistoryLayer('fullscreen');
   renderFullscreenPlayer();
   refreshPlaybackUI();
+  requestAnimationFrame(() => {
+    const container = document.getElementById('fs-wave-container');
+    if (container) {
+      import('../components/wavyProgress.js').then((m) => m.updateWavyProgress());
+    }
+  });
 }
 
 export function closeFullscreenPlayer(syncHistory = true) {
@@ -92,11 +105,13 @@ export function openQueuePanel() {
   state.queuePanel = true;
   pushHistoryLayer('queue');
   renderQueuePanel();
+  updatePanelBackdrop();
 }
 
 export function closeQueuePanel(syncHistory = true) {
   state.queuePanel = false;
   renderQueuePanel();
+  updatePanelBackdrop();
   if (syncHistory) {
     popHistoryLayer('queue');
   }
@@ -107,11 +122,13 @@ export function openLyricsPanel() {
   state.lyricsPanel = true;
   pushHistoryLayer('lyrics');
   renderLyricsPanel();
+  updatePanelBackdrop();
 }
 
 export function closeLyricsPanel(syncHistory = true) {
   state.lyricsPanel = false;
   renderLyricsPanel();
+  updatePanelBackdrop();
   if (syncHistory) {
     popHistoryLayer('lyrics');
   }
@@ -120,6 +137,7 @@ export function closeLyricsPanel(syncHistory = true) {
 export function closeArtistProfile(syncHistory = true) {
   state.artistProfile = null;
   renderArtistProfile();
+  updatePanelBackdrop();
   if (syncHistory) {
     popHistoryLayer('artist');
   }

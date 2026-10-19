@@ -571,11 +571,51 @@ img {
 
 /* ============ HOME SCREEN (ANDROID MD3) ============ */
 .home-greeting {
-  font-size: 1.625rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.home-greeting h1 {
+  font-size: 1.5rem;
   font-weight: 700;
+  line-height: 1.25;
   letter-spacing: -0.02em;
   color: var(--md-sys-color-on-surface);
-  margin-bottom: 4px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--md-shape-full);
+  background-color: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.settings-btn:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+
+.settings-btn:active {
+  transform: scale(0.92);
 }
 
 .home-grid {
@@ -2015,13 +2055,31 @@ body.has-fullscreen-open .mobile-nav {
   color: var(--md-sys-color-primary);
 }
 
+/* ============ PANEL BACKDROP ============ */
+.panel-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background-color: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.panel-backdrop.active {
+  display: block;
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* ============ MATERIAL 3 BOTTOM SHEETS & PANELS ============ */
 .queue-panel,
 .lyrics-panel,
 .artist-profile {
   position: fixed;
   inset: 0;
-  z-index: 105;
+  z-index: 125;
   background-color: var(--md-sys-color-surface-container);
   display: none;
   flex-direction: column;
@@ -2039,18 +2097,36 @@ body.has-fullscreen-open .mobile-nav {
 @media (min-width: 901px) {
   .queue-panel,
   .lyrics-panel {
+    top: 0;
+    bottom: 0;
     left: auto;
-    width: 360px;
+    right: 0;
+    width: 380px;
     border-left: 1px solid var(--md-sys-color-outline);
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
   }
 }
 
 @media (max-width: 900px) {
   .queue-panel,
-  .lyrics-panel {
+  .lyrics-panel,
+  .artist-profile {
     top: 60px;
+    bottom: 0;
+    left: 0;
+    right: 0;
     border-radius: var(--md-shape-xl) var(--md-shape-xl) 0 0;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
   }
+}
+
+.lyrics-body {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .queue-header,
@@ -2165,7 +2241,7 @@ body.has-fullscreen-open .mobile-nav {
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 120;
+  z-index: 135;
   background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
@@ -2721,12 +2797,16 @@ body.has-fullscreen-open .mobile-nav {
   right: 16px;
   width: 280px;
   height: 158px;
-  z-index: 90;
+  z-index: 100;
   background-color: #000000;
   border-radius: var(--md-shape-md);
   border: 1px solid var(--md-sys-color-outline);
   box-shadow: var(--md-elevation-3);
   overflow: hidden;
+}
+
+body.has-fullscreen-open .yt-player-container {
+  z-index: 115;
 }
 
 .yt-player-header {
@@ -2755,7 +2835,7 @@ body.has-fullscreen-open .mobile-nav {
   transform: translateX(-50%) translateY(40px);
   opacity: 0;
   pointer-events: none;
-  z-index: 130;
+  z-index: 150;
   background-color: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
   border: 1px solid var(--md-sys-color-outline);
@@ -2854,8 +2934,15 @@ body.has-fullscreen-open .mobile-nav {
   }
 
   .page-title,
-  .home-greeting {
-    font-size: 1.4rem;
+  .home-greeting h1 {
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+
+  .settings-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
   }
 
   .home-grid {

@@ -32,16 +32,17 @@ function resizeCanvas() {
   if (!waveCanvas || !containerElement) return;
   const rect = containerElement.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const width = Math.max(rect.width, 100);
+  const width = Math.max(rect.width, 10);
   const height = Math.max(rect.height, 28);
 
-  waveCanvas.width = Math.floor(width * dpr);
-  waveCanvas.height = Math.floor(height * dpr);
-  waveCanvas.style.width = `${width}px`;
-  waveCanvas.style.height = `${height}px`;
-
-  if (waveCtx) {
-    waveCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const targetW = Math.floor(width * dpr);
+  const targetH = Math.floor(height * dpr);
+  if (waveCanvas.width !== targetW || waveCanvas.height !== targetH) {
+    waveCanvas.width = targetW;
+    waveCanvas.height = targetH;
+    if (waveCtx) {
+      waveCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
   }
 }
 
@@ -60,9 +61,11 @@ export function teardownWavyProgress() {
 }
 
 export function updateWavyProgress() {
-  if (!waveCanvas && state.fullscreenPlayer) {
+  if (state.fullscreenPlayer) {
     const fsContainer = document.getElementById('fs-wave-container');
-    if (fsContainer) initWavyProgress(fsContainer);
+    if (fsContainer && (!waveCanvas || !waveCtx || containerElement !== fsContainer)) {
+      initWavyProgress(fsContainer);
+    }
   }
   drawFrame();
   if (state.isPlaying && !animFrameId && state.fullscreenPlayer) {
@@ -83,8 +86,10 @@ function startWaveLoop() {
 
     drawFrame();
 
-    if (state.isPlaying && !isReduced) {
-      phase += 0.055;
+    if (state.isPlaying) {
+      if (!isReduced) {
+        phase += 0.055;
+      }
       animFrameId = requestAnimationFrame(loop);
     } else if (currentAmp > 0.05 && !isReduced) {
       // Smoothly settle wave to 0 when paused
@@ -110,8 +115,15 @@ function drawFrame() {
   const H = rect.height;
   if (W <= 0 || H <= 0) return;
 
-  if (waveCanvas.width === 0) {
-    resizeCanvas();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const targetW = Math.floor(W * dpr);
+  const targetH = Math.floor(H * dpr);
+  if (waveCanvas.width !== targetW || waveCanvas.height !== targetH) {
+    waveCanvas.width = targetW;
+    waveCanvas.height = targetH;
+    if (waveCtx) {
+      waveCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
   }
 
   const cy = Math.round(H / 2);

@@ -54,58 +54,48 @@ export function setupSwipeGestures() {
         return;
       }
 
-      // Check if touching fullscreen player
-      if (state.fullscreenPlayer) {
-        const fs = document.getElementById('fullscreen-player');
-        if (fs && fs.classList.contains('active')) {
-          const scrollable = fs.querySelector('.fs-content') || fs;
-          initialScrollTop = scrollable.scrollTop || 0;
-          activeDragElement = { element: fs, type: 'fullscreen', scrollable };
-          return;
-        }
+      // Check if touching a modal overlay
+      const modal = e.target.closest('.overlay .modal');
+      if (modal && state.modal) {
+        activeDragElement = { element: modal, type: 'modal', scrollable: modal };
+        initialScrollTop = modal.scrollTop || 0;
+        return;
       }
 
       // Check if touching Queue panel
-      if (state.queuePanel) {
-        const qp = document.getElementById('queue-panel');
-        if (qp && qp.classList.contains('active')) {
-          const scrollable = qp.querySelector('.queue-list') || qp;
-          initialScrollTop = scrollable.scrollTop || 0;
-          activeDragElement = { element: qp, type: 'queue', scrollable };
-          return;
-        }
-      }
-
-      // Check if touching Artist Profile
-      if (state.artistProfile) {
-        const ap = document.getElementById('artist-profile');
-        if (ap && ap.classList.contains('active')) {
-          const scrollable = ap.querySelector('.artist-content') || ap;
-          initialScrollTop = scrollable.scrollTop || 0;
-          activeDragElement = { element: ap, type: 'artist', scrollable };
-          return;
-        }
+      const qp = e.target.closest('#queue-panel');
+      if (qp && state.queuePanel && qp.classList.contains('active')) {
+        const scrollable = qp.querySelector('.queue-list') || qp;
+        initialScrollTop = scrollable.scrollTop || 0;
+        activeDragElement = { element: qp, type: 'queue', scrollable };
+        return;
       }
 
       // Check if touching Lyrics Panel
-      if (state.lyricsPanel) {
-        const lp = document.getElementById('lyrics-panel');
-        if (lp && lp.classList.contains('active')) {
-          const scrollable = lp.querySelector('.lyrics-body') || lp;
-          initialScrollTop = scrollable.scrollTop || 0;
-          activeDragElement = { element: lp, type: 'lyrics', scrollable };
-          return;
-        }
+      const lp = e.target.closest('#lyrics-panel');
+      if (lp && state.lyricsPanel && lp.classList.contains('active')) {
+        const scrollable = lp.querySelector('.lyrics-body') || lp;
+        initialScrollTop = scrollable.scrollTop || 0;
+        activeDragElement = { element: lp, type: 'lyrics', scrollable };
+        return;
       }
 
-      // Check if touching a modal overlay
-      if (state.modal) {
-        const modal = document.querySelector('.overlay .modal');
-        if (modal) {
-          activeDragElement = { element: modal, type: 'modal', scrollable: modal };
-          initialScrollTop = modal.scrollTop || 0;
-          return;
-        }
+      // Check if touching Artist Profile
+      const ap = e.target.closest('#artist-profile');
+      if (ap && state.artistProfile && ap.classList.contains('active')) {
+        const scrollable = ap.querySelector('.artist-content') || ap;
+        initialScrollTop = scrollable.scrollTop || 0;
+        activeDragElement = { element: ap, type: 'artist', scrollable };
+        return;
+      }
+
+      // Check if touching fullscreen player
+      const fs = e.target.closest('#fullscreen-player');
+      if (fs && state.fullscreenPlayer && fs.classList.contains('active')) {
+        const scrollable = fs.querySelector('.fs-content') || fs;
+        initialScrollTop = scrollable.scrollTop || 0;
+        activeDragElement = { element: fs, type: 'fullscreen', scrollable };
+        return;
       }
     },
     { passive: true }

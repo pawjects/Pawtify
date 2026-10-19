@@ -13,7 +13,12 @@ export function renderLyricsPanel() {
   const song = state.currentSong;
   lyricsPanel.innerHTML = `
      <div class="lyrics-header">
-       <button class="icon-btn" data-action="close-lyrics" type="button" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+       <h2><i class="fa-solid fa-microphone" style="margin-right:8px; color:var(--green);"></i>Lyrics</h2>
+       <div class="lyrics-header-actions">
+         <button class="queue-close-btn" data-action="close-lyrics" type="button" aria-label="Close">
+           <i class="fa-solid fa-xmark"></i>
+         </button>
+       </div>
      </div>
      <div class="lyrics-body">
        <div class="empty-state" style="padding: 40px 20px; text-align: center;">

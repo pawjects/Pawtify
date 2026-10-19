@@ -135,6 +135,14 @@ export function bindGlobalEvents() {
   });
 
   document.addEventListener('click', async (event) => {
+    if (event.target.id === 'panel-backdrop' || event.target.closest('#panel-backdrop')) {
+      event.preventDefault();
+      if (state.queuePanel) closeQueuePanel();
+      if (state.lyricsPanel) closeLyricsPanel();
+      if (state.artistProfile) closeArtistProfile();
+      return;
+    }
+
     const routeButton = event.target.closest('[data-route]');
     const actionNode = event.target.closest('[data-action]');
 
