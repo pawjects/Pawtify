@@ -788,6 +788,7 @@ export function renderPlaylistPage(playlistId) {
 
 export function renderSongRow(song, index, source, playlistId = '') {
   if (!song) return '';
+  rememberSongs([song]);
   const active = state.currentSong?.id === song.id;
   const isFav = state.favorites.some((item) => item.id === song.id);
   const cover = getOptimizedArtwork(song.coverUrl, 120);
@@ -803,7 +804,7 @@ export function renderSongRow(song, index, source, playlistId = '') {
        </div>
        <div class="song-duration">${escapeHTML(song.duration || '0:00')}</div>
        <div class="song-actions">
-         <button class="song-action-btn song-menu-trigger" data-action="open-track-menu" data-song-id="${escapeHTML(song.id)}" data-playlist-id="${escapeHTML(playlistId)}" type="button" aria-label="More options for ${escapeHTML(song.title)}" title="More options" onclick="event.stopPropagation();">
+         <button class="song-action-btn song-menu-trigger" data-action="open-track-menu" data-song-id="${escapeHTML(song.id)}" data-playlist-id="${escapeHTML(playlistId)}" type="button" aria-label="More options for ${escapeHTML(song.title)}" title="More options">
            <i class="fa-solid fa-ellipsis-vertical"></i>
          </button>
        </div>

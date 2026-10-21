@@ -1015,7 +1015,7 @@ img {
 /* ============ TRACK OVERFLOW MENU (MATERIAL YOU POPUP) ============ */
 .track-menu-popup {
   position: fixed;
-  z-index: 140;
+  z-index: 300;
   background-color: var(--md-sys-color-surface-container-high);
   border: 1px solid var(--md-sys-color-outline);
   border-radius: var(--md-shape-md);
@@ -2325,6 +2325,10 @@ body.has-fullscreen-open .mobile-nav {
   border-radius: var(--md-shape-sm);
   background-color: transparent;
   cursor: pointer;
+  position: relative;
+  transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
+  border-top: 2px solid transparent;
+  border-bottom: 2px solid transparent;
 }
 
 .queue-item:hover {
@@ -2333,6 +2337,55 @@ body.has-fullscreen-open .mobile-nav {
 
 .queue-item.active {
   background-color: var(--md-sys-color-primary-container);
+}
+
+.queue-item.is-dragging {
+  opacity: 0.35;
+  background-color: var(--md-sys-color-surface-container-highest);
+  transform: scale(0.98);
+}
+
+.queue-item.is-touch-dragging {
+  opacity: 0.8;
+  background-color: var(--md-sys-color-surface-container-highest);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.queue-item.drag-over-above {
+  border-top: 2px solid var(--md-sys-color-primary);
+  background-color: rgba(30, 215, 96, 0.08);
+}
+
+.queue-item.drag-over-below {
+  border-bottom: 2px solid var(--md-sys-color-primary);
+  background-color: rgba(30, 215, 96, 0.08);
+}
+
+.queue-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 32px;
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.45;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.queue-drag-handle:hover,
+.queue-item:hover .queue-drag-handle {
+  opacity: 1;
+  color: var(--md-sys-color-on-surface);
+}
+
+.queue-drag-handle:active {
+  cursor: grabbing;
+  color: var(--md-sys-color-primary);
 }
 
 .queue-item-cover {
@@ -2366,6 +2419,59 @@ body.has-fullscreen-open .mobile-nav {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.queue-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.queue-reorder-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--md-shape-full);
+  color: var(--md-sys-color-on-surface-variant);
+  background: transparent;
+  font-size: 0.6875rem;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.queue-reorder-btn:hover:not(:disabled) {
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+}
+
+.queue-reorder-btn:disabled {
+  opacity: 0.2;
+  cursor: default;
+  pointer-events: none;
+}
+
+.queue-menu-btn {
+  width: 28px;
+  height: 28px;
+  font-size: 0.8125rem;
+}
+
+.queue-item-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--md-shape-full);
+  color: var(--md-sys-color-on-surface-variant);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.queue-item-remove:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-error);
 }
 
 /* ============ OVERLAY & MODALS ============ */

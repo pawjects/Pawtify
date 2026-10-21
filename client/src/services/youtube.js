@@ -58,6 +58,9 @@ window.onYouTubeIframeAPIReady = function () {
       events: {
         onReady: onPlayerReady,
         onStateChange: onPlayerStateChange,
+        onPlaybackQualityChange: () => {
+          refreshPlaybackUI();
+        },
         onError: (e) => {
           console.warn('YouTube Player Error:', e.data);
           handlePlaybackError(e.data);
@@ -375,4 +378,44 @@ export function mapServerSong(x) {
     releaseDate: x.releaseDate || '',
     genre: 'Streaming',
   };
+}
+
+export function getExactAudioQuality() {
+  if (!state.currentSong) return 'Unknown quality';
+
+  // 1. Check verified bitrate on song object
+  if (state.currentSong.bitrate) {
+    return `${state.currentSong.bitrate} kbps`;
+  }
+  if (state.currentSong.audioBitrate) {
+    return `${state.currentSong.audioBitrate} kbps`;
+  }
+
+  // 2. Query active YouTube stream quality from globals.ytPlayer
+  if (globals.ytPlayer && typeof globals.ytPlayer.getPlaybackQuality === 'function') {
+    try {
+      const q = globals.ytPlayer.getPlaybackQuality();
+      if (q && q !== 'unknown' && q !== 'undefined') {
+        const qualityMap = {
+          'hd2160': '320 kbps (4K)',
+          'hd1440': '256 kbps (2K)',
+          'hd1080': '160 kbps Opus',
+          'hd720': '160 kbps Opus',
+          'large': '128 kbps (480p)',
+          'medium': '128 kbps (360p)',
+          'small': '70 kbps (240p)',
+          'tiny': '50 kbps (144p)',
+        };
+        if (qualityMap[q]) {
+          return qualityMap[q];
+        }
+        if (q !== 'auto' && q !== 'default') {
+          return `${q} stream`;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 3. Fallback when unavailable
+  return 'Unknown quality';
 }

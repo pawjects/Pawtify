@@ -5,7 +5,7 @@ import { getSongById } from '../core/details.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
 import { renderQueuePanel } from './queuePanel.js';
 import { updateWavyProgress } from './wavyProgress.js';
-import { startYTPoll } from '../services/youtube.js';
+import { startYTPoll, getExactAudioQuality } from '../services/youtube.js';
 
 export function renderPlayerBar(force = false) {
   if (!playerBar) return;
@@ -34,9 +34,9 @@ export function renderPlayerBar(force = false) {
        <img class="player-bar-cover" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
        <div class="player-bar-info">
          <div class="player-bar-title">${escapeHTML(song.title)}</div>
-         <div style="display:flex; align-items:center; gap:4px;">
+         <div style="display:flex; align-items:center; gap:6px;">
            <div class="player-bar-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
-           <span class="player-quality-badge">HQ Audio</span>
+           <span class="player-quality-badge" id="player-quality-label">${escapeHTML(getExactAudioQuality())}</span>
          </div>
        </div>
        <button class="player-bar-like ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Favorite">
@@ -384,6 +384,15 @@ export function refreshPlaybackUI() {
   if (state.isPlaying && !globals.ytPollInterval && globals.ytPlayerReady) {
     startYTPoll();
   }
+
+  // Sync exact verified audio quality label
+  const quality = getExactAudioQuality();
+  const qualityBadges = document.querySelectorAll('.player-quality-badge, #player-quality-label, #fs-quality-label, #modal-quality-label');
+  qualityBadges.forEach((badge) => {
+    if (badge.textContent !== quality) {
+      badge.textContent = quality;
+    }
+  });
 
   // Re-render components only if their rendered track ID differs from current state
   renderPlayerBar(false);
