@@ -2,12 +2,23 @@
    Pawtify Service Worker v2.3
    Advanced Caching for Offline Access
    ============================================= */
-const CACHE_NAME = 'pawtify-app-shell-v2.3';
-const DYNAMIC_CACHE = 'pawtify-dynamic-v2.3';
-const API_CACHE = 'pawtify-api-v2.3';
-const MEDIA_CACHE = 'pawtify-media-v2.3';
+const CACHE_NAME = 'pawtify-app-shell-v2.4';
+const DYNAMIC_CACHE = 'pawtify-dynamic-v2.4';
+const API_CACHE = 'pawtify-api-v2.4';
+const MEDIA_CACHE = 'pawtify-media-v2.4';
 
-const ASSETS = ['/', '/index.html', '/styles.css', '/src/main.js', '/manifest.webmanifest', '/assets/pawtify.png', '/assets/pawtify.png'];
+const ASSETS = [
+  '/',
+  '/index.html',
+  '/styles.css',
+  '/src/main.js',
+  '/manifest.webmanifest',
+  '/assets/pawtify.png',
+  '/assets/icon-192.png',
+  '/assets/icon-512.png',
+  '/assets/apple-touch-icon.png',
+  '/assets/favicon.ico',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

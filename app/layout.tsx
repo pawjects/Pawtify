@@ -15,8 +15,15 @@ export const metadata: Metadata = {
     'A privacy-friendly, browser-based music player featuring local playlist controls, stats, and distraction-free streaming.',
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: '/assets/pawtify.png',
-    apple: '/assets/pawtify.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/assets/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/assets/icon-192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/assets/pawtify.png', type: 'image/png', sizes: '1024x1024' },
+    ],
+    apple: [
+      { url: '/assets/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   openGraph: {
     title: 'Pawtify',
