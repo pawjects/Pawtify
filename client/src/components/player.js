@@ -154,6 +154,66 @@ export async function togglePlay() {
   refreshPlaybackUI();
 }
 
+export async function playSomething() {
+  if (state.queue && state.queue.length > 0) {
+    const idx =
+      typeof state.currentSongIndex === 'number' &&
+      state.currentSongIndex >= 0 &&
+      state.currentSongIndex < state.queue.length
+        ? state.currentSongIndex
+        : 0;
+    await play(state.queue[idx], state.queue, true);
+    return;
+  }
+  if (state.favorites && state.favorites.length > 0) {
+    await play(state.favorites[0], state.favorites, true);
+    return;
+  }
+  if (state.trendingSongs && state.trendingSongs.length > 0) {
+    await play(state.trendingSongs[0], state.trendingSongs, true);
+    return;
+  }
+  if (state.feedCategories && state.feedCategories.length > 0) {
+    for (const cat of state.feedCategories) {
+      if (cat.songs && cat.songs.length > 0) {
+        await play(cat.songs[0], cat.songs, true);
+        return;
+      }
+    }
+  }
+  if (state.playlists && state.playlists.length > 0) {
+    for (const pl of state.playlists) {
+      if (pl.songs && pl.songs.length > 0) {
+        await play(pl.songs[0], pl.songs, true);
+        return;
+      }
+    }
+  }
+  try {
+    const res = await fetch('/api/search?q=indie+acoustic+official');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.items && data.items.length > 0) {
+        const { isValidMusicContent, prioritizeMusic, mapServerSong } =
+          await import('../services/youtube.js');
+        const songs = data.items
+          .filter(isValidMusicContent)
+          .sort(prioritizeMusic)
+          .map(mapServerSong)
+          .filter(Boolean);
+        if (songs.length > 0) {
+          rememberSongs(songs);
+          await play(songs[0], songs, true);
+          return;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('playSomething error:', err);
+  }
+  showToast('No tracks available to play.');
+}
+
 export async function nextTrack() {
   if (!state.currentSong) {
     await playSomething();

@@ -119,10 +119,10 @@ export function renderYouPage() {
               <div class="card" ${isRemoteAlbum ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} role="button" tabindex="0">
                 <div class="card-img-wrap">
                   <img class="card-cover" src="${escapeHTML(album.coverUrl)}" alt="${escapeHTML(album.name)}" draggable="false" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-                  <button class="card-play-btn" ${isRemoteAlbum ? `data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" aria-label="Play Album" onclick="event.stopPropagation();"` : `type="button" aria-label="View Artist"`}>
+                  <button class="card-play-btn" ${isRemoteAlbum ? `data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" aria-label="Play Album"` : `type="button" aria-label="View Artist"`}>
                     <i class="fa-solid ${isRemoteAlbum ? 'fa-play' : 'fa-compact-disc'}"></i>
                   </button>
-                  <button class="card-bookmark-btn ${saved ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id || '')}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist)}" data-album-cover="${escapeHTML(album.coverUrl)}" type="button" aria-label="${saved ? 'Unsave album' : 'Save album'}" onclick="event.stopPropagation();">
+                  <button class="card-bookmark-btn ${saved ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id || '')}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist)}" data-album-cover="${escapeHTML(album.coverUrl)}" type="button" aria-label="${saved ? 'Unsave album' : 'Save album'}">
                     <i class="fa-solid ${saved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
                   </button>
                 </div>
@@ -203,7 +203,7 @@ export function renderYouPage() {
                 <div class="card-title text-center">${escapeHTML(artist.name)}</div>
                 <div class="card-meta text-center" style="margin-bottom: 8px;">Artist</div>
                 <div style="display: flex; justify-content: center; margin-top: auto;">
-                  <button class="btn-card-follow ${followed ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(artist.imageUrl || '')}" type="button" onclick="event.stopPropagation();" aria-label="${followed ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
+                  <button class="btn-card-follow ${followed ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(artist.imageUrl || '')}" type="button" aria-label="${followed ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
                     <i class="fa-solid ${followed ? 'fa-check' : 'fa-plus'}"></i>
                     <span>${followed ? 'Following' : 'Follow'}</span>
                   </button>
@@ -429,7 +429,7 @@ export function renderYouPage() {
             <div class="you-hub-end">
               ${
                 favoritesCount > 0
-                  ? `<button class="you-hub-play" data-action="play-favorites" type="button" aria-label="Play Liked Songs" onclick="event.stopPropagation();"><i class="fa-solid fa-play"></i></button>`
+                  ? `<button class="you-hub-play" data-action="play-favorites" type="button" aria-label="Play Liked Songs"><i class="fa-solid fa-play"></i></button>`
                   : `<i class="fa-solid fa-chevron-right you-hub-arrow" aria-hidden="true"></i>`
               }
             </div>

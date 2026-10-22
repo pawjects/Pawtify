@@ -4,6 +4,7 @@ import {
   togglePlay,
   nextTrack,
   previousTrack,
+  playSomething,
   toggleFavorite,
   removeFromPlaylist,
   addToPlaylist,
@@ -55,6 +56,7 @@ import {
   renderQueuePanel,
   removeFromQueue,
   clearQueue,
+  reorderQueue,
 } from '../components/queuePanel.js';
 import { loadTrendingSongs } from '../services/dataLoader.js';
 import { openTrackMenu, closeTrackMenu } from '../components/trackMenu.js';
@@ -190,9 +192,9 @@ export function bindGlobalEvents() {
     if (!actionNode) return;
 
     const action = actionNode.dataset.action;
-    const songId = actionNode.dataset.songId || null;
-    const source = actionNode.dataset.source || null;
-    const playlistId = actionNode.dataset.playlistId || null;
+    const songId = actionNode.dataset.songId || actionNode.closest('[data-song-id]')?.dataset.songId || null;
+    const source = actionNode.dataset.source || actionNode.closest('[data-source]')?.dataset.source || null;
+    const playlistId = actionNode.dataset.playlistId || actionNode.closest('[data-playlist-id]')?.dataset.playlistId || null;
 
     try {
       if (action === 'clear-search-input') {
@@ -528,9 +530,40 @@ export function bindGlobalEvents() {
         closeQueuePanel();
         return;
       }
-      if (action === 'remove-from-queue' && songId) {
+      if (action === 'remove-from-queue') {
         event.preventDefault();
-        removeFromQueue(songId);
+        event.stopPropagation();
+        const targetQueueId = actionNode.dataset.queueId || actionNode.dataset.songId || songId;
+        if (targetQueueId) {
+          removeFromQueue(targetQueueId);
+        }
+        return;
+      }
+      if (action === 'queue-move-up') {
+        event.preventDefault();
+        event.stopPropagation();
+        const qIdx = parseInt(actionNode.dataset.queueIndex, 10);
+        if (!isNaN(qIdx) && qIdx > state.currentSongIndex + 1) {
+          reorderQueue(qIdx, qIdx - 1);
+        }
+        return;
+      }
+      if (action === 'queue-move-down') {
+        event.preventDefault();
+        event.stopPropagation();
+        const qIdx = parseInt(actionNode.dataset.queueIndex, 10);
+        if (!isNaN(qIdx) && qIdx < state.queue.length - 1) {
+          reorderQueue(qIdx, qIdx + 1);
+        }
+        return;
+      }
+      if (action === 'play-queue-track') {
+        event.preventDefault();
+        const qIdx = parseInt(actionNode.dataset.queueIndex, 10);
+        if (!isNaN(qIdx) && state.queue[qIdx]) {
+          state.currentSongIndex = qIdx;
+          play(state.queue[qIdx], state.queue, true);
+        }
         return;
       }
       if (action === 'navigate') {
@@ -1304,7 +1337,7 @@ export function bindGlobalEvents() {
         state.progress = nextTime;
         const maxVal = Number.parseFloat(target.max) || 1;
         const pct = maxVal > 0 ? (nextTime / maxVal) * 100 : 0;
-        target.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${pct}%, rgba(255,255,255,0.16) ${pct}%)`;
+        target.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${pct}%, #3e3e3e ${pct}%)`;
         const currentLabel = document.getElementById('time-current');
         if (currentLabel) currentLabel.textContent = formatTime(nextTime);
         const fsCurrentLabel = document.getElementById('fs-time-current');

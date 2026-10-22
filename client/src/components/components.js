@@ -186,7 +186,7 @@ export function renderSearchResults() {
             <h3 class="search-top-title">${escapeHTML(topSong.title)}</h3>
             <p class="search-top-artist">${escapeHTML(topSong.artist)}</p>
           </div>
-          <button class="search-top-play-btn" data-action="play-song" data-song-id="${escapeHTML(topSong.id)}" data-source="search" type="button" aria-label="Play ${escapeHTML(topSong.title)}" onclick="event.stopPropagation();">
+          <button class="search-top-play-btn" data-action="play-song" data-song-id="${escapeHTML(topSong.id)}" data-source="search" type="button" aria-label="Play ${escapeHTML(topSong.title)}">
             <i class="fa-solid fa-play"></i>
           </button>
         </div>
@@ -503,10 +503,10 @@ export function renderLibraryPage() {
             <div class="card" ${isRemoteAlbum ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} role="button" tabindex="0">
               <div class="card-img-wrap">
                 <img class="card-cover" src="${escapeHTML(album.coverUrl)}" alt="${escapeHTML(album.name)}" draggable="false" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-                <button class="card-play-btn" ${isRemoteAlbum ? `data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" aria-label="Play Album" onclick="event.stopPropagation();"` : `type="button" aria-label="View Artist"`}>
+                <button class="card-play-btn" ${isRemoteAlbum ? `data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" aria-label="Play Album"` : `type="button" aria-label="View Artist"`}>
                   <i class="fa-solid ${isRemoteAlbum ? 'fa-play' : 'fa-compact-disc'}"></i>
                 </button>
-                <button class="card-bookmark-btn ${isAlbumSaved({ name: album.name, artist: album.artist }) ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id || '')}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist)}" data-album-cover="${escapeHTML(album.coverUrl)}" type="button" aria-label="${isAlbumSaved({ name: album.name, artist: album.artist }) ? 'Unsave album' : 'Save album'}" onclick="event.stopPropagation();">
+                <button class="card-bookmark-btn ${isAlbumSaved({ name: album.name, artist: album.artist }) ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id || '')}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist)}" data-album-cover="${escapeHTML(album.coverUrl)}" type="button" aria-label="${isAlbumSaved({ name: album.name, artist: album.artist }) ? 'Unsave album' : 'Save album'}">
                   <i class="fa-solid ${isAlbumSaved({ name: album.name, artist: album.artist }) ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
                 </button>
               </div>
@@ -560,7 +560,7 @@ export function renderLibraryPage() {
               <div class="card-title" style="text-align: center;">${escapeHTML(artist.name)}</div>
               <div class="card-meta" style="text-align: center; margin-bottom: 8px;">Artist</div>
               <div style="display:flex; justify-content:center; margin-top:auto;">
-                <button class="btn-card-follow ${isArtistFollowed(artist.name) ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(artist.imageUrl || '')}" type="button" onclick="event.stopPropagation();" aria-label="${isArtistFollowed(artist.name) ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
+                <button class="btn-card-follow ${isArtistFollowed(artist.name) ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(artist.imageUrl || '')}" type="button" aria-label="${isArtistFollowed(artist.name) ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
                   <i class="fa-solid ${isArtistFollowed(artist.name) ? 'fa-check' : 'fa-plus'}"></i>
                   <span>${isArtistFollowed(artist.name) ? 'Following' : 'Follow'}</span>
                 </button>
@@ -788,6 +788,7 @@ export function renderPlaylistPage(playlistId) {
 
 export function renderSongRow(song, index, source, playlistId = '') {
   if (!song) return '';
+  rememberSongs([song]);
   const active = state.currentSong?.id === song.id;
   const isFav = state.favorites.some((item) => item.id === song.id);
   const cover = getOptimizedArtwork(song.coverUrl, 120);
@@ -799,11 +800,11 @@ export function renderSongRow(song, index, source, playlistId = '') {
        <img class="song-cover-sm" src="${escapeHTML(cover)}" alt="" draggable="false" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
        <div class="song-info">
          <div class="song-title">${escapeHTML(song.title)}</div>
-         <div class="song-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}" onclick="event.stopPropagation();">${escapeHTML(song.artist)}</div>
+         <div class="song-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
        </div>
        <div class="song-duration">${escapeHTML(song.duration || '0:00')}</div>
        <div class="song-actions">
-         <button class="song-action-btn song-menu-trigger" data-action="open-track-menu" data-song-id="${escapeHTML(song.id)}" data-playlist-id="${escapeHTML(playlistId)}" type="button" aria-label="More options for ${escapeHTML(song.title)}" title="More options" onclick="event.stopPropagation();">
+         <button class="song-action-btn song-menu-trigger" data-action="open-track-menu" data-song-id="${escapeHTML(song.id)}" data-playlist-id="${escapeHTML(playlistId)}" type="button" aria-label="More options for ${escapeHTML(song.title)}" title="More options">
            <i class="fa-solid fa-ellipsis-vertical"></i>
          </button>
        </div>
@@ -824,13 +825,13 @@ export function renderPlaylistCard(playlist, index) {
     <div class="card" data-action="navigate" data-path="/playlist/${escapeHTML(playlist.id)}" tabindex="0">
       <div class="card-img-wrap">
         <img src="${escapeHTML(coverUrl)}" alt="${escapeHTML(playlist.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-        <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Play ${escapeHTML(playlist.name)}" onclick="event.stopPropagation();">
+        <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Play ${escapeHTML(playlist.name)}">
           <i class="fa-solid fa-play"></i>
         </button>
         ${
           !playlist.isSystem && !isCustomUserPlaylist
             ? `
-          <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-playlist" data-playlist-id="${escapeHTML(playlist.id)}" data-playlist-name="${escapeHTML(playlist.name)}" data-playlist-uploader="${escapeHTML(playlist.uploaderName || '')}" data-playlist-cover="${escapeHTML(rawCover)}" type="button" aria-label="${isSaved ? 'Unsave playlist' : 'Save playlist'}" title="${isSaved ? 'Unsave Playlist' : 'Save Playlist'}" onclick="event.stopPropagation();">
+          <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-playlist" data-playlist-id="${escapeHTML(playlist.id)}" data-playlist-name="${escapeHTML(playlist.name)}" data-playlist-uploader="${escapeHTML(playlist.uploaderName || '')}" data-playlist-cover="${escapeHTML(rawCover)}" type="button" aria-label="${isSaved ? 'Unsave playlist' : 'Save playlist'}" title="${isSaved ? 'Unsave Playlist' : 'Save Playlist'}">
             <i class="fa-solid ${isSaved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
           </button>
         `
@@ -854,10 +855,10 @@ export function renderPlaylistSearchCard(playlist, index) {
     <div class="card" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(playlist.id)}" tabindex="0" role="button" aria-label="Open playlist ${escapeHTML(playlist.name)}">
       <div class="card-img-wrap">
         <img class="card-cover" src="${escapeHTML(coverUrl)}" alt="${escapeHTML(playlist.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-        <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Play ${escapeHTML(playlist.name)}" onclick="event.stopPropagation();">
+        <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Play ${escapeHTML(playlist.name)}">
           <i class="fa-solid fa-play"></i>
         </button>
-        <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-playlist" data-playlist-id="${escapeHTML(playlist.id)}" data-playlist-name="${escapeHTML(playlist.name)}" data-playlist-uploader="${escapeHTML(playlist.uploaderName || '')}" data-playlist-cover="${escapeHTML(rawCover)}" type="button" aria-label="${isSaved ? 'Unsave playlist' : 'Save playlist'}" title="${isSaved ? 'Unsave Playlist' : 'Save Playlist'}" onclick="event.stopPropagation();">
+        <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-playlist" data-playlist-id="${escapeHTML(playlist.id)}" data-playlist-name="${escapeHTML(playlist.name)}" data-playlist-uploader="${escapeHTML(playlist.uploaderName || '')}" data-playlist-cover="${escapeHTML(rawCover)}" type="button" aria-label="${isSaved ? 'Unsave playlist' : 'Save playlist'}" title="${isSaved ? 'Unsave Playlist' : 'Save Playlist'}">
           <i class="fa-solid ${isSaved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
         </button>
       </div>
@@ -876,10 +877,10 @@ export function renderAlbumSearchCard(album, index) {
     <div class="card" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}" tabindex="0" role="button" aria-label="Open album ${escapeHTML(album.name)}">
       <div class="card-img-wrap">
         <img class="card-cover" src="${escapeHTML(coverUrl)}" alt="${escapeHTML(album.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-        <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" type="button" aria-label="Play ${escapeHTML(album.name)}" onclick="event.stopPropagation();">
+        <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" type="button" aria-label="Play ${escapeHTML(album.name)}">
           <i class="fa-solid fa-play"></i>
         </button>
-        <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id)}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist || '')}" data-album-cover="${escapeHTML(rawCover)}" data-album-year="${escapeHTML(album.year || '')}" type="button" aria-label="${isSaved ? 'Unsave album' : 'Save album'}" title="${isSaved ? 'Unsave Album' : 'Save Album'}" onclick="event.stopPropagation();">
+        <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id)}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist || '')}" data-album-cover="${escapeHTML(rawCover)}" data-album-year="${escapeHTML(album.year || '')}" type="button" aria-label="${isSaved ? 'Unsave album' : 'Save album'}" title="${isSaved ? 'Unsave Album' : 'Save Album'}">
           <i class="fa-solid ${isSaved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
         </button>
       </div>
@@ -904,7 +905,7 @@ export function renderArtistSearchCard(artist, index) {
       <div class="card-title" style="text-align: center;">${escapeHTML(artist.name)}</div>
       <div class="card-meta" style="text-align: center; margin-bottom: 8px;">Artist</div>
       <div style="display: flex; justify-content: center; margin-top: auto;">
-        <button class="btn-card-follow ${isFollowed ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(rawCover)}" type="button" onclick="event.stopPropagation();" aria-label="${isFollowed ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
+        <button class="btn-card-follow ${isFollowed ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(rawCover)}" type="button" aria-label="${isFollowed ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
           <i class="fa-solid ${isFollowed ? 'fa-check' : 'fa-plus'}"></i>
           <span>${isFollowed ? 'Following' : 'Follow'}</span>
         </button>

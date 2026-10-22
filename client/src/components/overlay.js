@@ -2,6 +2,7 @@ import { state, LOGO_URL } from '../config/config.js';
 import { overlayRoot } from '../config/dom.js';
 import { escapeHTML } from '../utils/utils.js';
 import { getSongById } from '../core/details.js';
+import { getExactAudioQuality } from '../services/youtube.js';
 
 export function renderOverlay() {
   if (!overlayRoot) return;
@@ -34,7 +35,7 @@ export function renderOverlay() {
                </div>
              </div>
              <div class="meta-list">
-               <p class="meta-item"><b>Quality:</b> HQ Audio Stream</p>
+               <p class="meta-item"><b>Quality:</b> <span id="modal-quality-label">${escapeHTML(getExactAudioQuality())}</span></p>
                <p class="meta-item"><b>Duration:</b> ${escapeHTML(song.duration || '0:00')}</p>
              </div>
              <div style="display:flex; gap:10px; margin-top:16px;">
@@ -348,7 +349,7 @@ export function renderOverlay() {
                       <div class="you-setting-label">Audio Quality</div>
                       <div class="you-setting-desc">High-bitrate Opus 160kbps stream via native YouTube Engine.</div>
                     </div>
-                    <span class="player-quality-badge" style="font-size:0.75rem; padding:4px 10px;">HQ Audio Active</span>
+                    <span class="player-quality-badge" id="settings-quality-label" style="font-size:0.75rem; padding:4px 10px;">${escapeHTML(getExactAudioQuality())}</span>
                   </div>
 
                   <div class="you-setting-divider"></div>

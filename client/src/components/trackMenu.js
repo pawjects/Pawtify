@@ -1,6 +1,6 @@
 import { state, showToast } from '../config/config.js';
 import { escapeHTML, getOptimizedArtwork } from '../utils/utils.js';
-import { getSongById, shareSpecificSong } from '../core/details.js';
+import { getSongById, shareSpecificSong, rememberSongs } from '../core/details.js';
 import {
   toggleFavorite,
   addToQueue,
@@ -145,9 +145,41 @@ export function openTrackMenu(songId, playlistId, triggerBtn) {
     return;
   }
 
-  const song =
+  let song =
     getSongById(songId) ||
     (state.currentSong?.id === songId ? state.currentSong : null);
+
+  if (!song && state.queue?.length) {
+    song = state.queue.find((s) => s.id === songId);
+  }
+  if (!song && state.favorites?.length) {
+    song = state.favorites.find((s) => s.id === songId);
+  }
+  if (!song && state.searchResults?.songs?.length) {
+    song = state.searchResults.songs.find((s) => s.id === songId);
+  }
+  if (!song && state.recommendedSongs?.length) {
+    song = state.recommendedSongs.find((s) => s.id === songId);
+  }
+  if (!song && state.trendingSongs?.length) {
+    song = state.trendingSongs.find((s) => s.id === songId);
+  }
+  if (!song && triggerBtn) {
+    const row = triggerBtn.closest('.song-row, .queue-item');
+    if (row) {
+      const titleEl = row.querySelector('.song-title, .queue-item-title');
+      const artistEl = row.querySelector('.song-artist, .queue-item-artist');
+      const imgEl = row.querySelector('img');
+      song = {
+        id: songId,
+        title: titleEl?.textContent?.trim() || 'Track',
+        artist: artistEl?.textContent?.trim() || 'Unknown Artist',
+        coverUrl: imgEl?.src || '/assets/pawtify.png',
+        duration: row.querySelector('.song-duration')?.textContent?.trim() || '0:00',
+      };
+      rememberSongs([song]);
+    }
+  }
   if (!song) return;
 
   if (activeTriggerBtn) {
@@ -227,6 +259,7 @@ export function positionTrackMenu(triggerBtn, menu) {
   const padding = 12;
   const menuWidth = Math.min(240, window.innerWidth - padding * 2);
   menu.style.width = `${menuWidth}px`;
+  menu.style.zIndex = '300';
 
   const menuHeight = menu.offsetHeight || 280;
 
@@ -240,7 +273,12 @@ export function positionTrackMenu(triggerBtn, menu) {
   // Vertical position: place below button, flip above if limited viewport space below
   let top = rect.bottom + 6;
   if (top + menuHeight > window.innerHeight - padding) {
-    top = Math.max(padding, rect.top - menuHeight - 6);
+    const flippedTop = rect.top - menuHeight - 6;
+    if (flippedTop >= padding) {
+      top = flippedTop;
+    } else {
+      top = Math.max(padding, window.innerHeight - menuHeight - padding);
+    }
   }
 
   menu.style.left = `${Math.round(left)}px`;
