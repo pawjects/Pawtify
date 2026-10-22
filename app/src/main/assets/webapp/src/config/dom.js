@@ -1,0 +1,9 @@
+export const appMain = document.getElementById('app-main');
+export const playerBar = document.getElementById('player-bar');
+export const miniPlayer = document.getElementById('mini-player');
+export const overlayRoot = document.getElementById('overlay-root');
+export const fullscreenPlayer = document.getElementById('fullscreen-player');
+export const lyricsPanel = document.getElementById('lyrics-panel');
+export const artistProfile = document.getElementById('artist-profile');
+export const queuePanel = document.getElementById('queue-panel');
+export const sidebarPlaylists = document.getElementById('sidebar-playlists');

@@ -118,6 +118,19 @@ export function updateMediaSession(song) {
     album: song.album || '',
     artwork: [{ src: song.coverUrl, sizes: '512x512', type: 'image/jpeg' }],
   });
+
+  // Notify native Android wrapper bridge if running inside WebView
+  if (typeof window !== 'undefined' && window.AndroidBridge) {
+    try {
+      window.AndroidBridge.updateTrackInfo(
+        song.title || 'Unknown',
+        song.artist || 'Unknown',
+        song.coverUrl || ''
+      );
+      window.AndroidBridge.updatePlaybackState(Boolean(state.isPlaying));
+    } catch (e) {}
+  }
+
   navigator.mediaSession.setActionHandler('play', () => {
     if (!state.isPlaying) togglePlay();
   });
@@ -128,6 +141,25 @@ export function updateMediaSession(song) {
     previousTrack()
   );
   navigator.mediaSession.setActionHandler('nexttrack', () => nextTrack());
+
+  // Register window hooks for native Android notification actions
+  if (typeof window !== 'undefined') {
+    window.onAndroidPlayPause = () => {
+      togglePlay();
+    };
+    window.onAndroidPlay = () => {
+      if (!state.isPlaying) togglePlay();
+    };
+    window.onAndroidPause = () => {
+      if (state.isPlaying) pause();
+    };
+    window.onAndroidNext = () => {
+      nextTrack();
+    };
+    window.onAndroidPrevious = () => {
+      previousTrack();
+    };
+  }
   navigator.mediaSession.setActionHandler('seekforward', () => {
     if (globals.ytPlayerReady && globals.ytPlayer)
       globals.ytPlayer.seekTo(
@@ -223,6 +255,9 @@ export function onPlayerStateChange(event) {
     if (state.currentSong) state.currentSong._triedFallback = false;
     if (navigator.mediaSession)
       navigator.mediaSession.playbackState = 'playing';
+    if (typeof window !== 'undefined' && window.AndroidBridge) {
+      try { window.AndroidBridge.updatePlaybackState(true); } catch (e) {}
+    }
     startBackgroundAudio();
     startYTPoll();
   } else if (event.data === 3) {
@@ -242,6 +277,9 @@ export function onPlayerStateChange(event) {
     state.isPlaying = false;
     if (navigator.mediaSession) {
       navigator.mediaSession.playbackState = 'paused';
+    }
+    if (typeof window !== 'undefined' && window.AndroidBridge) {
+      try { window.AndroidBridge.updatePlaybackState(false); } catch (e) {}
     }
     stopBackgroundAudio();
     if (globals.ytPollInterval) {

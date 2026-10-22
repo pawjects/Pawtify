@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Pawtify</string>
+    <string name="notification_channel_name">Media Playback</string>
+    <string name="notification_channel_description">Shows current track info and playback controls</string>
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_next">Next</string>
+    <string name="action_previous">Previous</string>
+    <string name="permission_post_notifications_rationale">Notification permission is required to display media controls in the status bar.</string>
+</resources>
