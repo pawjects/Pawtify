@@ -107,29 +107,25 @@ class MediaPlaybackService : Service() {
         }
 
         fun updateMetadata(context: Context, title: String, artist: String, artworkUrl: String?) {
-            val instance = activeInstance
-            if (instance != null) {
-                instance.onTrackInfoChanged(title, artist, artworkUrl)
-            } else {
-                val intent = Intent(context, MediaPlaybackService::class.java).apply {
-                    putExtra(EXTRA_TITLE, title)
-                    putExtra(EXTRA_ARTIST, artist)
-                    putExtra(EXTRA_ARTWORK_URL, artworkUrl)
-                }
-                ContextCompat.startForegroundService(context, intent)
+            val intent = Intent(context, MediaPlaybackService::class.java).apply {
+                putExtra(EXTRA_TITLE, title)
+                putExtra(EXTRA_ARTIST, artist)
+                putExtra(EXTRA_ARTWORK_URL, artworkUrl)
             }
+            try {
+                ContextCompat.startForegroundService(context, intent)
+            } catch (ignored: Exception) {}
+            activeInstance?.onTrackInfoChanged(title, artist, artworkUrl)
         }
 
         fun updatePlaybackState(context: Context, isPlaying: Boolean) {
-            val instance = activeInstance
-            if (instance != null) {
-                instance.onPlaybackStateChanged(isPlaying)
-            } else {
-                val intent = Intent(context, MediaPlaybackService::class.java).apply {
-                    putExtra(EXTRA_IS_PLAYING, isPlaying)
-                }
-                ContextCompat.startForegroundService(context, intent)
+            val intent = Intent(context, MediaPlaybackService::class.java).apply {
+                putExtra(EXTRA_IS_PLAYING, isPlaying)
             }
+            try {
+                ContextCompat.startForegroundService(context, intent)
+            } catch (ignored: Exception) {}
+            activeInstance?.onPlaybackStateChanged(isPlaying)
         }
 
         fun stopService(context: Context) {

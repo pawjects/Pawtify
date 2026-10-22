@@ -2,15 +2,15 @@ package meow.pawtify.pawjects
 
 import android.content.Context
 import android.util.AttributeSet
-import android.view.MotionEvent
 import android.view.View
 import android.webkit.WebView
 
 /**
- * Custom WebView that ensures soft keyboard (IME) input compatibility and focusability.
- *
- * Overrides touch events to guarantee that tapping text input fields inside the WebView
- * requests focus from touch and reliably summons the Android software keyboard.
+ * Custom WebView that:
+ * 1. Tricks Chromium and WebKit into always treating the window and view as View.VISIBLE
+ *    even when the app is minimized, locked, or backgrounded, preventing Chromium from
+ *    suspending timers, pausing HTML5 Audio/WebAudio, or throttling playback.
+ * 2. Allows natural IME text focus management without aggressive requestFocus triggers.
  */
 class BackgroundWebView @JvmOverloads constructor(
     context: Context,
@@ -24,17 +24,24 @@ class BackgroundWebView @JvmOverloads constructor(
         isClickable = true
     }
 
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        if (event != null && (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_UP)) {
-            if (!hasFocus()) {
-                requestFocus(View.FOCUS_DOWN)
-                requestFocusFromTouch()
-            }
-        }
-        return super.onTouchEvent(event)
+    /**
+     * Prevents Chromium from detecting that the window was hidden or minimized.
+     */
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(View.VISIBLE)
     }
 
-    override fun onCheckIsTextEditor(): Boolean {
-        return true
+    /**
+     * Prevents Chromium from detecting view hierarchy invisibility.
+     */
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, View.VISIBLE)
+    }
+
+    /**
+     * Ensures dispatched window visibility is permanently reported as VISIBLE.
+     */
+    override fun dispatchWindowVisibilityChanged(visibility: Int) {
+        super.dispatchWindowVisibilityChanged(View.VISIBLE)
     }
 }

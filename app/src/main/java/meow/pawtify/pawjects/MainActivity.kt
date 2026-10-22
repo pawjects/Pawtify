@@ -39,12 +39,12 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
  * Main Activity wrapping the hosted Pawtify PWA inside an optimized Android WebView.
  *
  * Implements:
- * - Notch cutout and navigation bar safe insets via WindowInsetsCompat.
- * - Soft keyboard (IME) resize behavior and touch focusability.
- * - Real-time two-way synchronization with MediaPlaybackService.
- * - Native AMOLED dark Material 3 dialogs (Welcome, No Internet, and Confirm Exit).
- * - App Links / Deep Linking verification for https://pawtify-meow.vercel.app/.
- * - Efficient lifecycle management and clean service teardown.
+ * 1. Safe insets handling for camera cutouts and notches without content clipping.
+ * 2. SOFT_INPUT_STATE_HIDDEN to prevent keyboard from popping up automatically on resume.
+ * 3. Never pausing WebView in onPause/onStop to guarantee continuous background audio.
+ * 4. Automatic JavaScript injection into the PWA observing navigator.mediaSession.metadata
+ *    and HTML5 audio/video tags to synchronize with native MediaPlaybackService notifications in real time.
+ * 5. Full two-way control between Android media notifications and the webapp.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -72,8 +72,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Issue 2 Fix: Ensure soft keyboard resizes layout and is immediately interactive
-        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        // Fix 2: Prevent aggressive keyboard popup on app resume or launch
+        window.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
+        )
 
         setContentView(R.layout.activity_main)
 
@@ -103,9 +105,6 @@ class MainActivity : AppCompatActivity() {
         handleIncomingIntent(intent)
     }
 
-    /**
-     * Issue 6 Fix: Deep Linking and App Links verification handler.
-     */
     private fun handleIncomingIntent(intent: Intent?) {
         val appLinkData = intent?.data
         if (appLinkData != null && "https".equals(appLinkData.scheme, ignoreCase = true)
@@ -121,7 +120,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Issue 1 Fix: WindowInsetsCompat listener on root layout to prevent notch / camera cutout clipping.
+     * Fix 1: WindowInsetsCompat listener on root layout to prevent notch / camera cutout clipping.
      */
     private fun setupEdgeToEdgeInsets() {
         val rootContainer = findViewById<View>(R.id.rootContainer)
@@ -131,15 +130,11 @@ class MainActivity : AppCompatActivity() {
             val insets = windowInsets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
-            // Apply top padding to safely clear status bar notch and bottom padding for gesture bar
             view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
             windowInsets
         }
     }
 
-    /**
-     * Issue 2 Fix: Configures WebView settings and focus for seamless IME input and rendering.
-     */
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         val settings = webView.settings
@@ -154,10 +149,7 @@ class MainActivity : AppCompatActivity() {
         webView.isVerticalScrollBarEnabled = false
         webView.isHorizontalScrollBarEnabled = false
 
-        // Ensure focusable for soft keyboard interaction
-        webView.isFocusable = true
-        webView.isFocusableInTouchMode = true
-
+        // Fix 3: Expose AndroidBridge interface to JavaScript
         webView.addJavascriptInterface(WebAppInterface(this), "AndroidBridge")
 
         webView.webViewClient = object : WebViewClient() {
@@ -173,7 +165,8 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 loadingSpinner.visibility = View.GONE
-                evaluateJs("window.isAndroidContainer = true; if (window.onAndroidReady) window.onAndroidReady();")
+                // Fix 3: Inject MediaSession and Audio element observers to automatically bridge PWA metadata
+                injectMediaSessionObserver()
             }
 
             override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
@@ -192,35 +185,222 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Issue 3 Fix: Two-way control from native notification to WebView playback controls.
+     * Fix 3: Injects a JavaScript hook that transparently observes navigator.mediaSession
+     * and HTML5 audio/video tags, guaranteeing metadata is forwarded to AndroidBridge.
+     */
+    private fun injectMediaSessionObserver() {
+        val injectionScript = """
+            (function() {
+                if (window.__pawtify_observer_injected) return;
+                window.__pawtify_observer_injected = true;
+                window.isAndroidContainer = true;
+
+                function extractArtwork(artworkArray) {
+                    if (!artworkArray || !artworkArray.length) return '';
+                    var last = artworkArray[artworkArray.length - 1];
+                    return (last && last.src) ? last.src : '';
+                }
+
+                function notifyTrackInfo(meta) {
+                    if (!window.AndroidBridge || !meta) return;
+                    try {
+                        var title = meta.title || 'Pawtify';
+                        var artist = meta.artist || 'Ready to Play';
+                        var artwork = extractArtwork(meta.artwork);
+                        window.AndroidBridge.updateTrackInfo(title, artist, artwork);
+                    } catch (e) {}
+                }
+
+                function notifyPlayback(isPlaying) {
+                    if (!window.AndroidBridge) return;
+                    try {
+                        window.AndroidBridge.updatePlaybackState(Boolean(isPlaying));
+                    } catch (e) {}
+                }
+
+                // 1. Hook navigator.mediaSession.metadata setter
+                if ('mediaSession' in navigator) {
+                    if (navigator.mediaSession.metadata) {
+                        notifyTrackInfo(navigator.mediaSession.metadata);
+                    }
+
+                    try {
+                        var proto = Object.getPrototypeOf(navigator.mediaSession);
+                        var metaDesc = Object.getOwnPropertyDescriptor(proto, 'metadata') 
+                                    || Object.getOwnPropertyDescriptor(navigator.mediaSession, 'metadata');
+                        var internalMeta = navigator.mediaSession.metadata || null;
+
+                        Object.defineProperty(navigator.mediaSession, 'metadata', {
+                            configurable: true,
+                            enumerable: true,
+                            get: function() {
+                                return (metaDesc && metaDesc.get) ? metaDesc.get.call(navigator.mediaSession) : internalMeta;
+                            },
+                            set: function(val) {
+                                internalMeta = val;
+                                if (metaDesc && metaDesc.set) {
+                                    metaDesc.set.call(navigator.mediaSession, val);
+                                }
+                                notifyTrackInfo(val);
+                            }
+                        });
+                    } catch (e) {}
+
+                    // Hook navigator.mediaSession.playbackState
+                    try {
+                        var stateProto = Object.getPrototypeOf(navigator.mediaSession);
+                        var stateDesc = Object.getOwnPropertyDescriptor(stateProto, 'playbackState')
+                                     || Object.getOwnPropertyDescriptor(navigator.mediaSession, 'playbackState');
+                        var internalState = navigator.mediaSession.playbackState || 'none';
+
+                        Object.defineProperty(navigator.mediaSession, 'playbackState', {
+                            configurable: true,
+                            enumerable: true,
+                            get: function() {
+                                return (stateDesc && stateDesc.get) ? stateDesc.get.call(navigator.mediaSession) : internalState;
+                            },
+                            set: function(val) {
+                                internalState = val;
+                                if (stateDesc && stateDesc.set) {
+                                    stateDesc.set.call(navigator.mediaSession, val);
+                                }
+                                notifyPlayback(val === 'playing');
+                            }
+                        });
+                    } catch (e) {}
+                }
+
+                // 2. Hook HTML5 audio and video elements
+                function bindMedia(el) {
+                    if (!el || el.__pawtify_bound) return;
+                    el.__pawtify_bound = true;
+                    el.addEventListener('play', function() { notifyPlayback(true); });
+                    el.addEventListener('playing', function() { notifyPlayback(true); });
+                    el.addEventListener('pause', function() { notifyPlayback(false); });
+                    el.addEventListener('ended', function() { notifyPlayback(false); });
+                    if (!el.paused && el.currentTime > 0) {
+                        notifyPlayback(true);
+                    }
+                }
+
+                document.querySelectorAll('audio, video').forEach(bindMedia);
+
+                var obs = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(m) {
+                        m.addedNodes.forEach(function(node) {
+                            if (node.nodeType === 1) {
+                                if (node.tagName === 'AUDIO' || node.tagName === 'VIDEO') {
+                                    bindMedia(node);
+                                }
+                                if (node.querySelectorAll) {
+                                    node.querySelectorAll('audio, video').forEach(bindMedia);
+                                }
+                            }
+                        });
+                    });
+                });
+                obs.observe(document.documentElement || document.body, { childList: true, subtree: true });
+
+                if (window.onAndroidReady) {
+                    try { window.onAndroidReady(); } catch (e) {}
+                }
+            })();
+        """.trimIndent()
+        evaluateJs(injectionScript)
+    }
+
+    /**
+     * Fix 3: Two-way control from native notification to WebView playback controls.
      */
     private fun setupMediaActionListener() {
         MediaPlaybackService.mediaActionListener = { action ->
             webView.post {
                 when (action) {
                     MediaPlaybackService.ACTION_PLAY -> {
-                        evaluateJs("window.onAndroidPlay ? window.onAndroidPlay() : (window.onAndroidPlayPause ? window.onAndroidPlayPause() : null);")
+                        evaluateJs("""
+                            (function() {
+                                if (window.onAndroidPlay) {
+                                    window.onAndroidPlay();
+                                } else if (window.onAndroidPlayPause) {
+                                    window.onAndroidPlayPause();
+                                } else {
+                                    var audio = document.querySelector('audio') || document.querySelector('video');
+                                    if (audio) audio.play();
+                                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+                                }
+                            })();
+                        """.trimIndent())
                     }
                     MediaPlaybackService.ACTION_PAUSE -> {
-                        evaluateJs("window.onAndroidPause ? window.onAndroidPause() : (window.onAndroidPlayPause ? window.onAndroidPlayPause() : null);")
+                        evaluateJs("""
+                            (function() {
+                                if (window.onAndroidPause) {
+                                    window.onAndroidPause();
+                                } else if (window.onAndroidPlayPause) {
+                                    window.onAndroidPlayPause();
+                                } else {
+                                    var audio = document.querySelector('audio') || document.querySelector('video');
+                                    if (audio) audio.pause();
+                                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+                                }
+                            })();
+                        """.trimIndent())
                     }
                     MediaPlaybackService.ACTION_TOGGLE -> {
-                        evaluateJs("window.onAndroidPlayPause ? window.onAndroidPlayPause() : null;")
+                        evaluateJs("""
+                            (function() {
+                                if (window.onAndroidPlayPause) {
+                                    window.onAndroidPlayPause();
+                                    return;
+                                }
+                                var audio = document.querySelector('audio') || document.querySelector('video');
+                                if ('mediaSession' in navigator && navigator.mediaSession.playbackState) {
+                                    if (navigator.mediaSession.playbackState === 'playing') {
+                                        if (audio) audio.pause();
+                                        navigator.mediaSession.playbackState = 'paused';
+                                    } else {
+                                        if (audio) audio.play();
+                                        navigator.mediaSession.playbackState = 'playing';
+                                    }
+                                } else if (audio) {
+                                    if (audio.paused) audio.play(); else audio.pause();
+                                }
+                            })();
+                        """.trimIndent())
                     }
                     MediaPlaybackService.ACTION_NEXT -> {
-                        evaluateJs("window.onAndroidNext ? window.onAndroidNext() : null;")
+                        evaluateJs("""
+                            (function() {
+                                if (window.onAndroidNext) {
+                                    window.onAndroidNext();
+                                } else {
+                                    var btn = document.querySelector('[data-action="next"]') 
+                                           || document.querySelector('.next-btn') 
+                                           || document.getElementById('next-track');
+                                    if (btn) btn.click();
+                                }
+                            })();
+                        """.trimIndent())
                     }
                     MediaPlaybackService.ACTION_PREVIOUS -> {
-                        evaluateJs("window.onAndroidPrevious ? window.onAndroidPrevious() : null;")
+                        evaluateJs("""
+                            (function() {
+                                if (window.onAndroidPrevious) {
+                                    window.onAndroidPrevious();
+                                } else {
+                                    var btn = document.querySelector('[data-action="prev"]') 
+                                           || document.querySelector('.prev-btn') 
+                                           || document.getElementById('prev-track');
+                                    if (btn) btn.click();
+                                }
+                            })();
+                        """.trimIndent())
                     }
                 }
             }
         }
     }
 
-    /**
-     * Issue 5 Fix: Intercepts back navigation to prompt with a styled Confirm Exit Dialog.
-     */
     private fun setupBackNavigation() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -238,9 +418,6 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    /**
-     * Issue 5 Fix: Native AMOLED Material 3 Welcome Dialog.
-     */
     private fun showWelcomeDialogIfNeeded() {
         if (!prefs.getBoolean(KEY_WELCOME_SHOWN, false)) {
             MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Pawtify_MaterialAlertDialog)
@@ -255,9 +432,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Issue 5 Fix: Native AMOLED Material 3 No Internet Dialog with network callback.
-     */
     private fun setupNetworkMonitoring() {
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val request = NetworkRequest.Builder()
@@ -316,9 +490,6 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    /**
-     * Issue 5 Fix: Native AMOLED Material 3 Confirm Exit Dialog.
-     */
     private fun showConfirmExitDialog() {
         MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Pawtify_MaterialAlertDialog)
             .setTitle("Exit Pawtify?")
@@ -366,14 +537,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Background audio continuity: do NOT pause WebView timers or engine when minimized.
+     * Fix 1: STRICT BACKGROUND AUDIO ENFORCEMENT
+     * NEVER call webView.onPause() or webView.pauseTimers() in onPause() or onStop().
+     * This keeps the JavaScript engine, AudioContext, and media pipeline running when minimized.
      */
     override fun onPause() {
         super.onPause()
+        // Strictly no webView.onPause() here
     }
 
     override fun onStop() {
         super.onStop()
+        // Strictly no webView.pauseTimers() here
     }
 
     override fun onDestroy() {
