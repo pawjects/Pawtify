@@ -1,4 +1,4 @@
-package com.pawtify.app
+package meow.pawtify.pawjects
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -54,12 +54,12 @@ class MusicPlaybackService : Service() {
         const val CHANNEL_ID = "pawtify_media_playback_channel"
         const val NOTIFICATION_ID = 1001
 
-        const val ACTION_PLAY = "com.pawtify.app.ACTION_PLAY"
-        const val ACTION_PAUSE = "com.pawtify.app.ACTION_PAUSE"
-        const val ACTION_TOGGLE = "com.pawtify.app.ACTION_TOGGLE"
-        const val ACTION_NEXT = "com.pawtify.app.ACTION_NEXT"
-        const val ACTION_PREVIOUS = "com.pawtify.app.ACTION_PREVIOUS"
-        const val ACTION_STOP = "com.pawtify.app.ACTION_STOP"
+        const val ACTION_PLAY = "meow.pawtify.pawjects.ACTION_PLAY"
+        const val ACTION_PAUSE = "meow.pawtify.pawjects.ACTION_PAUSE"
+        const val ACTION_TOGGLE = "meow.pawtify.pawjects.ACTION_TOGGLE"
+        const val ACTION_NEXT = "meow.pawtify.pawjects.ACTION_NEXT"
+        const val ACTION_PREVIOUS = "meow.pawtify.pawjects.ACTION_PREVIOUS"
+        const val ACTION_STOP = "meow.pawtify.pawjects.ACTION_STOP"
 
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_ARTIST = "extra_artist"

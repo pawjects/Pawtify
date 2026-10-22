@@ -1,4 +1,4 @@
-package com.pawtify.app
+package meow.pawtify.pawjects
 
 import android.content.Context
 import android.os.Handler
@@ -7,7 +7,7 @@ import android.webkit.JavascriptInterface
 import android.widget.Toast
 
 /**
- * JavaScript Bridge exposed as `window.AndroidBridge` to the embedded Pawtify web app.
+ * JavaScript Bridge exposed as `window.AndroidBridge` to the hosted Pawtify web app.
  *
  * Allows two-way communication:
  * - Web app informs native Android about current song metadata and playback state.
