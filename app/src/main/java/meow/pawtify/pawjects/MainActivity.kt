@@ -2,8 +2,10 @@ package meow.pawtify.pawjects
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -20,32 +22,30 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 
 /**
- * Main Activity wrapping the hosted Pawtify PWA inside an optimized Android WebView.
+ * Main Activity wrapping the hosted Pawtify PWA (`https://pawtify-meow.vercel.app/`).
  *
  * Implements:
- * - Direct remote URL loading with easy-to-change target constant.
- * - Continuous background audio execution without calling webView.onPause().
- * - Android 13+ (API 33+) POST_NOTIFICATIONS runtime permission handling.
- * - Two-way JavaScript bridge for media notification synchronization.
- * - Smart back-button override preserving playback session.
+ * 1. BackgroundWebView embedding that suppresses window visibility changes,
+ *    allowing YouTube iframes and audio players to play continuously when minimized.
+ * 2. Deep linking with autoVerify support for `https://pawtify-meow.vercel.app/`.
+ * 3. Never calling webView.onPause() or pauseTimers() on activity minimization.
+ * 4. Android 13+ POST_NOTIFICATIONS runtime permission requests.
+ * 5. MediaPlaybackService synchronization and notification control dispatch.
  */
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        /**
-         * The hosted Pawtify Music Streaming PWA endpoint.
-         * Easily change this constant or override it via strings.xml.
-         */
         const val TARGET_WEB_URL = "https://pawtify-meow.vercel.app/"
+        private const val TARGET_HOST = "pawtify-meow.vercel.app"
     }
 
-    private lateinit var webView: WebView
+    private lateinit var webView: BackgroundWebView
     private lateinit var loadingSpinner: ProgressBar
 
     private val requestNotificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            // If granted, system notification will show media controls.
-            // If denied, media will still play in background, but notification won't appear.
+            // Notification permission result. Media will play regardless, but notification
+            // controls appear in the status bar if granted.
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,9 +60,24 @@ class MainActivity : AppCompatActivity() {
         setupMediaActionListener()
         checkNotificationPermission()
 
-        // Load the hosted Pawtify PWA directly into the WebView
-        val urlToLoad = runCatching { getString(R.string.target_web_url) }.getOrDefault(TARGET_WEB_URL)
-        webView.loadUrl(urlToLoad)
+        handleIntentUrl(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntentUrl(intent)
+    }
+
+    private fun handleIntentUrl(incomingIntent: Intent?) {
+        val appLinkData: Uri? = incomingIntent?.data
+        if (appLinkData != null && appLinkData.host.equals(TARGET_HOST, ignoreCase = true)) {
+            // Direct deep link navigation (e.g., https://pawtify-meow.vercel.app/playlist/...)
+            webView.loadUrl(appLinkData.toString())
+        } else if (webView.url.isNullOrEmpty()) {
+            val fallbackUrl = runCatching { getString(R.string.target_web_url) }.getOrDefault(TARGET_WEB_URL)
+            webView.loadUrl(fallbackUrl)
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -71,23 +86,36 @@ class MainActivity : AppCompatActivity() {
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.databaseEnabled = true
-        // Explicitly disable media playback user gesture requirement
+        // Explicitly disable user gesture requirement for media playback
         settings.mediaPlaybackRequiresUserGesture = false
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         settings.cacheMode = WebSettings.LOAD_DEFAULT
 
-        // Modern rendering, hardware acceleration and pure black background
         webView.setBackgroundColor(ContextCompat.getColor(this, R.color.black))
         webView.isVerticalScrollBarEnabled = false
         webView.isHorizontalScrollBarEnabled = false
 
-        // Register the JavaScript Interface for communication with the web app
+        // Expose JavaScript Interface to the web app
         webView.addJavascriptInterface(WebAppInterface(this), "AndroidBridge")
 
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                // Keep navigation inside the WebView
-                return false
+                val url = request?.url ?: return false
+                val host = url.host?.lowercase() ?: ""
+
+                // Keep internal app domain navigation inside the WebView
+                if (host == TARGET_HOST || host.endsWith(".$TARGET_HOST")) {
+                    return false
+                }
+
+                // Allow external links (e.g. documentation, help) to open in browser
+                return try {
+                    val browserIntent = Intent(Intent.ACTION_VIEW, url)
+                    startActivity(browserIntent)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -113,14 +141,14 @@ class MainActivity : AppCompatActivity() {
     private fun setupBackNavigation() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // First attempt SPA back routing in web app
+                // First check if web app wants to handle back action (e.g. close fullscreen player)
                 webView.evaluateJavascript("window.onAndroidBackPressed ? window.onAndroidBackPressed() : null") { result ->
                     val handledByWebApp = result == "true" || result == "\"true\""
                     if (!handledByWebApp) {
                         if (webView.canGoBack()) {
                             webView.goBack()
                         } else {
-                            // Move app to background instead of destroying activity, preserving playback
+                            // Move app task to back instead of destroying activity, ensuring playback continues
                             moveTaskToBack(true)
                         }
                     }
@@ -130,22 +158,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupMediaActionListener() {
-        MusicPlaybackService.mediaActionListener = { action ->
+        MediaPlaybackService.mediaActionListener = { action ->
             runOnUiThread {
                 when (action) {
-                    MusicPlaybackService.ACTION_PLAY -> {
+                    MediaPlaybackService.ACTION_PLAY -> {
                         evaluateJs("window.onAndroidPlay ? window.onAndroidPlay() : (window.onAndroidPlayPause ? window.onAndroidPlayPause() : null);")
                     }
-                    MusicPlaybackService.ACTION_PAUSE -> {
+                    MediaPlaybackService.ACTION_PAUSE -> {
                         evaluateJs("window.onAndroidPause ? window.onAndroidPause() : (window.onAndroidPlayPause ? window.onAndroidPlayPause() : null);")
                     }
-                    MusicPlaybackService.ACTION_TOGGLE -> {
+                    MediaPlaybackService.ACTION_TOGGLE -> {
                         evaluateJs("window.onAndroidPlayPause ? window.onAndroidPlayPause() : null;")
                     }
-                    MusicPlaybackService.ACTION_NEXT -> {
+                    MediaPlaybackService.ACTION_NEXT -> {
                         evaluateJs("window.onAndroidNext ? window.onAndroidNext() : null;")
                     }
-                    MusicPlaybackService.ACTION_PREVIOUS -> {
+                    MediaPlaybackService.ACTION_PREVIOUS -> {
                         evaluateJs("window.onAndroidPrevious ? window.onAndroidPrevious() : null;")
                     }
                 }
@@ -168,9 +196,9 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * CRITICAL FOR BACKGROUND AUDIO:
-     * Do NOT call webView.onPause() or webView.pauseTimers() in onPause() or onStop().
-     * This keeps the JavaScript AudioContext, audio streams, and WebSockets alive when the
-     * screen is turned off or the app is minimized.
+     * Never call webView.onPause() or webView.pauseTimers() in onPause() or onStop().
+     * This keeps the JavaScript audio context, streaming socket, and YouTube iframe engine
+     * active when the activity is stopped or minimized.
      */
     override fun onPause() {
         super.onPause()
@@ -181,7 +209,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        MusicPlaybackService.mediaActionListener = null
+        MediaPlaybackService.mediaActionListener = null
         super.onDestroy()
         webView.destroy()
     }

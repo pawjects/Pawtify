@@ -4,7 +4,7 @@ const fs = require('fs');
 const searchHandler = require('./api/search');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
 // Enable CORS for all incoming requests
 app.use((req, res, next) => {

@@ -24,7 +24,7 @@ class WebAppInterface(
      */
     @JavascriptInterface
     fun updateTrackInfo(title: String, artist: String, artworkUrl: String) {
-        MusicPlaybackService.updateMetadata(context, title, artist, artworkUrl)
+        MediaPlaybackService.updateMetadata(context, title, artist, artworkUrl)
     }
 
     /**
@@ -32,7 +32,7 @@ class WebAppInterface(
      */
     @JavascriptInterface
     fun updatePlaybackState(isPlaying: Boolean) {
-        MusicPlaybackService.updatePlaybackState(context, isPlaying)
+        MediaPlaybackService.updatePlaybackState(context, isPlaying)
     }
 
     /**

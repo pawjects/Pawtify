@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.AudioAttributes
@@ -30,12 +31,15 @@ import kotlinx.coroutines.withContext
 import java.net.URL
 
 /**
- * Foreground Service responsible for:
- * 1. Maintaining media playback in the background via partial WakeLock and AudioFocus.
- * 2. Displaying an Android MediaStyle notification with Title, Artist, Cover artwork, and Play/Pause/Skip actions.
- * 3. Handling MediaSession transport controls and routing user actions back to the WebView.
+ * Foreground Service for persistent media playback.
+ *
+ * Implements:
+ * 1. Partial WakeLock to prevent the CPU and network from entering Doze mode when screen is off.
+ * 2. System audio focus acquisition.
+ * 3. MediaSessionCompat with MediaStyle notification and lock-screen controls.
+ * 4. Dispatching notification play/pause/skip events back into the WebView.
  */
-class MusicPlaybackService : Service() {
+class MediaPlaybackService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -67,12 +71,12 @@ class MusicPlaybackService : Service() {
         const val EXTRA_IS_PLAYING = "extra_is_playing"
 
         /**
-         * Listener interface for UI / WebView notification callbacks.
+         * Callback invoked when notification or lockscreen controls are tapped.
          */
         var mediaActionListener: ((action: String) -> Unit)? = null
 
         fun updateMetadata(context: Context, title: String, artist: String, artworkUrl: String?) {
-            val intent = Intent(context, MusicPlaybackService::class.java).apply {
+            val intent = Intent(context, MediaPlaybackService::class.java).apply {
                 putExtra(EXTRA_TITLE, title)
                 putExtra(EXTRA_ARTIST, artist)
                 putExtra(EXTRA_ARTWORK_URL, artworkUrl)
@@ -81,7 +85,7 @@ class MusicPlaybackService : Service() {
         }
 
         fun updatePlaybackState(context: Context, isPlaying: Boolean) {
-            val intent = Intent(context, MusicPlaybackService::class.java).apply {
+            val intent = Intent(context, MediaPlaybackService::class.java).apply {
                 putExtra(EXTRA_IS_PLAYING, isPlaying)
             }
             ContextCompat.startForegroundService(context, intent)
@@ -124,7 +128,6 @@ class MusicPlaybackService : Service() {
                     return START_NOT_STICKY
                 }
                 else -> {
-                    // Update metadata if extras present
                     if (intent.hasExtra(EXTRA_TITLE)) {
                         currentTitle = intent.getStringExtra(EXTRA_TITLE) ?: "Pawtify"
                         currentArtist = intent.getStringExtra(EXTRA_ARTIST) ?: "Unknown Artist"
@@ -136,7 +139,9 @@ class MusicPlaybackService : Service() {
                     }
 
                     if (intent.hasExtra(EXTRA_IS_PLAYING)) {
-                        isPlaying = intent.getBooleanExtra(EXTRA_IS_PLAYING, false)
+                        val requestedPlayState = intent.getBooleanExtra(EXTRA_IS_PLAYING, false)
+                        updatePlaybackStateInternal(requestedPlayState)
+                        return START_STICKY
                     }
                 }
             }
@@ -158,7 +163,7 @@ class MusicPlaybackService : Service() {
     }
 
     private fun setupMediaSession() {
-        mediaSession = MediaSessionCompat(this, "PawtifySession").apply {
+        mediaSession = MediaSessionCompat(this, "PawtifyMediaSession").apply {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
                     mediaActionListener?.invoke(ACTION_PLAY)
@@ -216,7 +221,16 @@ class MusicPlaybackService : Service() {
         mediaSession?.setMetadata(metadataBuilder.build())
 
         val notification = buildNotification()
-        startForeground(NOTIFICATION_ID, notification)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
     }
 
     private fun buildNotification(): Notification {
@@ -230,23 +244,20 @@ class MusicPlaybackService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Previous Action
-        val prevIntent = Intent(this, MusicPlaybackService::class.java).apply { action = ACTION_PREVIOUS }
+        val prevIntent = Intent(this, MediaPlaybackService::class.java).apply { action = ACTION_PREVIOUS }
         val prevPendingIntent = PendingIntent.getService(
             this, 1, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Play/Pause Action
         val toggleAction = if (isPlaying) ACTION_PAUSE else ACTION_PLAY
         val toggleIcon = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
         val toggleLabel = if (isPlaying) getString(R.string.action_pause) else getString(R.string.action_play)
-        val toggleIntent = Intent(this, MusicPlaybackService::class.java).apply { action = toggleAction }
+        val toggleIntent = Intent(this, MediaPlaybackService::class.java).apply { action = toggleAction }
         val togglePendingIntent = PendingIntent.getService(
             this, 2, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Next Action
-        val nextIntent = Intent(this, MusicPlaybackService::class.java).apply { action = ACTION_NEXT }
+        val nextIntent = Intent(this, MediaPlaybackService::class.java).apply { action = ACTION_NEXT }
         val nextPendingIntent = PendingIntent.getService(
             this, 3, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -325,13 +336,13 @@ class MusicPlaybackService : Service() {
             val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
             wakeLock = powerManager?.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
-                "Pawtify::AudioPlaybackWakeLock"
+                "Pawtify::MediaPlaybackWakeLock"
             )?.apply {
                 setReferenceCounted(false)
             }
         }
         if (wakeLock?.isHeld == false) {
-            wakeLock?.acquire(3 * 60 * 60 * 1000L) // 3 hours timeout safety
+            wakeLock?.acquire(4 * 60 * 60 * 1000L) // 4 hours timeout safety
         }
     }
 
