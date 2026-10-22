@@ -4,8 +4,10 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -15,6 +17,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.webkit.ConsoleMessage
@@ -38,13 +41,11 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 /**
  * Main Activity wrapping the hosted Pawtify PWA inside an optimized Android WebView.
  *
- * Implements:
- * 1. Safe insets handling for camera cutouts and notches without content clipping.
- * 2. SOFT_INPUT_STATE_HIDDEN to prevent keyboard from popping up automatically on resume.
- * 3. Never pausing WebView in onPause/onStop to guarantee continuous background audio.
- * 4. Automatic JavaScript injection into the PWA observing navigator.mediaSession.metadata
- *    and HTML5 audio/video tags to synchronize with native MediaPlaybackService notifications in real time.
- * 5. Full two-way control between Android media notifications and the webapp.
+ * Implements standard browser architecture:
+ * 1. Native Notification to WebApp via standard Android KeyEvents (KEYCODE_MEDIA_PLAY_PAUSE,
+ *    KEYCODE_MEDIA_NEXT, KEYCODE_MEDIA_PREVIOUS) routed directly into the WebView's Chromium engine.
+ * 2. WebApp to Native Notification via standard navigator.mediaSession metadata & playbackState observer.
+ * 3. Cutout safe insets, hidden soft keyboard on resume, and unthrottled background playback.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -62,6 +63,18 @@ class MainActivity : AppCompatActivity() {
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var noInternetDialog: AlertDialog? = null
 
+    // Broadcast receiver to route Media Key Events from MediaPlaybackService into the WebView
+    private val mediaKeyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == MediaPlaybackService.ACTION_BROADCAST_MEDIA_KEY) {
+                val keyCode = intent.getIntExtra(MediaPlaybackService.EXTRA_KEY_CODE, KeyEvent.KEYCODE_UNKNOWN)
+                if (keyCode != KeyEvent.KEYCODE_UNKNOWN) {
+                    dispatchMediaKeyToWebView(keyCode)
+                }
+            }
+        }
+    }
+
     private val requestNotificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
@@ -72,7 +85,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Fix 2: Prevent aggressive keyboard popup on app resume or launch
+        // Soft input mode: default hidden upon launch and resume
         window.setSoftInputMode(
             WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
         )
@@ -86,7 +99,7 @@ class MainActivity : AppCompatActivity() {
         setupEdgeToEdgeInsets()
         setupWebView()
         setupBackNavigation()
-        setupMediaActionListener()
+        setupMediaKeyListener()
         setupNetworkMonitoring()
 
         createNotificationChannel()
@@ -95,7 +108,6 @@ class MainActivity : AppCompatActivity() {
 
         showWelcomeDialogIfNeeded()
 
-        // Handle initial intent for Deep Linking or default target URL
         handleIncomingIntent(intent)
     }
 
@@ -119,9 +131,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Fix 1: WindowInsetsCompat listener on root layout to prevent notch / camera cutout clipping.
-     */
     private fun setupEdgeToEdgeInsets() {
         val rootContainer = findViewById<View>(R.id.rootContainer)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -149,7 +158,7 @@ class MainActivity : AppCompatActivity() {
         webView.isVerticalScrollBarEnabled = false
         webView.isHorizontalScrollBarEnabled = false
 
-        // Fix 3: Expose AndroidBridge interface to JavaScript
+        // Bridge registration
         webView.addJavascriptInterface(WebAppInterface(this), "AndroidBridge")
 
         webView.webViewClient = object : WebViewClient() {
@@ -165,7 +174,7 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 loadingSpinner.visibility = View.GONE
-                // Fix 3: Inject MediaSession and Audio element observers to automatically bridge PWA metadata
+                // Standard MediaSession API Observer injection
                 injectMediaSessionObserver()
             }
 
@@ -185,48 +194,78 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Fix 3: Injects a JavaScript hook that transparently observes navigator.mediaSession
-     * and HTML5 audio/video tags, guaranteeing metadata is forwarded to AndroidBridge.
+     * Standard Browser Architecture Fix: Dispatches real hardware media KeyEvents
+     * directly into the WebView's Chromium engine.
+     */
+    private fun dispatchMediaKeyToWebView(keyCode: Int) {
+        webView.post {
+            webView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+            webView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+        }
+    }
+
+    private fun setupMediaKeyListener() {
+        // Direct listener callback from MediaPlaybackService
+        MediaPlaybackService.mediaKeyActionListener = { keyCode ->
+            dispatchMediaKeyToWebView(keyCode)
+        }
+
+        // Broadcast receiver for inter-process or detached events
+        val filter = IntentFilter(MediaPlaybackService.ACTION_BROADCAST_MEDIA_KEY)
+        ContextCompat.registerReceiver(
+            this,
+            mediaKeyReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+    /**
+     * Injects standard navigator.mediaSession observer to forward metadata and playback state
+     * to the native Android notification without any hacky DOM lookups.
      */
     private fun injectMediaSessionObserver() {
-        val injectionScript = """
+        val script = """
             (function() {
-                if (window.__pawtify_observer_injected) return;
-                window.__pawtify_observer_injected = true;
+                if (window.__pawtify_session_hooked) return;
+                window.__pawtify_session_hooked = true;
                 window.isAndroidContainer = true;
 
-                function extractArtwork(artworkArray) {
-                    if (!artworkArray || !artworkArray.length) return '';
-                    var last = artworkArray[artworkArray.length - 1];
-                    return (last && last.src) ? last.src : '';
-                }
-
-                function notifyTrackInfo(meta) {
+                function syncMetadata(meta) {
                     if (!window.AndroidBridge || !meta) return;
                     try {
-                        var title = meta.title || 'Pawtify';
-                        var artist = meta.artist || 'Ready to Play';
-                        var artwork = extractArtwork(meta.artwork);
-                        window.AndroidBridge.updateTrackInfo(title, artist, artwork);
+                        var title = meta.title || '';
+                        var artist = meta.artist || '';
+                        var artworkUrl = '';
+                        if (meta.artwork && meta.artwork.length > 0) {
+                            var art = meta.artwork[meta.artwork.length - 1];
+                            artworkUrl = (art && art.src) ? art.src : '';
+                        }
+                        window.AndroidBridge.updateTrackInfo(title, artist, artworkUrl);
                     } catch (e) {}
                 }
 
-                function notifyPlayback(isPlaying) {
+                function syncPlayback(state) {
                     if (!window.AndroidBridge) return;
                     try {
-                        window.AndroidBridge.updatePlaybackState(Boolean(isPlaying));
+                        var isPlaying = (state === 'playing');
+                        window.AndroidBridge.updatePlaybackState(isPlaying);
                     } catch (e) {}
                 }
 
-                // 1. Hook navigator.mediaSession.metadata setter
                 if ('mediaSession' in navigator) {
+                    // Initial sync
                     if (navigator.mediaSession.metadata) {
-                        notifyTrackInfo(navigator.mediaSession.metadata);
+                        syncMetadata(navigator.mediaSession.metadata);
+                    }
+                    if (navigator.mediaSession.playbackState) {
+                        syncPlayback(navigator.mediaSession.playbackState);
                     }
 
+                    // 1. Hook metadata setter
                     try {
                         var proto = Object.getPrototypeOf(navigator.mediaSession);
-                        var metaDesc = Object.getOwnPropertyDescriptor(proto, 'metadata') 
+                        var metaDesc = Object.getOwnPropertyDescriptor(proto, 'metadata')
                                     || Object.getOwnPropertyDescriptor(navigator.mediaSession, 'metadata');
                         var internalMeta = navigator.mediaSession.metadata || null;
 
@@ -241,12 +280,12 @@ class MainActivity : AppCompatActivity() {
                                 if (metaDesc && metaDesc.set) {
                                     metaDesc.set.call(navigator.mediaSession, val);
                                 }
-                                notifyTrackInfo(val);
+                                syncMetadata(val);
                             }
                         });
                     } catch (e) {}
 
-                    // Hook navigator.mediaSession.playbackState
+                    // 2. Hook playbackState setter
                     try {
                         var stateProto = Object.getPrototypeOf(navigator.mediaSession);
                         var stateDesc = Object.getOwnPropertyDescriptor(stateProto, 'playbackState')
@@ -264,141 +303,40 @@ class MainActivity : AppCompatActivity() {
                                 if (stateDesc && stateDesc.set) {
                                     stateDesc.set.call(navigator.mediaSession, val);
                                 }
-                                notifyPlayback(val === 'playing');
+                                syncPlayback(val);
                             }
                         });
                     } catch (e) {}
-                }
 
-                // 2. Hook HTML5 audio and video elements
-                function bindMedia(el) {
-                    if (!el || el.__pawtify_bound) return;
-                    el.__pawtify_bound = true;
-                    el.addEventListener('play', function() { notifyPlayback(true); });
-                    el.addEventListener('playing', function() { notifyPlayback(true); });
-                    el.addEventListener('pause', function() { notifyPlayback(false); });
-                    el.addEventListener('ended', function() { notifyPlayback(false); });
-                    if (!el.paused && el.currentTime > 0) {
-                        notifyPlayback(true);
-                    }
-                }
-
-                document.querySelectorAll('audio, video').forEach(bindMedia);
-
-                var obs = new MutationObserver(function(mutations) {
-                    mutations.forEach(function(m) {
-                        m.addedNodes.forEach(function(node) {
-                            if (node.nodeType === 1) {
-                                if (node.tagName === 'AUDIO' || node.tagName === 'VIDEO') {
-                                    bindMedia(node);
-                                }
-                                if (node.querySelectorAll) {
-                                    node.querySelectorAll('audio, video').forEach(bindMedia);
+                    // 3. Robust polling fallback for in-place property mutations
+                    var lastTitle = '';
+                    var lastArtist = '';
+                    var lastState = '';
+                    setInterval(function() {
+                        try {
+                            var m = navigator.mediaSession.metadata;
+                            if (m) {
+                                if (m.title !== lastTitle || m.artist !== lastArtist) {
+                                    lastTitle = m.title || '';
+                                    lastArtist = m.artist || '';
+                                    syncMetadata(m);
                                 }
                             }
-                        });
-                    });
-                });
-                obs.observe(document.documentElement || document.body, { childList: true, subtree: true });
+                            var s = navigator.mediaSession.playbackState;
+                            if (s && s !== lastState) {
+                                lastState = s;
+                                syncPlayback(s);
+                            }
+                        } catch (err) {}
+                    }, 800);
+                }
 
                 if (window.onAndroidReady) {
                     try { window.onAndroidReady(); } catch (e) {}
                 }
             })();
         """.trimIndent()
-        evaluateJs(injectionScript)
-    }
-
-    /**
-     * Fix 3: Two-way control from native notification to WebView playback controls.
-     */
-    private fun setupMediaActionListener() {
-        MediaPlaybackService.mediaActionListener = { action ->
-            webView.post {
-                when (action) {
-                    MediaPlaybackService.ACTION_PLAY -> {
-                        evaluateJs("""
-                            (function() {
-                                if (window.onAndroidPlay) {
-                                    window.onAndroidPlay();
-                                } else if (window.onAndroidPlayPause) {
-                                    window.onAndroidPlayPause();
-                                } else {
-                                    var audio = document.querySelector('audio') || document.querySelector('video');
-                                    if (audio) audio.play();
-                                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-                                }
-                            })();
-                        """.trimIndent())
-                    }
-                    MediaPlaybackService.ACTION_PAUSE -> {
-                        evaluateJs("""
-                            (function() {
-                                if (window.onAndroidPause) {
-                                    window.onAndroidPause();
-                                } else if (window.onAndroidPlayPause) {
-                                    window.onAndroidPlayPause();
-                                } else {
-                                    var audio = document.querySelector('audio') || document.querySelector('video');
-                                    if (audio) audio.pause();
-                                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-                                }
-                            })();
-                        """.trimIndent())
-                    }
-                    MediaPlaybackService.ACTION_TOGGLE -> {
-                        evaluateJs("""
-                            (function() {
-                                if (window.onAndroidPlayPause) {
-                                    window.onAndroidPlayPause();
-                                    return;
-                                }
-                                var audio = document.querySelector('audio') || document.querySelector('video');
-                                if ('mediaSession' in navigator && navigator.mediaSession.playbackState) {
-                                    if (navigator.mediaSession.playbackState === 'playing') {
-                                        if (audio) audio.pause();
-                                        navigator.mediaSession.playbackState = 'paused';
-                                    } else {
-                                        if (audio) audio.play();
-                                        navigator.mediaSession.playbackState = 'playing';
-                                    }
-                                } else if (audio) {
-                                    if (audio.paused) audio.play(); else audio.pause();
-                                }
-                            })();
-                        """.trimIndent())
-                    }
-                    MediaPlaybackService.ACTION_NEXT -> {
-                        evaluateJs("""
-                            (function() {
-                                if (window.onAndroidNext) {
-                                    window.onAndroidNext();
-                                } else {
-                                    var btn = document.querySelector('[data-action="next"]') 
-                                           || document.querySelector('.next-btn') 
-                                           || document.getElementById('next-track');
-                                    if (btn) btn.click();
-                                }
-                            })();
-                        """.trimIndent())
-                    }
-                    MediaPlaybackService.ACTION_PREVIOUS -> {
-                        evaluateJs("""
-                            (function() {
-                                if (window.onAndroidPrevious) {
-                                    window.onAndroidPrevious();
-                                } else {
-                                    var btn = document.querySelector('[data-action="prev"]') 
-                                           || document.querySelector('.prev-btn') 
-                                           || document.getElementById('prev-track');
-                                    if (btn) btn.click();
-                                }
-                            })();
-                        """.trimIndent())
-                    }
-                }
-            }
-        }
+        webView.evaluateJavascript(script, null)
     }
 
     private fun setupBackNavigation() {
@@ -532,31 +470,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun evaluateJs(script: String) {
-        webView.evaluateJavascript(script, null)
-    }
-
-    /**
-     * Fix 1: STRICT BACKGROUND AUDIO ENFORCEMENT
-     * NEVER call webView.onPause() or webView.pauseTimers() in onPause() or onStop().
-     * This keeps the JavaScript engine, AudioContext, and media pipeline running when minimized.
-     */
     override fun onPause() {
         super.onPause()
-        // Strictly no webView.onPause() here
     }
 
     override fun onStop() {
         super.onStop()
-        // Strictly no webView.pauseTimers() here
     }
 
     override fun onDestroy() {
         try {
+            unregisterReceiver(mediaKeyReceiver)
+        } catch (ignored: Exception) {}
+        try {
             networkCallback?.let { connectivityManager?.unregisterNetworkCallback(it) }
         } catch (ignored: Exception) {}
         noInternetDialog?.dismiss()
-        MediaPlaybackService.mediaActionListener = null
+        MediaPlaybackService.mediaKeyActionListener = null
         super.onDestroy()
         webView.destroy()
     }

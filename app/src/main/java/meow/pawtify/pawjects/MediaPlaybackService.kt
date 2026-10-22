@@ -19,6 +19,7 @@ import android.os.PowerManager
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.media.app.NotificationCompat.MediaStyle
@@ -29,6 +30,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
 import java.net.URL
 
 /**
@@ -36,9 +38,11 @@ import java.net.URL
  * 1. Maintaining media playback in the background via partial WakeLock and AudioFocus.
  * 2. Displaying an Android MediaStyle notification with Title, Artist, Cover Artwork,
  *    and transport controls (Previous, Play/Pause, Next).
- * 3. Real-time synchronization with WebApp playback state and metadata.
- * 4. Battery conservation: WakeLock is ONLY held during active playback and released immediately on pause.
- * 5. Clean teardown on onTaskRemoved() and app exit.
+ * 3. Real-time synchronization with WebApp navigator.mediaSession metadata.
+ * 4. Dispatching standard Android KeyEvents (KEYCODE_MEDIA_PLAY_PAUSE, KEYCODE_MEDIA_NEXT,
+ *    KEYCODE_MEDIA_PREVIOUS) to the WebView like standard web browsers.
+ * 5. Battery conservation: WakeLock is ONLY held during active playback.
+ * 6. Clean teardown on onTaskRemoved() and app exit.
  */
 class MediaPlaybackService : Service() {
 
@@ -83,21 +87,22 @@ class MediaPlaybackService : Service() {
         const val ACTION_STOP = "meow.pawtify.pawjects.ACTION_STOP"
         const val ACTION_INIT = "meow.pawtify.pawjects.ACTION_INIT"
 
+        // Broadcast action for Media Key Events to MainActivity
+        const val ACTION_BROADCAST_MEDIA_KEY = "meow.pawtify.pawjects.ACTION_BROADCAST_MEDIA_KEY"
+        const val EXTRA_KEY_CODE = "extra_key_code"
+
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_ARTIST = "extra_artist"
         const val EXTRA_ARTWORK_URL = "extra_artwork_url"
         const val EXTRA_IS_PLAYING = "extra_is_playing"
 
-        /**
-         * Live reference to running service instance for zero-latency direct updates from WebAppInterface.
-         */
         @Volatile
         var activeInstance: MediaPlaybackService? = null
 
         /**
-         * Listener invoked when the user interacts with notification controls or lock screen.
+         * Direct listener callback for media key events dispatched to MainActivity
          */
-        var mediaActionListener: ((action: String) -> Unit)? = null
+        var mediaKeyActionListener: ((keyCode: Int) -> Unit)? = null
 
         fun startOrUpdate(context: Context) {
             val intent = Intent(context, MediaPlaybackService::class.java).apply {
@@ -157,25 +162,24 @@ class MediaPlaybackService : Service() {
         if (intent != null) {
             when (intent.action) {
                 ACTION_PLAY -> {
-                    mediaActionListener?.invoke(ACTION_PLAY)
+                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY)
                     onPlaybackStateChanged(true)
                 }
                 ACTION_PAUSE -> {
-                    mediaActionListener?.invoke(ACTION_PAUSE)
+                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE)
                     onPlaybackStateChanged(false)
                 }
                 ACTION_TOGGLE -> {
-                    mediaActionListener?.invoke(ACTION_TOGGLE)
+                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
                     onPlaybackStateChanged(!isPlaying)
                 }
                 ACTION_NEXT -> {
-                    mediaActionListener?.invoke(ACTION_NEXT)
+                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)
                 }
                 ACTION_PREVIOUS -> {
-                    mediaActionListener?.invoke(ACTION_PREVIOUS)
+                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
                 }
                 ACTION_STOP -> {
-                    mediaActionListener?.invoke(ACTION_STOP)
                     cleanupAndStop()
                     return START_NOT_STICKY
                 }
@@ -200,11 +204,24 @@ class MediaPlaybackService : Service() {
     }
 
     /**
+     * Dispatches standard hardware Media Key Events to MainActivity (which routes to the WebView).
+     */
+    private fun dispatchMediaKey(keyCode: Int) {
+        mediaKeyActionListener?.invoke(keyCode)
+
+        val broadcastIntent = Intent(ACTION_BROADCAST_MEDIA_KEY).apply {
+            setPackage(packageName)
+            putExtra(EXTRA_KEY_CODE, keyCode)
+        }
+        sendBroadcast(broadcastIntent)
+    }
+
+    /**
      * Direct real-time callback when track metadata arrives from WebAppInterface.
      */
     fun onTrackInfoChanged(title: String, artist: String, artworkUrl: String?) {
         currentTitle = if (title.isNotBlank()) title else "Pawtify"
-        currentArtist = if (artist.isNotBlank()) artist else "Playing"
+        currentArtist = if (artist.isNotBlank()) artist else "Ready to Play"
 
         if (artworkUrl != currentArtworkUrl) {
             currentArtworkUrl = artworkUrl
@@ -216,7 +233,6 @@ class MediaPlaybackService : Service() {
 
     /**
      * Direct real-time callback when play/pause state changes in WebAppInterface.
-     * Manages WakeLock strictly according to playback state to eliminate idle battery drain.
      */
     fun onPlaybackStateChanged(playing: Boolean) {
         isPlaying = playing
@@ -224,7 +240,6 @@ class MediaPlaybackService : Service() {
             acquireWakeLock()
             requestAudioFocus()
         } else {
-            // Strictly release WakeLock immediately upon pause
             releaseWakeLock()
         }
         startOrRefreshForeground()
@@ -234,25 +249,24 @@ class MediaPlaybackService : Service() {
         mediaSession = MediaSessionCompat(this, "PawtifyMediaSession").apply {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
-                    mediaActionListener?.invoke(ACTION_PLAY)
+                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY)
                     onPlaybackStateChanged(true)
                 }
 
                 override fun onPause() {
-                    mediaActionListener?.invoke(ACTION_PAUSE)
+                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE)
                     onPlaybackStateChanged(false)
                 }
 
                 override fun onSkipToNext() {
-                    mediaActionListener?.invoke(ACTION_NEXT)
+                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)
                 }
 
                 override fun onSkipToPrevious() {
-                    mediaActionListener?.invoke(ACTION_PREVIOUS)
+                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
                 }
 
                 override fun onStop() {
-                    mediaActionListener?.invoke(ACTION_STOP)
                     cleanupAndStop()
                 }
             })
@@ -262,7 +276,6 @@ class MediaPlaybackService : Service() {
 
     /**
      * Updates playback state, media session metadata, and notification.
-     * Uses startForeground() if promoting to foreground or NotificationManager.notify() if already active.
      */
     private fun startOrRefreshForeground() {
         createNotificationChannel()
@@ -381,13 +394,19 @@ class MediaPlaybackService : Service() {
         artworkFetchJob = serviceScope.launch {
             val bitmap = withContext(Dispatchers.IO) {
                 try {
-                    val connection = URL(urlStr).openConnection()
+                    val connection = URL(urlStr).openConnection() as HttpURLConnection
                     connection.connectTimeout = 4000
                     connection.readTimeout = 4000
+                    connection.instanceFollowRedirects = true
                     connection.doInput = true
                     connection.connect()
-                    val inputStream = connection.getInputStream()
-                    BitmapFactory.decodeStream(inputStream)
+                    if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                        connection.inputStream.use { stream ->
+                            BitmapFactory.decodeStream(stream)
+                        }
+                    } else {
+                        null
+                    }
                 } catch (e: Exception) {
                     null
                 }
@@ -425,7 +444,7 @@ class MediaPlaybackService : Service() {
             }
         }
         if (wakeLock?.isHeld == false) {
-            wakeLock?.acquire(3 * 60 * 60 * 1000L) // 3 hour safety timeout
+            wakeLock?.acquire(24 * 60 * 60 * 1000L) // 24 hour safety timeout
         }
     }
 
@@ -451,16 +470,16 @@ class MediaPlaybackService : Service() {
                 .setOnAudioFocusChangeListener { focusChange ->
                     when (focusChange) {
                         AudioManager.AUDIOFOCUS_LOSS -> {
-                            mediaActionListener?.invoke(ACTION_PAUSE)
+                            dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE)
                             onPlaybackStateChanged(false)
                         }
                         AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
                         AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                            mediaActionListener?.invoke(ACTION_PAUSE)
+                            dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE)
                             onPlaybackStateChanged(false)
                         }
                         AudioManager.AUDIOFOCUS_GAIN -> {
-                            mediaActionListener?.invoke(ACTION_PLAY)
+                            dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY)
                             onPlaybackStateChanged(true)
                         }
                     }
@@ -473,7 +492,7 @@ class MediaPlaybackService : Service() {
             audioManager?.requestAudioFocus(
                 { focusChange ->
                     if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
-                        mediaActionListener?.invoke(ACTION_PAUSE)
+                        dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE)
                         onPlaybackStateChanged(false)
                     }
                 },
@@ -483,11 +502,6 @@ class MediaPlaybackService : Service() {
         }
     }
 
-    /**
-     * CLEAN TEARDOWN ON SWIPE AWAY (Issue 4 Fix):
-     * When the user clears the app from the recent apps / task manager,
-     * immediately dismiss foreground service, release WakeLock, and stop the service.
-     */
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         cleanupAndStop()
