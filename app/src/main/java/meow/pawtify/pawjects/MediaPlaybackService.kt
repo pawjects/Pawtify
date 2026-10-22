@@ -31,13 +31,12 @@ import kotlinx.coroutines.withContext
 import java.net.URL
 
 /**
- * Foreground Service for persistent media playback.
- *
- * Implements:
- * 1. Partial WakeLock to prevent the CPU and network from entering Doze mode when screen is off.
- * 2. System audio focus acquisition.
- * 3. MediaSessionCompat with MediaStyle notification and lock-screen controls.
- * 4. Dispatching notification play/pause/skip events back into the WebView.
+ * Foreground Service responsible for:
+ * 1. Maintaining media playback in the background via partial WakeLock and AudioFocus.
+ * 2. Displaying a persistent Android MediaStyle notification with Title, Artist, Logo/Artwork,
+ *    and transport controls (Play/Pause/Skip).
+ * 3. Calling startForeground() with FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK (required for Android 14+).
+ * 4. Relaying notification transport actions back to the WebView via mediaActionListener.
  */
 class MediaPlaybackService : Service() {
 
@@ -54,6 +53,15 @@ class MediaPlaybackService : Service() {
     private var currentArtworkBitmap: Bitmap? = null
     private var isPlaying: Boolean = false
 
+    // Default logo bitmap fallback loaded from res/drawable/pawtify_logo.png
+    private val defaultLogoBitmap: Bitmap? by lazy {
+        try {
+            BitmapFactory.decodeResource(resources, R.drawable.pawtify_logo)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     companion object {
         const val CHANNEL_ID = "pawtify_media_playback_channel"
         const val NOTIFICATION_ID = 1001
@@ -64,6 +72,7 @@ class MediaPlaybackService : Service() {
         const val ACTION_NEXT = "meow.pawtify.pawjects.ACTION_NEXT"
         const val ACTION_PREVIOUS = "meow.pawtify.pawjects.ACTION_PREVIOUS"
         const val ACTION_STOP = "meow.pawtify.pawjects.ACTION_STOP"
+        const val ACTION_INIT = "meow.pawtify.pawjects.ACTION_INIT"
 
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_ARTIST = "extra_artist"
@@ -71,9 +80,16 @@ class MediaPlaybackService : Service() {
         const val EXTRA_IS_PLAYING = "extra_is_playing"
 
         /**
-         * Callback invoked when notification or lockscreen controls are tapped.
+         * Listener invoked when the user interacts with notification controls or lock screen.
          */
         var mediaActionListener: ((action: String) -> Unit)? = null
+
+        fun startOrUpdate(context: Context) {
+            val intent = Intent(context, MediaPlaybackService::class.java).apply {
+                action = ACTION_INIT
+            }
+            ContextCompat.startForegroundService(context, intent)
+        }
 
         fun updateMetadata(context: Context, title: String, artist: String, artworkUrl: String?) {
             val intent = Intent(context, MediaPlaybackService::class.java).apply {
@@ -94,6 +110,7 @@ class MediaPlaybackService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // Ensure channel is registered immediately before any notification is built
         createNotificationChannel()
         setupMediaSession()
         acquireWakeLock()
@@ -101,6 +118,8 @@ class MediaPlaybackService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        createNotificationChannel()
+
         if (intent != null) {
             when (intent.action) {
                 ACTION_PLAY -> {
@@ -130,7 +149,7 @@ class MediaPlaybackService : Service() {
                 else -> {
                     if (intent.hasExtra(EXTRA_TITLE)) {
                         currentTitle = intent.getStringExtra(EXTRA_TITLE) ?: "Pawtify"
-                        currentArtist = intent.getStringExtra(EXTRA_ARTIST) ?: "Unknown Artist"
+                        currentArtist = intent.getStringExtra(EXTRA_ARTIST) ?: "Ready to Play"
                         val newArtwork = intent.getStringExtra(EXTRA_ARTWORK_URL)
                         if (newArtwork != currentArtworkUrl) {
                             currentArtworkUrl = newArtwork
@@ -139,15 +158,13 @@ class MediaPlaybackService : Service() {
                     }
 
                     if (intent.hasExtra(EXTRA_IS_PLAYING)) {
-                        val requestedPlayState = intent.getBooleanExtra(EXTRA_IS_PLAYING, false)
-                        updatePlaybackStateInternal(requestedPlayState)
-                        return START_STICKY
+                        isPlaying = intent.getBooleanExtra(EXTRA_IS_PLAYING, false)
                     }
                 }
             }
         }
 
-        updateNotification()
+        startForegroundNotification()
         return START_STICKY
     }
 
@@ -159,7 +176,7 @@ class MediaPlaybackService : Service() {
         } else {
             releaseWakeLock()
         }
-        updateNotification()
+        startForegroundNotification()
     }
 
     private fun setupMediaSession() {
@@ -193,7 +210,13 @@ class MediaPlaybackService : Service() {
         }
     }
 
-    private fun updateNotification() {
+    /**
+     * Builds the notification and promotes this Service to a Foreground Service.
+     * Complies with Android 14+ (API 34+) by including FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK.
+     */
+    private fun startForegroundNotification() {
+        createNotificationChannel()
+
         val stateActions = PlaybackStateCompat.ACTION_PLAY or
                 PlaybackStateCompat.ACTION_PAUSE or
                 PlaybackStateCompat.ACTION_PLAY_PAUSE or
@@ -211,17 +234,19 @@ class MediaPlaybackService : Service() {
             .build()
         mediaSession?.setPlaybackState(playbackState)
 
+        val metadataArtwork = currentArtworkBitmap ?: defaultLogoBitmap
         val metadataBuilder = MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTitle)
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentArtist)
 
-        if (currentArtworkBitmap != null) {
-            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, currentArtworkBitmap)
+        if (metadataArtwork != null) {
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, metadataArtwork)
         }
         mediaSession?.setMetadata(metadataBuilder.build())
 
-        val notification = buildNotification()
+        val notification = buildNotification(metadataArtwork)
 
+        // Android 14+ (API 34+) strictly requires the foregroundServiceType parameter
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
@@ -233,7 +258,7 @@ class MediaPlaybackService : Service() {
         }
     }
 
-    private fun buildNotification(): Notification {
+    private fun buildNotification(largeArtwork: Bitmap?): Notification {
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -244,11 +269,13 @@ class MediaPlaybackService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Previous Action
         val prevIntent = Intent(this, MediaPlaybackService::class.java).apply { action = ACTION_PREVIOUS }
         val prevPendingIntent = PendingIntent.getService(
             this, 1, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Play/Pause Action
         val toggleAction = if (isPlaying) ACTION_PAUSE else ACTION_PLAY
         val toggleIcon = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
         val toggleLabel = if (isPlaying) getString(R.string.action_pause) else getString(R.string.action_play)
@@ -257,6 +284,7 @@ class MediaPlaybackService : Service() {
             this, 2, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Next Action
         val nextIntent = Intent(this, MediaPlaybackService::class.java).apply { action = ACTION_NEXT }
         val nextPendingIntent = PendingIntent.getService(
             this, 3, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -270,6 +298,8 @@ class MediaPlaybackService : Service() {
             .setContentIntent(contentPendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(isPlaying)
+            .setColor(ContextCompat.getColor(this, R.color.spotify_green))
+            .setColorized(true)
             .addAction(R.drawable.ic_skip_previous, getString(R.string.action_previous), prevPendingIntent)
             .addAction(toggleIcon, toggleLabel, togglePendingIntent)
             .addAction(R.drawable.ic_skip_next, getString(R.string.action_next), nextPendingIntent)
@@ -279,8 +309,9 @@ class MediaPlaybackService : Service() {
                     .setShowActionsInCompactView(0, 1, 2)
             )
 
-        if (currentArtworkBitmap != null) {
-            builder.setLargeIcon(currentArtworkBitmap)
+        // Use downloaded track art or the attached Pawtify logo
+        if (largeArtwork != null) {
+            builder.setLargeIcon(largeArtwork)
         }
 
         return builder.build()
@@ -289,7 +320,7 @@ class MediaPlaybackService : Service() {
     private fun loadArtworkBitmap(urlStr: String?) {
         if (urlStr.isNullOrEmpty()) {
             currentArtworkBitmap = null
-            updateNotification()
+            startForegroundNotification()
             return
         }
 
@@ -309,7 +340,7 @@ class MediaPlaybackService : Service() {
             }
             if (bitmap != null) {
                 currentArtworkBitmap = bitmap
-                updateNotification()
+                startForegroundNotification()
             }
         }
     }
@@ -322,6 +353,7 @@ class MediaPlaybackService : Service() {
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
                 description = descriptionText
                 setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 setSound(null, null)
                 enableLights(false)
                 enableVibration(false)
@@ -336,13 +368,13 @@ class MediaPlaybackService : Service() {
             val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
             wakeLock = powerManager?.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
-                "Pawtify::MediaPlaybackWakeLock"
+                "Pawtify::AudioPlaybackWakeLock"
             )?.apply {
                 setReferenceCounted(false)
             }
         }
         if (wakeLock?.isHeld == false) {
-            wakeLock?.acquire(4 * 60 * 60 * 1000L) // 4 hours timeout safety
+            wakeLock?.acquire(3 * 60 * 60 * 1000L) // 3 hours timeout safety
         }
     }
 
