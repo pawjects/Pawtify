@@ -2,6 +2,10 @@ package meow.pawtify.pawjects
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Build
@@ -66,10 +70,13 @@ class MainActivity : AppCompatActivity() {
         setupBackNavigation()
         setupMediaActionListener()
 
-        // 1. Actively request POST_NOTIFICATIONS permission on Android 13+
+        // 1. Ensure Notification Channel is registered before service start
+        createNotificationChannel()
+
+        // 2. Actively request POST_NOTIFICATIONS permission on Android 13+
         checkAndRequestNotificationPermission()
 
-        // 2. Prime the foreground service so the notification is ready
+        // 3. Prime the foreground service so the notification is ready
         MediaPlaybackService.startOrUpdate(this)
 
         // 3. Load the hosted Pawtify PWA directly into the WebView
@@ -167,6 +174,27 @@ class MainActivity : AppCompatActivity() {
 
     private fun evaluateJs(script: String) {
         webView.evaluateJavascript(script, null)
+    }
+
+    /**
+     * Registers NotificationChannel required for Android 8.0+ (API 26+).
+     */
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = getString(R.string.notification_channel_name)
+            val descriptionText = getString(R.string.notification_channel_description)
+            val importance = NotificationManager.IMPORTANCE_LOW
+            val channel = NotificationChannel(MediaPlaybackService.CHANNEL_ID, name, importance).apply {
+                description = descriptionText
+                setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                setSound(null, null)
+                enableLights(false)
+                enableVibration(false)
+            }
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager?.createNotificationChannel(channel)
+        }
     }
 
     /**
