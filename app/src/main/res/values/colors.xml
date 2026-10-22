@@ -1,7 +1,11 @@
 <resources>
     <color name="black">#000000</color>
     <color name="surface_dark">#121212</color>
+    <color name="surface_card">#1E1E1E</color>
+    <color name="cyan_accent">#4DD0E1</color>
+    <color name="cyan_accent_bright">#00E5FF</color>
     <color name="spotify_green">#1DB954</color>
     <color name="white">#FFFFFF</color>
     <color name="muted_gray">#A0AFA4</color>
+    <color name="dialog_background">#121212</color>
 </resources>

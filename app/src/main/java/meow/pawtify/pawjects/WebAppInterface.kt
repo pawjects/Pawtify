@@ -9,9 +9,7 @@ import android.widget.Toast
 /**
  * JavaScript Bridge exposed as `window.AndroidBridge` to the hosted Pawtify web app.
  *
- * Allows two-way communication:
- * - Web app informs native Android about current song metadata and playback state.
- * - Native Android media notification controls dispatch actions back into the WebView.
+ * Dispatches real-time track metadata and playback state updates to MediaPlaybackService.
  */
 class WebAppInterface(
     private val context: Context,
@@ -24,7 +22,9 @@ class WebAppInterface(
      */
     @JavascriptInterface
     fun updateTrackInfo(title: String, artist: String, artworkUrl: String) {
-        MediaPlaybackService.updateMetadata(context, title, artist, artworkUrl)
+        mainHandler.post {
+            MediaPlaybackService.updateMetadata(context, title, artist, artworkUrl)
+        }
     }
 
     /**
@@ -32,7 +32,9 @@ class WebAppInterface(
      */
     @JavascriptInterface
     fun updatePlaybackState(isPlaying: Boolean) {
-        MediaPlaybackService.updatePlaybackState(context, isPlaying)
+        mainHandler.post {
+            MediaPlaybackService.updatePlaybackState(context, isPlaying)
+        }
     }
 
     /**

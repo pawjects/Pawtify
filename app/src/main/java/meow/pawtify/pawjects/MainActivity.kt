@@ -2,17 +2,24 @@ package meow.pawtify.pawjects
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -20,92 +27,141 @@ import android.webkit.WebViewClient
 import android.widget.ProgressBar
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * Main Activity wrapping the hosted Pawtify PWA inside an optimized Android WebView.
  *
  * Implements:
- * - Direct remote URL loading with easy-to-change target constant.
- * - Active POST_NOTIFICATIONS runtime permission request on Android 13+ (API 33+).
- * - Immediate MediaPlaybackService bootstrap on launch & permission grant.
- * - Continuous background audio execution without calling webView.onPause().
- * - Two-way JavaScript bridge for media notification synchronization.
- * - Smart back-button override preserving playback session.
+ * - Notch cutout and navigation bar safe insets via WindowInsetsCompat.
+ * - Soft keyboard (IME) resize behavior and touch focusability.
+ * - Real-time two-way synchronization with MediaPlaybackService.
+ * - Native AMOLED dark Material 3 dialogs (Welcome, No Internet, and Confirm Exit).
+ * - App Links / Deep Linking verification for https://pawtify-meow.vercel.app/.
+ * - Efficient lifecycle management and clean service teardown.
  */
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        /**
-         * The hosted Pawtify Music Streaming PWA endpoint.
-         * Easily change this constant or override it via strings.xml.
-         */
         const val TARGET_WEB_URL = "https://pawtify-meow.vercel.app/"
+        private const val PREFS_NAME = "pawtify_prefs"
+        private const val KEY_WELCOME_SHOWN = "welcome_dialog_shown"
     }
 
-    private lateinit var webView: WebView
+    private lateinit var webView: BackgroundWebView
     private lateinit var loadingSpinner: ProgressBar
+    private lateinit var prefs: SharedPreferences
 
-    /**
-     * Runtime permission launcher for Android 13+ (API 33+) POST_NOTIFICATIONS.
-     * When granted, immediately initializes or refreshes the media notification.
-     */
+    private var connectivityManager: ConnectivityManager? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private var noInternetDialog: AlertDialog? = null
+
     private val requestNotificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
-                // Immediately start or refresh the media notification service
                 MediaPlaybackService.startOrUpdate(this)
             }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Issue 2 Fix: Ensure soft keyboard resizes layout and is immediately interactive
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+
         setContentView(R.layout.activity_main)
 
+        prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         webView = findViewById(R.id.webView)
         loadingSpinner = findViewById(R.id.loadingSpinner)
 
+        setupEdgeToEdgeInsets()
         setupWebView()
         setupBackNavigation()
         setupMediaActionListener()
+        setupNetworkMonitoring()
 
-        // 1. Ensure Notification Channel is registered before service start
         createNotificationChannel()
-
-        // 2. Actively request POST_NOTIFICATIONS permission on Android 13+
         checkAndRequestNotificationPermission()
-
-        // 3. Prime the foreground service so the notification is ready
         MediaPlaybackService.startOrUpdate(this)
 
-        // 3. Load the hosted Pawtify PWA directly into the WebView
-        val urlToLoad = runCatching { getString(R.string.target_web_url) }.getOrDefault(TARGET_WEB_URL)
-        webView.loadUrl(urlToLoad)
+        showWelcomeDialogIfNeeded()
+
+        // Handle initial intent for Deep Linking or default target URL
+        handleIncomingIntent(intent)
     }
 
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingIntent(intent)
+    }
+
+    /**
+     * Issue 6 Fix: Deep Linking and App Links verification handler.
+     */
+    private fun handleIncomingIntent(intent: Intent?) {
+        val appLinkData = intent?.data
+        if (appLinkData != null && "https".equals(appLinkData.scheme, ignoreCase = true)
+            && "pawtify-meow.vercel.app".equals(appLinkData.host, ignoreCase = true)
+        ) {
+            webView.loadUrl(appLinkData.toString())
+        } else {
+            val defaultUrl = runCatching { getString(R.string.target_web_url) }.getOrDefault(TARGET_WEB_URL)
+            if (webView.url.isNullOrEmpty()) {
+                webView.loadUrl(defaultUrl)
+            }
+        }
+    }
+
+    /**
+     * Issue 1 Fix: WindowInsetsCompat listener on root layout to prevent notch / camera cutout clipping.
+     */
+    private fun setupEdgeToEdgeInsets() {
+        val rootContainer = findViewById<View>(R.id.rootContainer)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootContainer) { view, windowInsets ->
+            val insets = windowInsets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            // Apply top padding to safely clear status bar notch and bottom padding for gesture bar
+            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            windowInsets
+        }
+    }
+
+    /**
+     * Issue 2 Fix: Configures WebView settings and focus for seamless IME input and rendering.
+     */
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         val settings = webView.settings
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.databaseEnabled = true
-        // Explicitly disable media playback user gesture requirement
         settings.mediaPlaybackRequiresUserGesture = false
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         settings.cacheMode = WebSettings.LOAD_DEFAULT
 
-        // Modern rendering, hardware acceleration and pure black background
         webView.setBackgroundColor(ContextCompat.getColor(this, R.color.black))
         webView.isVerticalScrollBarEnabled = false
         webView.isHorizontalScrollBarEnabled = false
 
-        // Register the JavaScript Interface for communication with the web app
+        // Ensure focusable for soft keyboard interaction
+        webView.isFocusable = true
+        webView.isFocusableInTouchMode = true
+
         webView.addJavascriptInterface(WebAppInterface(this), "AndroidBridge")
 
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                // Keep navigation inside the WebView
                 return false
             }
 
@@ -117,8 +173,14 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 loadingSpinner.visibility = View.GONE
-                // Notify the web app that it is running inside the Android container
                 evaluateJs("window.isAndroidContainer = true; if (window.onAndroidReady) window.onAndroidReady();")
+            }
+
+            override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+                super.onReceivedError(view, request, error)
+                if (request?.isForMainFrame == true && !isNetworkAvailable()) {
+                    showNoInternetDialog()
+                }
             }
         }
 
@@ -129,28 +191,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupBackNavigation() {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                // First attempt SPA back routing in web app
-                webView.evaluateJavascript("window.onAndroidBackPressed ? window.onAndroidBackPressed() : null") { result ->
-                    val handledByWebApp = result == "true" || result == "\"true\""
-                    if (!handledByWebApp) {
-                        if (webView.canGoBack()) {
-                            webView.goBack()
-                        } else {
-                            // Move app to background instead of destroying activity, preserving playback
-                            moveTaskToBack(true)
-                        }
-                    }
-                }
-            }
-        })
-    }
-
+    /**
+     * Issue 3 Fix: Two-way control from native notification to WebView playback controls.
+     */
     private fun setupMediaActionListener() {
         MediaPlaybackService.mediaActionListener = { action ->
-            runOnUiThread {
+            webView.post {
                 when (action) {
                     MediaPlaybackService.ACTION_PLAY -> {
                         evaluateJs("window.onAndroidPlay ? window.onAndroidPlay() : (window.onAndroidPlayPause ? window.onAndroidPlayPause() : null);")
@@ -172,13 +218,121 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun evaluateJs(script: String) {
-        webView.evaluateJavascript(script, null)
+    /**
+     * Issue 5 Fix: Intercepts back navigation to prompt with a styled Confirm Exit Dialog.
+     */
+    private fun setupBackNavigation() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                webView.evaluateJavascript("window.onAndroidBackPressed ? window.onAndroidBackPressed() : null") { result ->
+                    val handledByWebApp = result == "true" || result == "\"true\""
+                    if (!handledByWebApp) {
+                        if (webView.canGoBack()) {
+                            webView.goBack()
+                        } else {
+                            showConfirmExitDialog()
+                        }
+                    }
+                }
+            }
+        })
     }
 
     /**
-     * Registers NotificationChannel required for Android 8.0+ (API 26+).
+     * Issue 5 Fix: Native AMOLED Material 3 Welcome Dialog.
      */
+    private fun showWelcomeDialogIfNeeded() {
+        if (!prefs.getBoolean(KEY_WELCOME_SHOWN, false)) {
+            MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Pawtify_MaterialAlertDialog)
+                .setTitle("Welcome to Pawtify 🐾")
+                .setMessage("Experience seamless background music streaming, notification controls, and offline capabilities tailored for Android.")
+                .setPositiveButton("Let's Play") { dialog, _ ->
+                    prefs.edit().putBoolean(KEY_WELCOME_SHOWN, true).apply()
+                    dialog.dismiss()
+                }
+                .setCancelable(false)
+                .show()
+        }
+    }
+
+    /**
+     * Issue 5 Fix: Native AMOLED Material 3 No Internet Dialog with network callback.
+     */
+    private fun setupNetworkMonitoring() {
+        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+
+        networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onLost(network: Network) {
+                runOnUiThread {
+                    if (!isNetworkAvailable()) {
+                        showNoInternetDialog()
+                    }
+                }
+            }
+
+            override fun onAvailable(network: Network) {
+                runOnUiThread {
+                    noInternetDialog?.dismiss()
+                    noInternetDialog = null
+                }
+            }
+        }
+
+        try {
+            connectivityManager?.registerNetworkCallback(request, networkCallback!!)
+        } catch (ignored: Exception) {}
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        val cm = connectivityManager ?: return true
+        val activeNetwork = cm.activeNetwork ?: return false
+        val capabilities = cm.getNetworkCapabilities(activeNetwork) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun showNoInternetDialog() {
+        if (isFinishing || isDestroyed || noInternetDialog?.isShowing == true) return
+
+        noInternetDialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Pawtify_MaterialAlertDialog)
+            .setTitle("No Internet Connection")
+            .setMessage("Pawtify requires an active network connection to stream music. Please check your Wi-Fi or mobile data.")
+            .setPositiveButton("Retry") { dialog, _ ->
+                dialog.dismiss()
+                noInternetDialog = null
+                if (isNetworkAvailable()) {
+                    webView.reload()
+                } else {
+                    showNoInternetDialog()
+                }
+            }
+            .setNegativeButton("Exit") { _, _ ->
+                MediaPlaybackService.stopService(this)
+                finishAffinity()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    /**
+     * Issue 5 Fix: Native AMOLED Material 3 Confirm Exit Dialog.
+     */
+    private fun showConfirmExitDialog() {
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Pawtify_MaterialAlertDialog)
+            .setTitle("Exit Pawtify?")
+            .setMessage("Do you want to exit the app and stop background music playback?")
+            .setPositiveButton("Exit") { _, _ ->
+                MediaPlaybackService.stopService(this)
+                finish()
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = getString(R.string.notification_channel_name)
@@ -187,7 +341,7 @@ class MainActivity : AppCompatActivity() {
             val channel = NotificationChannel(MediaPlaybackService.CHANNEL_ID, name, importance).apply {
                 description = descriptionText
                 setShowBadge(false)
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                 setSound(null, null)
                 enableLights(false)
                 enableVibration(false)
@@ -197,9 +351,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Actively requests POST_NOTIFICATIONS runtime permission for Android 13+ (API 33+).
-     */
     private fun checkAndRequestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permission = Manifest.permission.POST_NOTIFICATIONS
@@ -210,11 +361,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun evaluateJs(script: String) {
+        webView.evaluateJavascript(script, null)
+    }
+
     /**
-     * CRITICAL FOR BACKGROUND AUDIO:
-     * Do NOT call webView.onPause() or webView.pauseTimers() in onPause() or onStop().
-     * This keeps the JavaScript AudioContext, audio streams, and WebSockets alive when the
-     * screen is turned off or the app is minimized.
+     * Background audio continuity: do NOT pause WebView timers or engine when minimized.
      */
     override fun onPause() {
         super.onPause()
@@ -225,6 +377,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        try {
+            networkCallback?.let { connectivityManager?.unregisterNetworkCallback(it) }
+        } catch (ignored: Exception) {}
+        noInternetDialog?.dismiss()
         MediaPlaybackService.mediaActionListener = null
         super.onDestroy()
         webView.destroy()
