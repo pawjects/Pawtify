@@ -4,6 +4,7 @@ import {
   togglePlay,
   nextTrack,
   previousTrack,
+  playSomething,
   toggleFavorite,
   removeFromPlaylist,
   addToPlaylist,
@@ -1336,7 +1337,7 @@ export function bindGlobalEvents() {
         state.progress = nextTime;
         const maxVal = Number.parseFloat(target.max) || 1;
         const pct = maxVal > 0 ? (nextTime / maxVal) * 100 : 0;
-        target.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${pct}%, rgba(255,255,255,0.16) ${pct}%)`;
+        target.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${pct}%, #3e3e3e ${pct}%)`;
         const currentLabel = document.getElementById('time-current');
         if (currentLabel) currentLabel.textContent = formatTime(nextTime);
         const fsCurrentLabel = document.getElementById('fs-time-current');

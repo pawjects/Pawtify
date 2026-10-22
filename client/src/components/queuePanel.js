@@ -104,7 +104,7 @@ export function renderQueuePanel() {
                  <div class="queue-item-title">${escapeHTML(s?.title || 'Unknown Track')}</div>
                  <div class="queue-item-artist">${escapeHTML(s?.artist || 'Unknown Artist')}</div>
                </div>
-               <div class="queue-actions" onclick="event.stopPropagation();">
+               <div class="queue-actions">
                  <button class="queue-reorder-btn" data-action="queue-move-up" data-queue-index="${absIdx}" type="button" aria-label="Move ${escapeHTML(s?.title || '')} up" title="Move up" ${!canMoveUp ? 'disabled' : ''}>
                    <i class="fa-solid fa-chevron-up"></i>
                  </button>
@@ -141,7 +141,7 @@ export function renderQueuePanel() {
                <div class="queue-item-title">${escapeHTML(s?.title || 'Unknown Track')}</div>
                <div class="queue-item-artist">${escapeHTML(s?.artist || 'Unknown Artist')}</div>
              </div>
-             <div class="queue-actions" onclick="event.stopPropagation();">
+             <div class="queue-actions">
                <button class="song-action-btn song-menu-trigger queue-menu-btn" data-action="open-track-menu" data-song-id="${escapeHTML(s?.id || '')}" type="button" aria-label="More options" title="More options">
                  <i class="fa-solid fa-ellipsis-vertical"></i>
                </button>

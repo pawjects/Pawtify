@@ -34,10 +34,7 @@ export function renderPlayerBar(force = false) {
        <img class="player-bar-cover" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
        <div class="player-bar-info">
          <div class="player-bar-title">${escapeHTML(song.title)}</div>
-         <div style="display:flex; align-items:center; gap:6px;">
-           <div class="player-bar-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
-           <span class="player-quality-badge" id="player-quality-label">${escapeHTML(getExactAudioQuality())}</span>
-         </div>
+         <div class="player-bar-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
        </div>
        <button class="player-bar-like ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Favorite">
          <i class="${isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}"></i>
@@ -293,7 +290,7 @@ export function refreshPlaybackUI() {
       seek.value = String(Math.floor(state.progress || 0));
       const pct =
         maxVal > 0 ? (Math.floor(state.progress || 0) / maxVal) * 100 : 0;
-      seek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${pct}%, rgba(255,255,255,0.16) ${pct}%)`;
+      seek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${pct}%, #3e3e3e ${pct}%)`;
     }
     const fsSeek = document.getElementById('fs-seekbar');
     if (fsSeek) {
@@ -305,7 +302,7 @@ export function refreshPlaybackUI() {
       fsSeek.value = String(Math.floor(state.progress || 0));
       const fsPct =
         fsMax > 0 ? (Math.floor(state.progress || 0) / fsMax) * 100 : 0;
-      fsSeek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${fsPct}%, rgba(255,255,255,0.16) ${fsPct}%)`;
+      fsSeek.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${fsPct}%, #3e3e3e ${fsPct}%)`;
     }
 
     const currentLabel = document.getElementById('time-current');
@@ -344,13 +341,13 @@ export function refreshPlaybackUI() {
   if (volumeSlider && document.activeElement !== volumeSlider) {
     volumeSlider.value = String(Math.round(state.volume * 100));
     const volPct = Math.round(state.volume * 100);
-    volumeSlider.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${volPct}%, rgba(255,255,255,0.16) ${volPct}%)`;
+    volumeSlider.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${volPct}%, #3e3e3e ${volPct}%)`;
   }
   const fsVol = document.getElementById('fs-volume-slider');
   if (fsVol && document.activeElement !== fsVol) {
     fsVol.value = String(Math.round(state.volume * 100));
     const volPct = Math.round(state.volume * 100);
-    fsVol.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${volPct}%, rgba(255,255,255,0.16) ${volPct}%)`;
+    fsVol.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${volPct}%, #3e3e3e ${volPct}%)`;
   }
 
   // Ensure active-track class is kept in sync on document body

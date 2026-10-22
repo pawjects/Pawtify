@@ -8,7 +8,6 @@ import {
   teardownWavyProgress,
   updateWavyProgress,
 } from './wavyProgress.js';
-import { getExactAudioQuality } from '../services/youtube.js';
 
 export function renderFullscreenPlayer(force = false) {
   if (!fullscreenPlayer) return;
@@ -66,10 +65,7 @@ export function renderFullscreenPlayer(force = false) {
          <div class="fs-info">
            <div class="fs-text">
              <div class="fs-title">${escapeHTML(song.title)}</div>
-             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-               <div class="fs-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
-               <span class="player-quality-badge" id="fs-quality-label">${escapeHTML(getExactAudioQuality())}</span>
-             </div>
+             <div class="fs-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
            </div>
            <button class="fs-heart ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Favorite">
              <i class="${isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}"></i>
