@@ -41,11 +41,11 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 /**
  * Main Activity wrapping the hosted Pawtify PWA inside an optimized Android WebView.
  *
- * Implements standard browser architecture:
- * 1. Native Notification to WebApp via standard Android KeyEvents (KEYCODE_MEDIA_PLAY_PAUSE,
- *    KEYCODE_MEDIA_NEXT, KEYCODE_MEDIA_PREVIOUS) routed directly into the WebView's Chromium engine.
- * 2. WebApp to Native Notification via standard navigator.mediaSession metadata & playbackState observer.
- * 3. Cutout safe insets, hidden soft keyboard on resume, and unthrottled background playback.
+ * Implements two-way media bridge:
+ * 1. WebApp -> Native Notification: Injects JavaScript observing navigator.mediaSession
+ *    and HTML5 audio/video events (capture phase) to sync title, artist, artwork, and playback state in real time.
+ * 2. Native Notification -> WebApp: Dispatches both hardware KeyEvents and targeted JavaScript
+ *    evaluations to guarantee play, pause, next, and previous triggers work across all player architectures.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -63,14 +63,13 @@ class MainActivity : AppCompatActivity() {
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var noInternetDialog: AlertDialog? = null
 
-    // Broadcast receiver to route Media Key Events from MediaPlaybackService into the WebView
+    // Broadcast receiver to route Media Actions from MediaPlaybackService into the WebView
     private val mediaKeyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == MediaPlaybackService.ACTION_BROADCAST_MEDIA_KEY) {
+                val action = intent.getStringExtra(MediaPlaybackService.EXTRA_ACTION) ?: ""
                 val keyCode = intent.getIntExtra(MediaPlaybackService.EXTRA_KEY_CODE, KeyEvent.KEYCODE_UNKNOWN)
-                if (keyCode != KeyEvent.KEYCODE_UNKNOWN) {
-                    dispatchMediaKeyToWebView(keyCode)
-                }
+                dispatchMediaActionToWebView(action, keyCode)
             }
         }
     }
@@ -99,7 +98,7 @@ class MainActivity : AppCompatActivity() {
         setupEdgeToEdgeInsets()
         setupWebView()
         setupBackNavigation()
-        setupMediaKeyListener()
+        setupMediaActionListener()
         setupNetworkMonitoring()
 
         createNotificationChannel()
@@ -174,7 +173,7 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 loadingSpinner.visibility = View.GONE
-                // Standard MediaSession API Observer injection
+                // Inject real-time two-way media session bridge observer
                 injectMediaSessionObserver()
             }
 
@@ -194,20 +193,85 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Standard Browser Architecture Fix: Dispatches real hardware media KeyEvents
-     * directly into the WebView's Chromium engine.
+     * Dispatches media actions to the WebView using both hardware KeyEvents and direct JS execution.
      */
-    private fun dispatchMediaKeyToWebView(keyCode: Int) {
+    private fun dispatchMediaActionToWebView(action: String, keyCode: Int) {
         webView.post {
-            webView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-            webView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+            // 1. Dispatch standard Android KeyEvent
+            if (keyCode != KeyEvent.KEYCODE_UNKNOWN) {
+                webView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+                webView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+            }
+
+            // 2. Direct JavaScript execution fallback ensuring the web player responds
+            val jsAction = when (action) {
+                MediaPlaybackService.ACTION_PLAY -> """
+                    (function() {
+                        var audio = document.querySelector('audio') || document.querySelector('video');
+                        if (audio && audio.paused) { try { audio.play(); } catch(e){} }
+                        if (window.onAndroidPlay) { try { window.onAndroidPlay(); } catch(e){} }
+                        else if (window.onAndroidPlayPause) { try { window.onAndroidPlayPause(); } catch(e){} }
+                        var playBtn = document.querySelector('[data-action="play"], [aria-label*="Play" i], [title*="Play" i], button.play');
+                        if (playBtn) { playBtn.click(); }
+                    })();
+                """.trimIndent()
+
+                MediaPlaybackService.ACTION_PAUSE -> """
+                    (function() {
+                        var audio = document.querySelector('audio') || document.querySelector('video');
+                        if (audio && !audio.paused) { try { audio.pause(); } catch(e){} }
+                        if (window.onAndroidPause) { try { window.onAndroidPause(); } catch(e){} }
+                        else if (window.onAndroidPlayPause) { try { window.onAndroidPlayPause(); } catch(e){} }
+                        var pauseBtn = document.querySelector('[data-action="pause"], [aria-label*="Pause" i], [title*="Pause" i], button.pause');
+                        if (pauseBtn) { pauseBtn.click(); }
+                    })();
+                """.trimIndent()
+
+                MediaPlaybackService.ACTION_TOGGLE -> """
+                    (function() {
+                        var audio = document.querySelector('audio') || document.querySelector('video');
+                        if (audio) {
+                            if (audio.paused) { try { audio.play(); } catch(e){} } 
+                            else { try { audio.pause(); } catch(e){} }
+                            return;
+                        }
+                        if (window.onAndroidPlayPause) { 
+                            try { window.onAndroidPlayPause(); return; } catch(e){} 
+                        }
+                        var toggleBtn = document.querySelector('[data-action="toggle"], [data-action="play-pause"], [aria-label*="Play" i], [aria-label*="Pause" i], .play-pause-btn');
+                        if (toggleBtn) { toggleBtn.click(); }
+                    })();
+                """.trimIndent()
+
+                MediaPlaybackService.ACTION_NEXT -> """
+                    (function() {
+                        if (window.onAndroidNext) { try { window.onAndroidNext(); return; } catch(e){} }
+                        var btn = document.querySelector('[data-action="next"], [aria-label*="Next" i], [title*="Next" i], #next-track, .next-btn, button.next');
+                        if (btn) { btn.click(); }
+                    })();
+                """.trimIndent()
+
+                MediaPlaybackService.ACTION_PREVIOUS -> """
+                    (function() {
+                        if (window.onAndroidPrevious) { try { window.onAndroidPrevious(); return; } catch(e){} }
+                        var btn = document.querySelector('[data-action="prev"], [data-action="previous"], [aria-label*="Previous" i], [title*="Previous" i], #prev-track, .prev-btn, button.prev');
+                        if (btn) { btn.click(); }
+                    })();
+                """.trimIndent()
+
+                else -> null
+            }
+
+            if (jsAction != null) {
+                webView.evaluateJavascript(jsAction, null)
+            }
         }
     }
 
-    private fun setupMediaKeyListener() {
+    private fun setupMediaActionListener() {
         // Direct listener callback from MediaPlaybackService
-        MediaPlaybackService.mediaKeyActionListener = { keyCode ->
-            dispatchMediaKeyToWebView(keyCode)
+        MediaPlaybackService.mediaActionListener = { action, keyCode ->
+            dispatchMediaActionToWebView(action, keyCode)
         }
 
         // Broadcast receiver for inter-process or detached events
@@ -221,48 +285,67 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Injects standard navigator.mediaSession observer to forward metadata and playback state
-     * to the native Android notification without any hacky DOM lookups.
+     * Injects a real-time JavaScript observer that hooks into navigator.mediaSession
+     * and HTML5 audio/video events (capturing phase) to sync metadata & state to the native service.
      */
     private fun injectMediaSessionObserver() {
         val script = """
             (function() {
-                if (window.__pawtify_session_hooked) return;
-                window.__pawtify_session_hooked = true;
+                if (window.__pawtify_two_way_bridge_injected) return;
+                window.__pawtify_two_way_bridge_injected = true;
                 window.isAndroidContainer = true;
 
-                function syncMetadata(meta) {
-                    if (!window.AndroidBridge || !meta) return;
-                    try {
-                        var title = meta.title || '';
-                        var artist = meta.artist || '';
-                        var artworkUrl = '';
-                        if (meta.artwork && meta.artwork.length > 0) {
-                            var art = meta.artwork[meta.artwork.length - 1];
-                            artworkUrl = (art && art.src) ? art.src : '';
-                        }
-                        window.AndroidBridge.updateTrackInfo(title, artist, artworkUrl);
-                    } catch (e) {}
+                function getArtworkUrl(artworkArray) {
+                    if (!artworkArray || !artworkArray.length) return '';
+                    var last = artworkArray[artworkArray.length - 1];
+                    return (last && last.src) ? last.src : (artworkArray[0] ? artworkArray[0].src : '');
                 }
 
-                function syncPlayback(state) {
+                var lastTitle = '';
+                var lastArtist = '';
+                var lastArt = '';
+
+                function syncMedia() {
                     if (!window.AndroidBridge) return;
                     try {
-                        var isPlaying = (state === 'playing');
-                        window.AndroidBridge.updatePlaybackState(isPlaying);
+                        if ('mediaSession' in navigator && navigator.mediaSession.metadata) {
+                            var meta = navigator.mediaSession.metadata;
+                            var title = (meta && meta.title) ? meta.title : '';
+                            var artist = (meta && meta.artist) ? meta.artist : '';
+                            var artwork = (meta && meta.artwork) ? getArtworkUrl(meta.artwork) : '';
+
+                            if (title && (title !== lastTitle || artist !== lastArtist || artwork !== lastArt)) {
+                                lastTitle = title;
+                                lastArtist = artist;
+                                lastArt = artwork;
+                                window.AndroidBridge.updateTrackInfo(title, artist, artwork);
+                            }
+                        }
                     } catch (e) {}
                 }
 
-                if ('mediaSession' in navigator) {
-                    // Initial sync
-                    if (navigator.mediaSession.metadata) {
-                        syncMetadata(navigator.mediaSession.metadata);
-                    }
-                    if (navigator.mediaSession.playbackState) {
-                        syncPlayback(navigator.mediaSession.playbackState);
-                    }
+                function syncPlayback(isPlaying) {
+                    if (!window.AndroidBridge) return;
+                    try {
+                        window.AndroidBridge.updatePlaybackState(Boolean(isPlaying));
+                    } catch (e) {}
+                }
 
-                    // 1. Hook metadata setter
+                // 1. Hook into document audio/video elements for state (capture phase = true)
+                document.addEventListener('play', function() { syncPlayback(true); syncMedia(); }, true);
+                document.addEventListener('playing', function() { syncPlayback(true); syncMedia(); }, true);
+                document.addEventListener('pause', function() { syncPlayback(false); }, true);
+                document.addEventListener('ended', function() { syncPlayback(false); }, true);
+
+                var activeAudio = document.querySelector('audio, video');
+                if (activeAudio && !activeAudio.paused && activeAudio.currentTime > 0) {
+                    syncPlayback(true);
+                }
+
+                // 2. Wrap/intercept navigator.mediaSession.metadata setter
+                if ('mediaSession' in navigator) {
+                    syncMedia();
+
                     try {
                         var proto = Object.getPrototypeOf(navigator.mediaSession);
                         var metaDesc = Object.getOwnPropertyDescriptor(proto, 'metadata')
@@ -280,12 +363,12 @@ class MainActivity : AppCompatActivity() {
                                 if (metaDesc && metaDesc.set) {
                                     metaDesc.set.call(navigator.mediaSession, val);
                                 }
-                                syncMetadata(val);
+                                syncMedia();
                             }
                         });
                     } catch (e) {}
 
-                    // 2. Hook playbackState setter
+                    // Wrap navigator.mediaSession.playbackState setter
                     try {
                         var stateProto = Object.getPrototypeOf(navigator.mediaSession);
                         var stateDesc = Object.getOwnPropertyDescriptor(stateProto, 'playbackState')
@@ -303,33 +386,19 @@ class MainActivity : AppCompatActivity() {
                                 if (stateDesc && stateDesc.set) {
                                     stateDesc.set.call(navigator.mediaSession, val);
                                 }
-                                syncPlayback(val);
+                                syncPlayback(val === 'playing');
                             }
                         });
                     } catch (e) {}
-
-                    // 3. Robust polling fallback for in-place property mutations
-                    var lastTitle = '';
-                    var lastArtist = '';
-                    var lastState = '';
-                    setInterval(function() {
-                        try {
-                            var m = navigator.mediaSession.metadata;
-                            if (m) {
-                                if (m.title !== lastTitle || m.artist !== lastArtist) {
-                                    lastTitle = m.title || '';
-                                    lastArtist = m.artist || '';
-                                    syncMetadata(m);
-                                }
-                            }
-                            var s = navigator.mediaSession.playbackState;
-                            if (s && s !== lastState) {
-                                lastState = s;
-                                syncPlayback(s);
-                            }
-                        } catch (err) {}
-                    }, 800);
                 }
+
+                // 3. Poll every 1000ms as a reliable safety net
+                setInterval(function() {
+                    syncMedia();
+                    if ('mediaSession' in navigator && navigator.mediaSession.playbackState) {
+                        syncPlayback(navigator.mediaSession.playbackState === 'playing');
+                    }
+                }, 1000);
 
                 if (window.onAndroidReady) {
                     try { window.onAndroidReady(); } catch (e) {}
@@ -486,7 +555,7 @@ class MainActivity : AppCompatActivity() {
             networkCallback?.let { connectivityManager?.unregisterNetworkCallback(it) }
         } catch (ignored: Exception) {}
         noInternetDialog?.dismiss()
-        MediaPlaybackService.mediaKeyActionListener = null
+        MediaPlaybackService.mediaActionListener = null
         super.onDestroy()
         webView.destroy()
     }

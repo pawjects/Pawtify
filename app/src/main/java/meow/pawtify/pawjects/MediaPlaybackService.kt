@@ -19,6 +19,7 @@ import android.os.PowerManager
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.util.Base64
 import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -36,13 +37,12 @@ import java.net.URL
 /**
  * Foreground Service responsible for:
  * 1. Maintaining media playback in the background via partial WakeLock and AudioFocus.
- * 2. Displaying an Android MediaStyle notification with Title, Artist, Cover Artwork,
- *    and transport controls (Previous, Play/Pause, Next).
- * 3. Real-time synchronization with WebApp navigator.mediaSession metadata.
- * 4. Dispatching standard Android KeyEvents (KEYCODE_MEDIA_PLAY_PAUSE, KEYCODE_MEDIA_NEXT,
- *    KEYCODE_MEDIA_PREVIOUS) to the WebView like standard web browsers.
- * 5. Battery conservation: WakeLock is ONLY held during active playback.
- * 6. Clean teardown on onTaskRemoved() and app exit.
+ * 2. Displaying an Android MediaStyle notification with real-time Title, Artist, and Cover Artwork.
+ * 3. Two-way communication with the WebView:
+ *    - Receives track metadata and play/pause state from the WebView.
+ *    - Dispatches media action events and KeyEvents back to the WebView when notification buttons are tapped.
+ * 4. Battery conservation: WakeLock is ONLY held during active playback.
+ * 5. Clean teardown on onTaskRemoved() and app exit.
  */
 class MediaPlaybackService : Service() {
 
@@ -87,8 +87,9 @@ class MediaPlaybackService : Service() {
         const val ACTION_STOP = "meow.pawtify.pawjects.ACTION_STOP"
         const val ACTION_INIT = "meow.pawtify.pawjects.ACTION_INIT"
 
-        // Broadcast action for Media Key Events to MainActivity
+        // Broadcast action for Media Controls to MainActivity
         const val ACTION_BROADCAST_MEDIA_KEY = "meow.pawtify.pawjects.ACTION_BROADCAST_MEDIA_KEY"
+        const val EXTRA_ACTION = "extra_action"
         const val EXTRA_KEY_CODE = "extra_key_code"
 
         const val EXTRA_TITLE = "extra_title"
@@ -100,9 +101,9 @@ class MediaPlaybackService : Service() {
         var activeInstance: MediaPlaybackService? = null
 
         /**
-         * Direct listener callback for media key events dispatched to MainActivity
+         * Listener invoked when the user interacts with notification controls or lock screen.
          */
-        var mediaKeyActionListener: ((keyCode: Int) -> Unit)? = null
+        var mediaActionListener: ((action: String, keyCode: Int) -> Unit)? = null
 
         fun startOrUpdate(context: Context) {
             val intent = Intent(context, MediaPlaybackService::class.java).apply {
@@ -162,22 +163,22 @@ class MediaPlaybackService : Service() {
         if (intent != null) {
             when (intent.action) {
                 ACTION_PLAY -> {
-                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY)
+                    dispatchMediaAction(ACTION_PLAY, KeyEvent.KEYCODE_MEDIA_PLAY)
                     onPlaybackStateChanged(true)
                 }
                 ACTION_PAUSE -> {
-                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE)
+                    dispatchMediaAction(ACTION_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE)
                     onPlaybackStateChanged(false)
                 }
                 ACTION_TOGGLE -> {
-                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+                    dispatchMediaAction(ACTION_TOGGLE, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
                     onPlaybackStateChanged(!isPlaying)
                 }
                 ACTION_NEXT -> {
-                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)
+                    dispatchMediaAction(ACTION_NEXT, KeyEvent.KEYCODE_MEDIA_NEXT)
                 }
                 ACTION_PREVIOUS -> {
-                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+                    dispatchMediaAction(ACTION_PREVIOUS, KeyEvent.KEYCODE_MEDIA_PREVIOUS)
                 }
                 ACTION_STOP -> {
                     cleanupAndStop()
@@ -204,13 +205,14 @@ class MediaPlaybackService : Service() {
     }
 
     /**
-     * Dispatches standard hardware Media Key Events to MainActivity (which routes to the WebView).
+     * Dispatches media actions and KeyEvents back to MainActivity to control the WebView.
      */
-    private fun dispatchMediaKey(keyCode: Int) {
-        mediaKeyActionListener?.invoke(keyCode)
+    private fun dispatchMediaAction(action: String, keyCode: Int) {
+        mediaActionListener?.invoke(action, keyCode)
 
         val broadcastIntent = Intent(ACTION_BROADCAST_MEDIA_KEY).apply {
             setPackage(packageName)
+            putExtra(EXTRA_ACTION, action)
             putExtra(EXTRA_KEY_CODE, keyCode)
         }
         sendBroadcast(broadcastIntent)
@@ -220,13 +222,17 @@ class MediaPlaybackService : Service() {
      * Direct real-time callback when track metadata arrives from WebAppInterface.
      */
     fun onTrackInfoChanged(title: String, artist: String, artworkUrl: String?) {
-        currentTitle = if (title.isNotBlank()) title else "Pawtify"
-        currentArtist = if (artist.isNotBlank()) artist else "Ready to Play"
+        val cleanTitle = if (title.isNotBlank()) title else "Pawtify"
+        val cleanArtist = if (artist.isNotBlank()) artist else "Ready to Play"
+
+        val metadataChanged = cleanTitle != currentTitle || cleanArtist != currentArtist
+        currentTitle = cleanTitle
+        currentArtist = cleanArtist
 
         if (artworkUrl != currentArtworkUrl) {
             currentArtworkUrl = artworkUrl
             loadArtworkBitmapAsync(artworkUrl)
-        } else {
+        } else if (metadataChanged) {
             startOrRefreshForeground()
         }
     }
@@ -249,21 +255,21 @@ class MediaPlaybackService : Service() {
         mediaSession = MediaSessionCompat(this, "PawtifyMediaSession").apply {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
-                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY)
+                    dispatchMediaAction(ACTION_PLAY, KeyEvent.KEYCODE_MEDIA_PLAY)
                     onPlaybackStateChanged(true)
                 }
 
                 override fun onPause() {
-                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE)
+                    dispatchMediaAction(ACTION_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE)
                     onPlaybackStateChanged(false)
                 }
 
                 override fun onSkipToNext() {
-                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)
+                    dispatchMediaAction(ACTION_NEXT, KeyEvent.KEYCODE_MEDIA_NEXT)
                 }
 
                 override fun onSkipToPrevious() {
-                    dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+                    dispatchMediaAction(ACTION_PREVIOUS, KeyEvent.KEYCODE_MEDIA_PREVIOUS)
                 }
 
                 override fun onStop() {
@@ -304,6 +310,7 @@ class MediaPlaybackService : Service() {
 
         if (metadataArtwork != null) {
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, metadataArtwork)
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, metadataArtwork)
         }
         mediaSession?.setMetadata(metadataBuilder.build())
 
@@ -382,6 +389,10 @@ class MediaPlaybackService : Service() {
         return builder.build()
     }
 
+    /**
+     * Asynchronously fetches cover artwork with standard headers, protocol normalization,
+     * and base64 data-URI support.
+     */
     private fun loadArtworkBitmapAsync(urlStr: String?) {
         artworkFetchJob?.cancel()
 
@@ -394,18 +405,37 @@ class MediaPlaybackService : Service() {
         artworkFetchJob = serviceScope.launch {
             val bitmap = withContext(Dispatchers.IO) {
                 try {
-                    val connection = URL(urlStr).openConnection() as HttpURLConnection
-                    connection.connectTimeout = 4000
-                    connection.readTimeout = 4000
-                    connection.instanceFollowRedirects = true
-                    connection.doInput = true
-                    connection.connect()
-                    if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                        connection.inputStream.use { stream ->
-                            BitmapFactory.decodeStream(stream)
-                        }
+                    val finalUrl = when {
+                        urlStr.startsWith("//") -> "https:$urlStr"
+                        urlStr.startsWith("http://") -> "https://" + urlStr.removePrefix("http://")
+                        else -> urlStr
+                    }
+
+                    if (finalUrl.startsWith("data:image")) {
+                        val base64Data = finalUrl.substringAfter("base64,")
+                        val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                     } else {
-                        null
+                        val url = URL(finalUrl)
+                        val connection = url.openConnection() as HttpURLConnection
+                        connection.connectTimeout = 6000
+                        connection.readTimeout = 6000
+                        connection.instanceFollowRedirects = true
+                        connection.doInput = true
+                        connection.setRequestProperty(
+                            "User-Agent",
+                            "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                        )
+                        connection.setRequestProperty("Accept", "image/webp,image/apng,image/*,*/*;q=0.8")
+                        connection.connect()
+
+                        if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                            connection.inputStream.use { stream ->
+                                BitmapFactory.decodeStream(stream)
+                            }
+                        } else {
+                            null
+                        }
                     }
                 } catch (e: Exception) {
                     null
@@ -470,16 +500,16 @@ class MediaPlaybackService : Service() {
                 .setOnAudioFocusChangeListener { focusChange ->
                     when (focusChange) {
                         AudioManager.AUDIOFOCUS_LOSS -> {
-                            dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE)
+                            dispatchMediaAction(ACTION_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE)
                             onPlaybackStateChanged(false)
                         }
                         AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
                         AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                            dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE)
+                            dispatchMediaAction(ACTION_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE)
                             onPlaybackStateChanged(false)
                         }
                         AudioManager.AUDIOFOCUS_GAIN -> {
-                            dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY)
+                            dispatchMediaAction(ACTION_PLAY, KeyEvent.KEYCODE_MEDIA_PLAY)
                             onPlaybackStateChanged(true)
                         }
                     }
@@ -492,7 +522,7 @@ class MediaPlaybackService : Service() {
             audioManager?.requestAudioFocus(
                 { focusChange ->
                     if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
-                        dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE)
+                        dispatchMediaAction(ACTION_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE)
                         onPlaybackStateChanged(false)
                     }
                 },

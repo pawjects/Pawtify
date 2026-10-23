@@ -9,7 +9,8 @@ import android.widget.Toast
 /**
  * JavaScript Bridge exposed as `window.AndroidBridge` to the hosted Pawtify web app.
  *
- * Dispatches real-time track metadata and playback state updates to MediaPlaybackService.
+ * Dispatches real-time track metadata and playback state updates from the browser's
+ * navigator.mediaSession and DOM audio events directly to MediaPlaybackService.
  */
 class WebAppInterface(
     private val context: Context,
@@ -18,17 +19,21 @@ class WebAppInterface(
     private val mainHandler = Handler(Looper.getMainLooper())
 
     /**
-     * Called by the web app when a track starts playing or changes.
+     * Called by the web app or injected script when a track starts playing or changes metadata.
      */
     @JavascriptInterface
-    fun updateTrackInfo(title: String, artist: String, artworkUrl: String) {
+    fun updateTrackInfo(title: String?, artist: String?, artworkUrl: String?) {
+        val safeTitle = if (title.isNullOrBlank() || title == "undefined" || title == "null") "Pawtify" else title.trim()
+        val safeArtist = if (artist.isNullOrBlank() || artist == "undefined" || artist == "null") "Ready to Play" else artist.trim()
+        val safeArtwork = if (artworkUrl.isNullOrBlank() || artworkUrl == "undefined" || artworkUrl == "null") null else artworkUrl.trim()
+
         mainHandler.post {
-            MediaPlaybackService.updateMetadata(context, title, artist, artworkUrl)
+            MediaPlaybackService.updateMetadata(context, safeTitle, safeArtist, safeArtwork)
         }
     }
 
     /**
-     * Called by the web app when playback state changes (play, pause, stop).
+     * Called by the web app or injected script when playback state changes (play, pause, stop).
      */
     @JavascriptInterface
     fun updatePlaybackState(isPlaying: Boolean) {
@@ -53,9 +58,11 @@ class WebAppInterface(
      * Optional toast helper for web app debugging / notifications.
      */
     @JavascriptInterface
-    fun showToast(message: String) {
-        mainHandler.post {
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    fun showToast(message: String?) {
+        if (!message.isNullOrBlank()) {
+            mainHandler.post {
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }
