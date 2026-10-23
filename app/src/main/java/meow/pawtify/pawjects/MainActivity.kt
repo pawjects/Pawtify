@@ -291,61 +291,52 @@ class MainActivity : AppCompatActivity() {
     private fun injectMediaSessionObserver() {
         val script = """
             (function() {
-                if (window.__pawtify_two_way_bridge_injected) return;
-                window.__pawtify_two_way_bridge_injected = true;
-                window.isAndroidContainer = true;
-
-                function getArtworkUrl(artworkArray) {
-                    if (!artworkArray || !artworkArray.length) return '';
-                    var last = artworkArray[artworkArray.length - 1];
-                    return (last && last.src) ? last.src : (artworkArray[0] ? artworkArray[0].src : '');
+                function extractArtworkUrl(meta) {
+                    if (!meta || !meta.artwork) return '';
+                    if (Array.isArray(meta.artwork) && meta.artwork.length > 0) {
+                        var last = meta.artwork[meta.artwork.length - 1] || meta.artwork[0];
+                        return (last && last.src) ? last.src : (typeof last === 'string' ? last : '');
+                    }
+                    return typeof meta.artwork === 'string' ? meta.artwork : '';
                 }
 
-                var lastTitle = '';
-                var lastArtist = '';
-                var lastArt = '';
+                var lastDispatchedTitle = '';
+                var lastDispatchedArtist = '';
+                var lastDispatchedArt = '';
 
-                function syncMedia() {
+                function notifyTrackIfChanged(force) {
                     if (!window.AndroidBridge) return;
                     try {
                         if ('mediaSession' in navigator && navigator.mediaSession.metadata) {
                             var meta = navigator.mediaSession.metadata;
-                            var title = (meta && meta.title) ? meta.title : '';
-                            var artist = (meta && meta.artist) ? meta.artist : '';
-                            var artwork = (meta && meta.artwork) ? getArtworkUrl(meta.artwork) : '';
+                            var title = (meta && meta.title) ? String(meta.title).trim() : '';
+                            var artist = (meta && meta.artist) ? String(meta.artist).trim() : '';
+                            var artworkUrl = extractArtworkUrl(meta);
 
-                            if (title && (title !== lastTitle || artist !== lastArtist || artwork !== lastArt)) {
-                                lastTitle = title;
-                                lastArtist = artist;
-                                lastArt = artwork;
-                                window.AndroidBridge.updateTrackInfo(title, artist, artwork);
+                            if (title && (force || title !== lastDispatchedTitle || artist !== lastDispatchedArtist || artworkUrl !== lastDispatchedArt)) {
+                                lastDispatchedTitle = title;
+                                lastDispatchedArtist = artist;
+                                lastDispatchedArt = artworkUrl;
+                                window.AndroidBridge.updateTrackInfo(title, artist, artworkUrl);
                             }
                         }
-                    } catch (e) {}
+                    } catch (e) {
+                        console.warn('[Pawtify Bridge] notifyTrackIfChanged error:', e);
+                    }
                 }
 
-                function syncPlayback(isPlaying) {
+                function notifyPlaybackIfChanged(isPlaying) {
                     if (!window.AndroidBridge) return;
                     try {
                         window.AndroidBridge.updatePlaybackState(Boolean(isPlaying));
                     } catch (e) {}
                 }
 
-                // 1. Hook into document audio/video elements for state (capture phase = true)
-                document.addEventListener('play', function() { syncPlayback(true); syncMedia(); }, true);
-                document.addEventListener('playing', function() { syncPlayback(true); syncMedia(); }, true);
-                document.addEventListener('pause', function() { syncPlayback(false); }, true);
-                document.addEventListener('ended', function() { syncPlayback(false); }, true);
+                // Initial sync immediately
+                notifyTrackIfChanged(true);
 
-                var activeAudio = document.querySelector('audio, video');
-                if (activeAudio && !activeAudio.paused && activeAudio.currentTime > 0) {
-                    syncPlayback(true);
-                }
-
-                // 2. Wrap/intercept navigator.mediaSession.metadata setter
                 if ('mediaSession' in navigator) {
-                    syncMedia();
-
+                    // Hook navigator.mediaSession.metadata setter
                     try {
                         var proto = Object.getPrototypeOf(navigator.mediaSession);
                         var metaDesc = Object.getOwnPropertyDescriptor(proto, 'metadata')
@@ -361,14 +352,16 @@ class MainActivity : AppCompatActivity() {
                             set: function(val) {
                                 internalMeta = val;
                                 if (metaDesc && metaDesc.set) {
-                                    metaDesc.set.call(navigator.mediaSession, val);
+                                    try { metaDesc.set.call(navigator.mediaSession, val); } catch (err) {}
                                 }
-                                syncMedia();
+                                notifyTrackIfChanged(true);
                             }
                         });
-                    } catch (e) {}
+                    } catch (e) {
+                        console.warn('[Pawtify Bridge] Could not hook metadata setter property:', e);
+                    }
 
-                    // Wrap navigator.mediaSession.playbackState setter
+                    // Hook navigator.mediaSession.playbackState setter
                     try {
                         var stateProto = Object.getPrototypeOf(navigator.mediaSession);
                         var stateDesc = Object.getOwnPropertyDescriptor(stateProto, 'playbackState')
@@ -384,22 +377,31 @@ class MainActivity : AppCompatActivity() {
                             set: function(val) {
                                 internalState = val;
                                 if (stateDesc && stateDesc.set) {
-                                    stateDesc.set.call(navigator.mediaSession, val);
+                                    try { stateDesc.set.call(navigator.mediaSession, val); } catch (err) {}
                                 }
-                                syncPlayback(val === 'playing');
+                                notifyPlaybackIfChanged(val === 'playing');
                             }
                         });
                     } catch (e) {}
                 }
 
-                // 3. Poll every 1000ms as a reliable safety net
-                setInterval(function() {
-                    syncMedia();
-                    if ('mediaSession' in navigator && navigator.mediaSession.playbackState) {
-                        syncPlayback(navigator.mediaSession.playbackState === 'playing');
-                    }
-                }, 1000);
+                // Document media events with capture = true
+                document.addEventListener('play', function() { notifyPlaybackIfChanged(true); notifyTrackIfChanged(false); }, true);
+                document.addEventListener('playing', function() { notifyPlaybackIfChanged(true); notifyTrackIfChanged(false); }, true);
+                document.addEventListener('pause', function() { notifyPlaybackIfChanged(false); }, true);
+                document.addEventListener('ended', function() { notifyPlaybackIfChanged(false); }, true);
 
+                // Polling safety loop (every 500ms) to guarantee in-place property mutations are synced
+                if (!window.__pawtify_metadata_poll_interval) {
+                    window.__pawtify_metadata_poll_interval = setInterval(function() {
+                        notifyTrackIfChanged(false);
+                        if ('mediaSession' in navigator && navigator.mediaSession.playbackState) {
+                            notifyPlaybackIfChanged(navigator.mediaSession.playbackState === 'playing');
+                        }
+                    }, 500);
+                }
+
+                window.isAndroidContainer = true;
                 if (window.onAndroidReady) {
                     try { window.onAndroidReady(); } catch (e) {}
                 }

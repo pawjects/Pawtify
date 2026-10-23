@@ -106,41 +106,47 @@ export function stopBackgroundAudio() {
   }
 }
 
-export function updateMediaSession(song) {
+export function wireMediaSessionActionHandlers() {
   if (!('mediaSession' in navigator)) return;
-  if (!song) {
-    navigator.mediaSession.playbackState = 'none';
-    return;
-  }
-  navigator.mediaSession.metadata = new MediaMetadata({
-    title: song.title || 'Unknown',
-    artist: song.artist || 'Unknown',
-    album: song.album || '',
-    artwork: [{ src: song.coverUrl, sizes: '512x512', type: 'image/jpeg' }],
-  });
 
-  // Notify native Android wrapper bridge if running inside WebView
-  if (typeof window !== 'undefined' && window.AndroidBridge) {
+  const actionHandlers = [
+    ['play', () => {
+      if (!state.isPlaying) togglePlay();
+    }],
+    ['pause', () => {
+      if (state.isPlaying) pause();
+    }],
+    ['previoustrack', () => {
+      previousTrack();
+    }],
+    ['nexttrack', () => {
+      nextTrack();
+    }],
+    ['stop', () => {
+      pause();
+    }],
+    ['seekto', (details) => {
+      if (details && typeof details.seekTime === 'number') {
+        seekTo(details.seekTime);
+      }
+    }],
+    ['seekforward', (details) => {
+      const skip = (details && details.seekOffset) || 10;
+      seekTo(Math.min(state.duration, state.progress + skip));
+    }],
+    ['seekbackward', (details) => {
+      const skip = (details && details.seekOffset) || 10;
+      seekTo(Math.max(0, state.progress - skip));
+    }],
+  ];
+
+  for (const [action, handler] of actionHandlers) {
     try {
-      window.AndroidBridge.updateTrackInfo(
-        song.title || 'Unknown',
-        song.artist || 'Unknown',
-        song.coverUrl || ''
-      );
-      window.AndroidBridge.updatePlaybackState(Boolean(state.isPlaying));
-    } catch (e) {}
+      navigator.mediaSession.setActionHandler(action, handler);
+    } catch (e) {
+      // Browser may not support specific action
+    }
   }
-
-  navigator.mediaSession.setActionHandler('play', () => {
-    if (!state.isPlaying) togglePlay();
-  });
-  navigator.mediaSession.setActionHandler('pause', () => {
-    if (state.isPlaying) pause();
-  });
-  navigator.mediaSession.setActionHandler('previoustrack', () =>
-    previousTrack()
-  );
-  navigator.mediaSession.setActionHandler('nexttrack', () => nextTrack());
 
   // Register window hooks for native Android notification actions
   if (typeof window !== 'undefined') {
@@ -160,24 +166,62 @@ export function updateMediaSession(song) {
       previousTrack();
     };
   }
-  navigator.mediaSession.setActionHandler('seekforward', () => {
-    if (globals.ytPlayerReady && globals.ytPlayer)
-      globals.ytPlayer.seekTo(
-        Math.min(state.duration, state.progress + 10),
-        true
-      );
-  });
-  navigator.mediaSession.setActionHandler('seekbackward', () => {
-    if (globals.ytPlayerReady && globals.ytPlayer)
-      globals.ytPlayer.seekTo(Math.max(0, state.progress - 10), true);
-  });
+}
+
+export function updateMediaSession(song) {
+  if (!('mediaSession' in navigator)) return;
+  if (!song) {
+    try {
+      navigator.mediaSession.playbackState = 'none';
+    } catch (e) {}
+    return;
+  }
+
+  const rawCover = song.coverUrl || song.thumbnail || '/assets/pawtify.png';
+  const artwork512 = getOptimizedArtwork(rawCover, 512);
+  const artwork256 = getOptimizedArtwork(rawCover, 256);
+  const artwork192 = getOptimizedArtwork(rawCover, 192);
+  const artwork96 = getOptimizedArtwork(rawCover, 96);
+
   try {
-    navigator.mediaSession.setActionHandler('seekto', (details) => {
-      if (details && typeof details.seekTime === 'number') {
-        seekTo(details.seekTime);
-      }
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: song.title || 'Unknown Title',
+      artist: song.artist || 'Unknown Artist',
+      album: song.album || 'Pawtify Music',
+      artwork: [
+        { src: artwork96, sizes: '96x96', type: 'image/jpeg' },
+        { src: artwork192, sizes: '192x192', type: 'image/jpeg' },
+        { src: artwork256, sizes: '256x256', type: 'image/jpeg' },
+        { src: artwork512, sizes: '512x512', type: 'image/jpeg' },
+      ],
     });
+  } catch (err) {
+    console.warn('Failed to set MediaMetadata:', err);
+  }
+
+  try {
+    navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
   } catch (e) {}
+
+  // Ensure action handlers are active
+  wireMediaSessionActionHandlers();
+
+  // Notify native Android wrapper bridge if running inside WebView
+  if (typeof window !== 'undefined' && window.AndroidBridge) {
+    try {
+      window.AndroidBridge.updateTrackInfo(
+        song.title || 'Unknown',
+        song.artist || 'Unknown',
+        artwork512
+      );
+      window.AndroidBridge.updatePlaybackState(Boolean(state.isPlaying));
+    } catch (e) {}
+  }
+}
+
+// Automatically wire handlers upon module initialization
+if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+  wireMediaSessionActionHandlers();
 }
 
 export function onPlayerReady(event) {
