@@ -59,8 +59,11 @@ export async function play(song, queue = null, autoplay = true) {
   saveJSON(STORAGE.CURRENT_TIME, 0);
   if (autoplay) startBackgroundAudio();
   updateMediaSession(playableSong);
-  if (navigator.mediaSession)
-    navigator.mediaSession.playbackState = autoplay ? 'playing' : 'paused';
+  if ('mediaSession' in navigator) {
+    try {
+      navigator.mediaSession.playbackState = autoplay ? 'playing' : 'paused';
+    } catch (e) {}
+  }
   if (autoplay) startYtLoadTimeout();
   if (
     globals.ytPlayerReady &&
@@ -103,7 +106,16 @@ export function pause() {
     } catch (e) {}
   }
   state.isPlaying = false;
-  if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused';
+  if ('mediaSession' in navigator) {
+    try {
+      navigator.mediaSession.playbackState = 'paused';
+    } catch (e) {}
+  }
+  if (typeof window !== 'undefined' && window.AndroidBridge) {
+    try {
+      window.AndroidBridge.updatePlaybackState(false);
+    } catch (e) {}
+  }
   persistPlayer();
   refreshPlaybackUI();
 }
@@ -148,6 +160,16 @@ export async function togglePlay() {
       loadYTApi();
     }
     state.isPlaying = true;
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.playbackState = 'playing';
+      } catch (e) {}
+    }
+    if (typeof window !== 'undefined' && window.AndroidBridge) {
+      try {
+        window.AndroidBridge.updatePlaybackState(true);
+      } catch (e) {}
+    }
     startYTPoll();
   }
   persistPlayer();
