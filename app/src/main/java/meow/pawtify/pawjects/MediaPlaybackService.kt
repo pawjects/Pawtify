@@ -20,7 +20,6 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Base64
-import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.media.app.NotificationCompat.MediaStyle
@@ -36,13 +35,13 @@ import java.net.URL
 
 /**
  * Foreground Service responsible for:
- * 1. Maintaining media playback in the background via partial WakeLock and AudioFocus.
- * 2. Displaying an Android MediaStyle notification with real-time Title, Artist, and Cover Artwork.
- * 3. Two-way communication with the WebView:
- *    - Receives track metadata and play/pause state from the WebView.
- *    - Dispatches media action events and KeyEvents back to the WebView when notification buttons are tapped.
- * 4. Battery conservation: WakeLock is ONLY held during active playback.
- * 5. Clean teardown on onTaskRemoved() and app exit.
+ * 1. Background audio playback support (WakeLock + AudioFocus).
+ * 2. Real-time media notification with actual track metadata and cover artwork.
+ * 3. Media control actions (Play, Pause, Toggle, Next, Previous) routed directly
+ *    to MainActivity via Intent/callbacks WITHOUT dispatching KeyEvents (avoiding
+ *    accidental clicks on focused web elements).
+ * 4. Dynamic lifecycle: ONLY runs when real music is playing, and cleanly terminates
+ *    when playback is stopped or dismissed.
  */
 class MediaPlaybackService : Service() {
 
@@ -55,9 +54,9 @@ class MediaPlaybackService : Service() {
     private var audioFocusRequest: AudioFocusRequest? = null
     private var notificationManager: NotificationManager? = null
 
-    var currentTitle: String = "Pawtify"
+    var currentTitle: String? = null
         private set
-    var currentArtist: String = "Ready to Play"
+    var currentArtist: String? = null
         private set
     var currentArtworkUrl: String? = null
         private set
@@ -65,15 +64,6 @@ class MediaPlaybackService : Service() {
         private set
     var isPlaying: Boolean = false
         private set
-
-    // Default logo bitmap fallback loaded from res/drawable/pawtify_logo.png
-    private val defaultLogoBitmap: Bitmap? by lazy {
-        try {
-            BitmapFactory.decodeResource(resources, R.drawable.pawtify_logo)
-        } catch (e: Exception) {
-            null
-        }
-    }
 
     companion object {
         const val CHANNEL_ID = "pawtify_media_playback_channel"
@@ -85,12 +75,11 @@ class MediaPlaybackService : Service() {
         const val ACTION_NEXT = "meow.pawtify.pawjects.ACTION_NEXT"
         const val ACTION_PREVIOUS = "meow.pawtify.pawjects.ACTION_PREVIOUS"
         const val ACTION_STOP = "meow.pawtify.pawjects.ACTION_STOP"
-        const val ACTION_INIT = "meow.pawtify.pawjects.ACTION_INIT"
+        const val ACTION_START_WITH_METADATA = "meow.pawtify.pawjects.ACTION_START_WITH_METADATA"
 
-        // Broadcast action for Media Controls to MainActivity
+        // Broadcast action for Media Controls to MainActivity (No KeyEvents)
         const val ACTION_BROADCAST_MEDIA_KEY = "meow.pawtify.pawjects.ACTION_BROADCAST_MEDIA_KEY"
         const val EXTRA_ACTION = "extra_action"
-        const val EXTRA_KEY_CODE = "extra_key_code"
 
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_ARTIST = "extra_artist"
@@ -103,43 +92,45 @@ class MediaPlaybackService : Service() {
         /**
          * Listener invoked when the user interacts with notification controls or lock screen.
          */
-        var mediaActionListener: ((action: String, keyCode: Int) -> Unit)? = null
+        var mediaActionListener: ((action: String) -> Unit)? = null
 
-        fun startOrUpdate(context: Context) {
+        /**
+         * Starts the foreground service with REAL track metadata.
+         */
+        fun startWithMetadata(
+            context: Context,
+            title: String,
+            artist: String,
+            artworkUrl: String?,
+            isPlaying: Boolean
+        ) {
             val intent = Intent(context, MediaPlaybackService::class.java).apply {
-                action = ACTION_INIT
-            }
-            ContextCompat.startForegroundService(context, intent)
-        }
-
-        fun updateMetadata(context: Context, title: String, artist: String, artworkUrl: String?) {
-            val intent = Intent(context, MediaPlaybackService::class.java).apply {
+                action = ACTION_START_WITH_METADATA
                 putExtra(EXTRA_TITLE, title)
                 putExtra(EXTRA_ARTIST, artist)
                 putExtra(EXTRA_ARTWORK_URL, artworkUrl)
-            }
-            try {
-                ContextCompat.startForegroundService(context, intent)
-            } catch (ignored: Exception) {}
-            activeInstance?.onTrackInfoChanged(title, artist, artworkUrl)
-        }
-
-        fun updatePlaybackState(context: Context, isPlaying: Boolean) {
-            val intent = Intent(context, MediaPlaybackService::class.java).apply {
                 putExtra(EXTRA_IS_PLAYING, isPlaying)
             }
             try {
                 ContextCompat.startForegroundService(context, intent)
             } catch (ignored: Exception) {}
+            activeInstance?.let { instance ->
+                instance.onTrackInfoChanged(title, artist, artworkUrl)
+                instance.onPlaybackStateChanged(isPlaying)
+            }
+        }
+
+        fun updateMetadata(context: Context, title: String, artist: String, artworkUrl: String?) {
+            activeInstance?.onTrackInfoChanged(title, artist, artworkUrl)
+        }
+
+        fun updatePlaybackState(context: Context, isPlaying: Boolean) {
             activeInstance?.onPlaybackStateChanged(isPlaying)
         }
 
         fun stopService(context: Context) {
             activeInstance?.let { instance ->
-                instance.stopForeground(STOP_FOREGROUND_REMOVE)
-                instance.releaseWakeLock()
-                instance.notificationManager?.cancel(NOTIFICATION_ID)
-                instance.stopSelf()
+                instance.cleanupAndStop()
             } ?: run {
                 val intent = Intent(context, MediaPlaybackService::class.java).apply {
                     action = ACTION_STOP
@@ -163,33 +154,46 @@ class MediaPlaybackService : Service() {
         if (intent != null) {
             when (intent.action) {
                 ACTION_PLAY -> {
-                    dispatchMediaAction(ACTION_PLAY, KeyEvent.KEYCODE_MEDIA_PLAY)
+                    dispatchMediaAction(ACTION_PLAY)
                     onPlaybackStateChanged(true)
                 }
                 ACTION_PAUSE -> {
-                    dispatchMediaAction(ACTION_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE)
+                    dispatchMediaAction(ACTION_PAUSE)
                     onPlaybackStateChanged(false)
                 }
                 ACTION_TOGGLE -> {
-                    dispatchMediaAction(ACTION_TOGGLE, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+                    dispatchMediaAction(ACTION_TOGGLE)
                     onPlaybackStateChanged(!isPlaying)
                 }
                 ACTION_NEXT -> {
-                    dispatchMediaAction(ACTION_NEXT, KeyEvent.KEYCODE_MEDIA_NEXT)
+                    dispatchMediaAction(ACTION_NEXT)
                 }
                 ACTION_PREVIOUS -> {
-                    dispatchMediaAction(ACTION_PREVIOUS, KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+                    dispatchMediaAction(ACTION_PREVIOUS)
                 }
                 ACTION_STOP -> {
                     cleanupAndStop()
                     return START_NOT_STICKY
                 }
+                ACTION_START_WITH_METADATA -> {
+                    val title = intent.getStringExtra(EXTRA_TITLE)
+                    val artist = intent.getStringExtra(EXTRA_ARTIST).orEmpty()
+                    val artwork = intent.getStringExtra(EXTRA_ARTWORK_URL)
+                    val playing = intent.getBooleanExtra(EXTRA_IS_PLAYING, true)
+
+                    if (!title.isNullOrBlank()) {
+                        onTrackInfoChanged(title, artist, artwork)
+                        onPlaybackStateChanged(playing)
+                    }
+                }
                 else -> {
                     if (intent.hasExtra(EXTRA_TITLE)) {
-                        val title = intent.getStringExtra(EXTRA_TITLE) ?: "Pawtify"
-                        val artist = intent.getStringExtra(EXTRA_ARTIST) ?: "Ready to Play"
+                        val title = intent.getStringExtra(EXTRA_TITLE)
+                        val artist = intent.getStringExtra(EXTRA_ARTIST).orEmpty()
                         val artwork = intent.getStringExtra(EXTRA_ARTWORK_URL)
-                        onTrackInfoChanged(title, artist, artwork)
+                        if (!title.isNullOrBlank()) {
+                            onTrackInfoChanged(title, artist, artwork)
+                        }
                     }
 
                     if (intent.hasExtra(EXTRA_IS_PLAYING)) {
@@ -205,15 +209,14 @@ class MediaPlaybackService : Service() {
     }
 
     /**
-     * Dispatches media actions and KeyEvents back to MainActivity to control the WebView.
+     * Dispatches media actions directly to MainActivity WITHOUT KeyEvents.
      */
-    private fun dispatchMediaAction(action: String, keyCode: Int) {
-        mediaActionListener?.invoke(action, keyCode)
+    private fun dispatchMediaAction(action: String) {
+        mediaActionListener?.invoke(action)
 
         val broadcastIntent = Intent(ACTION_BROADCAST_MEDIA_KEY).apply {
             setPackage(packageName)
             putExtra(EXTRA_ACTION, action)
-            putExtra(EXTRA_KEY_CODE, keyCode)
         }
         sendBroadcast(broadcastIntent)
     }
@@ -221,9 +224,11 @@ class MediaPlaybackService : Service() {
     /**
      * Direct real-time callback when track metadata arrives from WebAppInterface.
      */
-    fun onTrackInfoChanged(title: String, artist: String, artworkUrl: String?) {
-        val cleanTitle = if (title.isNotBlank()) title else "Pawtify"
-        val cleanArtist = if (artist.isNotBlank()) artist else "Ready to Play"
+    fun onTrackInfoChanged(title: String?, artist: String?, artworkUrl: String?) {
+        if (title.isNullOrBlank()) return
+
+        val cleanTitle = title.trim()
+        val cleanArtist = artist?.trim().orEmpty()
 
         val metadataChanged = cleanTitle != currentTitle || cleanArtist != currentArtist
         currentTitle = cleanTitle
@@ -255,21 +260,21 @@ class MediaPlaybackService : Service() {
         mediaSession = MediaSessionCompat(this, "PawtifyMediaSession").apply {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
-                    dispatchMediaAction(ACTION_PLAY, KeyEvent.KEYCODE_MEDIA_PLAY)
+                    dispatchMediaAction(ACTION_PLAY)
                     onPlaybackStateChanged(true)
                 }
 
                 override fun onPause() {
-                    dispatchMediaAction(ACTION_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE)
+                    dispatchMediaAction(ACTION_PAUSE)
                     onPlaybackStateChanged(false)
                 }
 
                 override fun onSkipToNext() {
-                    dispatchMediaAction(ACTION_NEXT, KeyEvent.KEYCODE_MEDIA_NEXT)
+                    dispatchMediaAction(ACTION_NEXT)
                 }
 
                 override fun onSkipToPrevious() {
-                    dispatchMediaAction(ACTION_PREVIOUS, KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+                    dispatchMediaAction(ACTION_PREVIOUS)
                 }
 
                 override fun onStop() {
@@ -282,8 +287,18 @@ class MediaPlaybackService : Service() {
 
     /**
      * Updates playback state, media session metadata, and notification.
+     * Only displays a notification if real track metadata exists.
      */
     private fun startOrRefreshForeground() {
+        val title = currentTitle
+        // Do NOT show notification if no real track metadata is available
+        if (title.isNullOrBlank()) {
+            if (!isPlaying) {
+                cleanupAndStop()
+            }
+            return
+        }
+
         createNotificationChannel()
 
         val stateActions = PlaybackStateCompat.ACTION_PLAY or
@@ -303,10 +318,10 @@ class MediaPlaybackService : Service() {
             .build()
         mediaSession?.setPlaybackState(playbackState)
 
-        val metadataArtwork = currentArtworkBitmap ?: defaultLogoBitmap
+        val metadataArtwork = currentArtworkBitmap
         val metadataBuilder = MediaMetadataCompat.Builder()
-            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTitle)
-            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentArtist)
+            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentArtist.orEmpty())
 
         if (metadataArtwork != null) {
             metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, metadataArtwork)
@@ -314,7 +329,7 @@ class MediaPlaybackService : Service() {
         }
         mediaSession?.setMetadata(metadataBuilder.build())
 
-        val notification = buildNotification(metadataArtwork)
+        val notification = buildNotification(title, currentArtist.orEmpty(), metadataArtwork)
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -331,7 +346,7 @@ class MediaPlaybackService : Service() {
         }
     }
 
-    private fun buildNotification(largeArtwork: Bitmap?): Notification {
+    private fun buildNotification(title: String, artist: String, largeArtwork: Bitmap?): Notification {
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -364,8 +379,8 @@ class MediaPlaybackService : Service() {
         )
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(currentTitle)
-            .setContentText(currentArtist)
+            .setContentTitle(title)
+            .setContentText(artist)
             .setSubText("Pawtify")
             .setSmallIcon(R.drawable.ic_music_note)
             .setContentIntent(contentPendingIntent)
@@ -499,17 +514,14 @@ class MediaPlaybackService : Service() {
                 .setAcceptsDelayedFocusGain(true)
                 .setOnAudioFocusChangeListener { focusChange ->
                     when (focusChange) {
-                        AudioManager.AUDIOFOCUS_LOSS -> {
-                            dispatchMediaAction(ACTION_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE)
-                            onPlaybackStateChanged(false)
-                        }
+                        AudioManager.AUDIOFOCUS_LOSS,
                         AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
                         AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                            dispatchMediaAction(ACTION_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE)
+                            dispatchMediaAction(ACTION_PAUSE)
                             onPlaybackStateChanged(false)
                         }
                         AudioManager.AUDIOFOCUS_GAIN -> {
-                            dispatchMediaAction(ACTION_PLAY, KeyEvent.KEYCODE_MEDIA_PLAY)
+                            dispatchMediaAction(ACTION_PLAY)
                             onPlaybackStateChanged(true)
                         }
                     }
@@ -522,7 +534,7 @@ class MediaPlaybackService : Service() {
             audioManager?.requestAudioFocus(
                 { focusChange ->
                     if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
-                        dispatchMediaAction(ACTION_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE)
+                        dispatchMediaAction(ACTION_PAUSE)
                         onPlaybackStateChanged(false)
                     }
                 },

@@ -10,10 +10,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
-import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -37,13 +35,12 @@ import androidx.core.view.WindowInsetsCompat
 /**
  * Main Activity wrapping the hosted Pawtify PWA inside an optimized Android WebView.
  *
- * Features:
+ * Implements:
  * 1. Native AndroidX SplashScreen with a smooth 500ms alpha fade-out transition.
- * 2. Uncluttered PWA integration: All native dialogs and loaders are stripped out,
- *    allowing the webapp's skeleton loader and responsive design to shine.
- * 3. Two-way media bridge:
- *    - WebApp -> Native Notification: Observes navigator.mediaSession to sync metadata & state.
- *    - Native Notification -> WebApp: Dispatches both hardware KeyEvents and JS fallback triggers.
+ * 2. Precise Media Controls via direct JavaScript evaluation (NO KeyEvents, avoiding
+ *    misclicks on focused DOM elements).
+ * 3. Dynamic Notification Lifecycle: Service starts ONLY when playback begins with real metadata,
+ *    and terminates when stopped.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -54,21 +51,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: BackgroundWebView
 
     // Broadcast receiver to route Media Actions from MediaPlaybackService into the WebView
-    private val mediaKeyReceiver = object : BroadcastReceiver() {
+    private val mediaActionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == MediaPlaybackService.ACTION_BROADCAST_MEDIA_KEY) {
                 val action = intent.getStringExtra(MediaPlaybackService.EXTRA_ACTION) ?: ""
-                val keyCode = intent.getIntExtra(MediaPlaybackService.EXTRA_KEY_CODE, KeyEvent.KEYCODE_UNKNOWN)
-                dispatchMediaActionToWebView(action, keyCode)
+                dispatchMediaActionToWebView(action)
             }
         }
     }
 
     private val requestNotificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                MediaPlaybackService.startOrUpdate(this)
-            }
+            // Permission result handled passively; service starts only when music plays
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -110,7 +104,6 @@ class MainActivity : AppCompatActivity() {
 
         createNotificationChannel()
         checkAndRequestNotificationPermission()
-        MediaPlaybackService.startOrUpdate(this)
 
         handleIncomingIntent(intent)
     }
@@ -173,7 +166,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                // Inject real-time two-way media session bridge observer
+                // Inject real-time passive observer
                 injectMediaSessionObserver()
             }
 
@@ -190,212 +183,194 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Dispatches media actions to the WebView using both hardware KeyEvents and direct JS execution.
+     * Dispatches media actions directly to the WebView via JavaScript evaluation.
+     * Absolutely NO KeyEvents are dispatched, preventing accidental clicks on focused DOM elements.
      */
-    private fun dispatchMediaActionToWebView(action: String, keyCode: Int) {
-        webView.post {
-            // 1. Dispatch standard Android KeyEvent
-            if (keyCode != KeyEvent.KEYCODE_UNKNOWN) {
-                webView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-                webView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
-            }
+    private fun dispatchMediaActionToWebView(action: String) {
+        val jsScript = when (action) {
+            MediaPlaybackService.ACTION_PLAY -> """
+                (function() {
+                    try {
+                        if (window.onAndroidPlay) { window.onAndroidPlay(); }
+                        else if (window.onAndroidPlayPause) { window.onAndroidPlayPause(); }
+                        else { document.querySelector('video, audio')?.play(); }
+                    } catch (e) {}
+                })();
+            """.trimIndent()
 
-            // 2. Direct JavaScript execution fallback ensuring the web player responds
-            val jsAction = when (action) {
-                MediaPlaybackService.ACTION_PLAY -> """
-                    (function() {
-                        var audio = document.querySelector('audio') || document.querySelector('video');
-                        if (audio && audio.paused) { try { audio.play(); } catch(e){} }
-                        if (window.onAndroidPlay) { try { window.onAndroidPlay(); } catch(e){} }
-                        else if (window.onAndroidPlayPause) { try { window.onAndroidPlayPause(); } catch(e){} }
-                        var playBtn = document.querySelector('[data-action="play"], [aria-label*="Play" i], [title*="Play" i], button.play');
-                        if (playBtn) { playBtn.click(); }
-                    })();
-                """.trimIndent()
+            MediaPlaybackService.ACTION_PAUSE -> """
+                (function() {
+                    try {
+                        if (window.onAndroidPause) { window.onAndroidPause(); }
+                        else if (window.onAndroidPlayPause) { window.onAndroidPlayPause(); }
+                        else { document.querySelector('video, audio')?.pause(); }
+                    } catch (e) {}
+                })();
+            """.trimIndent()
 
-                MediaPlaybackService.ACTION_PAUSE -> """
-                    (function() {
-                        var audio = document.querySelector('audio') || document.querySelector('video');
-                        if (audio && !audio.paused) { try { audio.pause(); } catch(e){} }
-                        if (window.onAndroidPause) { try { window.onAndroidPause(); } catch(e){} }
-                        else if (window.onAndroidPlayPause) { try { window.onAndroidPlayPause(); } catch(e){} }
-                        var pauseBtn = document.querySelector('[data-action="pause"], [aria-label*="Pause" i], [title*="Pause" i], button.pause');
-                        if (pauseBtn) { pauseBtn.click(); }
-                    })();
-                """.trimIndent()
-
-                MediaPlaybackService.ACTION_TOGGLE -> """
-                    (function() {
-                        var audio = document.querySelector('audio') || document.querySelector('video');
-                        if (audio) {
-                            if (audio.paused) { try { audio.play(); } catch(e){} } 
-                            else { try { audio.pause(); } catch(e){} }
-                            return;
+            MediaPlaybackService.ACTION_TOGGLE -> """
+                (function() {
+                    try {
+                        if (window.onAndroidPlayPause) { window.onAndroidPlayPause(); }
+                        else {
+                            var media = document.querySelector('video, audio');
+                            if (media) {
+                                if (media.paused) media.play(); else media.pause();
+                            }
                         }
-                        if (window.onAndroidPlayPause) { 
-                            try { window.onAndroidPlayPause(); return; } catch(e){} 
-                        }
-                        var toggleBtn = document.querySelector('[data-action="toggle"], [data-action="play-pause"], [aria-label*="Play" i], [aria-label*="Pause" i], .play-pause-btn');
-                        if (toggleBtn) { toggleBtn.click(); }
-                    })();
-                """.trimIndent()
+                    } catch (e) {}
+                })();
+            """.trimIndent()
 
-                MediaPlaybackService.ACTION_NEXT -> """
-                    (function() {
-                        if (window.onAndroidNext) { try { window.onAndroidNext(); return; } catch(e){} }
-                        var btn = document.querySelector('[data-action="next"], [aria-label*="Next" i], [title*="Next" i], #next-track, .next-btn, button.next');
-                        if (btn) { btn.click(); }
-                    })();
-                """.trimIndent()
+            MediaPlaybackService.ACTION_NEXT -> """
+                (function() {
+                    try {
+                        if (window.onAndroidNext) { window.onAndroidNext(); }
+                    } catch (e) {}
+                })();
+            """.trimIndent()
 
-                MediaPlaybackService.ACTION_PREVIOUS -> """
-                    (function() {
-                        if (window.onAndroidPrevious) { try { window.onAndroidPrevious(); return; } catch(e){} }
-                        var btn = document.querySelector('[data-action="prev"], [data-action="previous"], [aria-label*="Previous" i], [title*="Previous" i], #prev-track, .prev-btn, button.prev');
-                        if (btn) { btn.click(); }
-                    })();
-                """.trimIndent()
+            MediaPlaybackService.ACTION_PREVIOUS -> """
+                (function() {
+                    try {
+                        if (window.onAndroidPrevious) { window.onAndroidPrevious(); }
+                    } catch (e) {}
+                })();
+            """.trimIndent()
 
-                else -> null
-            }
+            else -> null
+        }
 
-            if (jsAction != null) {
-                webView.evaluateJavascript(jsAction, null)
+        if (jsScript != null) {
+            webView.post {
+                webView.evaluateJavascript(jsScript, null)
             }
         }
     }
 
     private fun setupMediaActionListener() {
         // Direct listener callback from MediaPlaybackService
-        MediaPlaybackService.mediaActionListener = { action, keyCode ->
-            dispatchMediaActionToWebView(action, keyCode)
+        MediaPlaybackService.mediaActionListener = { action ->
+            dispatchMediaActionToWebView(action)
         }
 
         // Broadcast receiver for inter-process or detached events
         val filter = IntentFilter(MediaPlaybackService.ACTION_BROADCAST_MEDIA_KEY)
         ContextCompat.registerReceiver(
             this,
-            mediaKeyReceiver,
+            mediaActionReceiver,
             filter,
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
     }
 
     /**
-     * Injects a real-time JavaScript observer that hooks into navigator.mediaSession
-     * and HTML5 audio/video events (capturing phase) to sync metadata & state to the native service.
+     * Injects a passive JavaScript observer in onPageFinished that monitors
+     * navigator.mediaSession.metadata and DOM media events, dispatching only REAL metadata.
      */
     private fun injectMediaSessionObserver() {
         val script = """
             (function() {
-                function extractArtworkUrl(meta) {
+                function getBestArtwork(meta) {
                     if (!meta || !meta.artwork) return '';
                     if (Array.isArray(meta.artwork) && meta.artwork.length > 0) {
-                        var last = meta.artwork[meta.artwork.length - 1] || meta.artwork[0];
-                        return (last && last.src) ? last.src : (typeof last === 'string' ? last : '');
+                        var art = meta.artwork[meta.artwork.length - 1] || meta.artwork[0];
+                        return (art && art.src) ? art.src : (typeof art === 'string' ? art : '');
                     }
                     return typeof meta.artwork === 'string' ? meta.artwork : '';
                 }
 
-                var lastDispatchedTitle = '';
-                var lastDispatchedArtist = '';
-                var lastDispatchedArt = '';
+                var lastSentTitle = '';
+                var lastSentArtist = '';
+                var lastSentArt = '';
 
-                function notifyTrackIfChanged(force) {
+                function syncRealMetadata() {
                     if (!window.AndroidBridge) return;
                     try {
+                        var title = '';
+                        var artist = '';
+                        var artworkUrl = '';
+
                         if ('mediaSession' in navigator && navigator.mediaSession.metadata) {
                             var meta = navigator.mediaSession.metadata;
-                            var title = (meta && meta.title) ? String(meta.title).trim() : '';
-                            var artist = (meta && meta.artist) ? String(meta.artist).trim() : '';
-                            var artworkUrl = extractArtworkUrl(meta);
+                            title = (meta && meta.title) ? String(meta.title).trim() : '';
+                            artist = (meta && meta.artist) ? String(meta.artist).trim() : '';
+                            artworkUrl = getBestArtwork(meta);
+                        }
 
-                            if (title && (force || title !== lastDispatchedTitle || artist !== lastDispatchedArtist || artworkUrl !== lastDispatchedArt)) {
-                                lastDispatchedTitle = title;
-                                lastDispatchedArtist = artist;
-                                lastDispatchedArt = artworkUrl;
+                        // Fallback to DOM elements if mediaSession metadata is not yet set
+                        if (!title) {
+                            var media = document.querySelector('video, audio');
+                            if (media && media.title) {
+                                title = String(media.title).trim();
+                            }
+                        }
+
+                        // ONLY dispatch when real non-dummy metadata exists
+                        if (title &&
+                            title !== 'Pawtify' &&
+                            title !== 'Unknown Title' &&
+                            title !== 'Ready to Play'
+                        ) {
+                            if (title !== lastSentTitle || artist !== lastSentArtist || artworkUrl !== lastSentArt) {
+                                lastSentTitle = title;
+                                lastSentArtist = artist;
+                                lastSentArt = artworkUrl;
                                 window.AndroidBridge.updateTrackInfo(title, artist, artworkUrl);
                             }
                         }
-                    } catch (e) {
-                        console.warn('[Pawtify Bridge] notifyTrackIfChanged error:', e);
-                    }
+                    } catch (e) {}
                 }
 
-                function notifyPlaybackIfChanged(isPlaying) {
+                function syncPlaybackState(isPlaying) {
                     if (!window.AndroidBridge) return;
                     try {
                         window.AndroidBridge.updatePlaybackState(Boolean(isPlaying));
                     } catch (e) {}
                 }
 
-                // Initial sync immediately
-                notifyTrackIfChanged(true);
+                // 1. Hook into document audio/video elements for state (capturing phase)
+                document.addEventListener('play', function() { syncRealMetadata(); syncPlaybackState(true); }, true);
+                document.addEventListener('playing', function() { syncRealMetadata(); syncPlaybackState(true); }, true);
+                document.addEventListener('pause', function() { syncPlaybackState(false); }, true);
+                document.addEventListener('ended', function() { syncPlaybackState(false); }, true);
 
+                // 2. Intercept navigator.mediaSession.metadata setter
                 if ('mediaSession' in navigator) {
-                    // Hook navigator.mediaSession.metadata setter
                     try {
                         var proto = Object.getPrototypeOf(navigator.mediaSession);
                         var metaDesc = Object.getOwnPropertyDescriptor(proto, 'metadata')
                                     || Object.getOwnPropertyDescriptor(navigator.mediaSession, 'metadata');
-                        var internalMeta = navigator.mediaSession.metadata || null;
+                        var currentMeta = navigator.mediaSession.metadata || null;
 
                         Object.defineProperty(navigator.mediaSession, 'metadata', {
                             configurable: true,
                             enumerable: true,
                             get: function() {
-                                return (metaDesc && metaDesc.get) ? metaDesc.get.call(navigator.mediaSession) : internalMeta;
+                                return (metaDesc && metaDesc.get) ? metaDesc.get.call(navigator.mediaSession) : currentMeta;
                             },
                             set: function(val) {
-                                internalMeta = val;
+                                currentMeta = val;
                                 if (metaDesc && metaDesc.set) {
                                     try { metaDesc.set.call(navigator.mediaSession, val); } catch (err) {}
                                 }
-                                notifyTrackIfChanged(true);
-                            }
-                        });
-                    } catch (e) {
-                        console.warn('[Pawtify Bridge] Could not hook metadata setter property:', e);
-                    }
-
-                    // Hook navigator.mediaSession.playbackState setter
-                    try {
-                        var stateProto = Object.getPrototypeOf(navigator.mediaSession);
-                        var stateDesc = Object.getOwnPropertyDescriptor(stateProto, 'playbackState')
-                                     || Object.getOwnPropertyDescriptor(navigator.mediaSession, 'playbackState');
-                        var internalState = navigator.mediaSession.playbackState || 'none';
-
-                        Object.defineProperty(navigator.mediaSession, 'playbackState', {
-                            configurable: true,
-                            enumerable: true,
-                            get: function() {
-                                return (stateDesc && stateDesc.get) ? stateDesc.get.call(navigator.mediaSession) : internalState;
-                            },
-                            set: function(val) {
-                                internalState = val;
-                                if (stateDesc && stateDesc.set) {
-                                    try { stateDesc.set.call(navigator.mediaSession, val); } catch (err) {}
-                                }
-                                notifyPlaybackIfChanged(val === 'playing');
+                                syncRealMetadata();
                             }
                         });
                     } catch (e) {}
                 }
 
-                // Document media events with capture = true
-                document.addEventListener('play', function() { notifyPlaybackIfChanged(true); notifyTrackIfChanged(false); }, true);
-                document.addEventListener('playing', function() { notifyPlaybackIfChanged(true); notifyTrackIfChanged(false); }, true);
-                document.addEventListener('pause', function() { notifyPlaybackIfChanged(false); }, true);
-                document.addEventListener('ended', function() { notifyPlaybackIfChanged(false); }, true);
-
-                // Polling safety loop (every 500ms) to guarantee in-place property mutations are synced
-                if (!window.__pawtify_metadata_poll_interval) {
-                    window.__pawtify_metadata_poll_interval = setInterval(function() {
-                        notifyTrackIfChanged(false);
-                        if ('mediaSession' in navigator && navigator.mediaSession.playbackState) {
-                            notifyPlaybackIfChanged(navigator.mediaSession.playbackState === 'playing');
+                // 3. Passive polling safety net (every 800ms)
+                if (!window.__pawtify_observer_interval) {
+                    window.__pawtify_observer_interval = setInterval(function() {
+                        syncRealMetadata();
+                        var media = document.querySelector('video, audio');
+                        if (media) {
+                            syncPlaybackState(!media.paused && media.currentTime > 0);
+                        } else if ('mediaSession' in navigator && navigator.mediaSession.playbackState) {
+                            syncPlaybackState(navigator.mediaSession.playbackState === 'playing');
                         }
-                    }, 500);
+                    }, 800);
                 }
 
                 window.isAndroidContainer = true;
@@ -462,7 +437,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         try {
-            unregisterReceiver(mediaKeyReceiver)
+            unregisterReceiver(mediaActionReceiver)
         } catch (ignored: Exception) {}
         MediaPlaybackService.mediaActionListener = null
         super.onDestroy()

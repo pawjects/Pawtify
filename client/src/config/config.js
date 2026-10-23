@@ -305,7 +305,6 @@ export async function initApp() {
     restoreCurrentSongIndex();
     loadYTApi();
 
-    if (state.currentSong) updateMediaSession(state.currentSong);
     document.body.classList.toggle('has-active-track', !!state.currentSong);
     applyTheme(state.theme);
     if (typeof window !== 'undefined' && window.matchMedia) {
@@ -363,6 +362,17 @@ export async function initApp() {
     }
 
     renderCurrentRoute();
+
+    // Safely update media session in the background after UI rendering is complete
+    if (state.currentSong) {
+      setTimeout(() => {
+        try {
+          updateMediaSession(state.currentSong);
+        } catch (e) {
+          console.warn('Deferred mediaSession error:', e);
+        }
+      }, 500);
+    }
 
     loadTrendingSongs().then(() => {
       if (state.currentSong) {
