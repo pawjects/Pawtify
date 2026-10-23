@@ -22,9 +22,22 @@ yarn-error.log*
 
 # Build Output & Caches
 dist/
+/build/
 build/
+app/build/
+.build-outputs/
 .cache/
 tsconfig.tsbuildinfo
+
+# Android Build Outputs & Artifacts
+*.apk
+*.ap_
+*.aab
+*.dex
+.gradle/
+local.properties
+.cxx/
+captures/
 
 # Scratch & Temporary Testing Files
 test-*.js

@@ -8,23 +8,15 @@
         <item name="colorSurface">@color/surface_dark</item>
         <item name="colorOnSurface">@color/white</item>
         <item name="colorSecondary">@color/cyan_accent</item>
-        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Pawtify.MaterialAlertDialog</item>
     </style>
 
-    <style name="ThemeOverlay.Pawtify.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="android:background">@color/surface_dark</item>
-        <item name="colorSurface">@color/surface_dark</item>
-        <item name="colorOnSurface">@color/white</item>
-        <item name="colorPrimary">@color/cyan_accent</item>
-        <item name="buttonBarPositiveButtonStyle">@style/Widget.Pawtify.Button.TextButton</item>
-        <item name="buttonBarNegativeButtonStyle">@style/Widget.Pawtify.Button.TextButton.Muted</item>
-    </style>
-
-    <style name="Widget.Pawtify.Button.TextButton" parent="Widget.Material3.Button.TextButton.Dialog">
-        <item name="android:textColor">@color/cyan_accent</item>
-    </style>
-
-    <style name="Widget.Pawtify.Button.TextButton.Muted" parent="Widget.Material3.Button.TextButton.Dialog">
-        <item name="android:textColor">@color/muted_gray</item>
+    <!-- Native Splash Screen Theme using AndroidX Core Splashscreen -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Set splash screen AMOLED dark background (#121212) -->
+        <item name="windowSplashScreenBackground">@color/surface_dark</item>
+        <!-- Set the splash screen logo icon -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/pawtify_logo</item>
+        <!-- Set the theme of the Activity that immediately follows the splash screen -->
+        <item name="postSplashScreenTheme">@style/Theme.Pawtify</item>
     </style>
 </resources>

@@ -1,6 +1,7 @@
 package meow.pawtify.pawjects
 
 import android.Manifest
+import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,18 +9,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -27,41 +24,34 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.ProgressBar
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * Main Activity wrapping the hosted Pawtify PWA inside an optimized Android WebView.
  *
- * Implements two-way media bridge:
- * 1. WebApp -> Native Notification: Injects JavaScript observing navigator.mediaSession
- *    and HTML5 audio/video events (capture phase) to sync title, artist, artwork, and playback state in real time.
- * 2. Native Notification -> WebApp: Dispatches both hardware KeyEvents and targeted JavaScript
- *    evaluations to guarantee play, pause, next, and previous triggers work across all player architectures.
+ * Features:
+ * 1. Native AndroidX SplashScreen with a smooth 500ms alpha fade-out transition.
+ * 2. Uncluttered PWA integration: All native dialogs and loaders are stripped out,
+ *    allowing the webapp's skeleton loader and responsive design to shine.
+ * 3. Two-way media bridge:
+ *    - WebApp -> Native Notification: Observes navigator.mediaSession to sync metadata & state.
+ *    - Native Notification -> WebApp: Dispatches both hardware KeyEvents and JS fallback triggers.
  */
 class MainActivity : AppCompatActivity() {
 
     companion object {
         const val TARGET_WEB_URL = "https://pawtify-meow.vercel.app/"
-        private const val PREFS_NAME = "pawtify_prefs"
-        private const val KEY_WELCOME_SHOWN = "welcome_dialog_shown"
     }
 
     private lateinit var webView: BackgroundWebView
-    private lateinit var loadingSpinner: ProgressBar
-    private lateinit var prefs: SharedPreferences
-
-    private var connectivityManager: ConnectivityManager? = null
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
-    private var noInternetDialog: AlertDialog? = null
 
     // Broadcast receiver to route Media Actions from MediaPlaybackService into the WebView
     private val mediaKeyReceiver = object : BroadcastReceiver() {
@@ -82,6 +72,26 @@ class MainActivity : AppCompatActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Install AndroidX SplashScreen before super.onCreate() and setContentView()
+        val splashScreen = installSplashScreen()
+
+        // Smooth exit animation: fade out the splash screen over 500ms before removing it
+        splashScreen.setOnExitAnimationListener { splashScreenViewProvider ->
+            val fadeOut = ObjectAnimator.ofFloat(
+                splashScreenViewProvider.view,
+                View.ALPHA,
+                1f,
+                0f
+            ).apply {
+                interpolator = AccelerateDecelerateInterpolator()
+                duration = 500L
+                doOnEnd {
+                    splashScreenViewProvider.remove()
+                }
+            }
+            fadeOut.start()
+        }
+
         super.onCreate(savedInstanceState)
 
         // Soft input mode: default hidden upon launch and resume
@@ -91,21 +101,16 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
 
-        prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         webView = findViewById(R.id.webView)
-        loadingSpinner = findViewById(R.id.loadingSpinner)
 
         setupEdgeToEdgeInsets()
         setupWebView()
         setupBackNavigation()
         setupMediaActionListener()
-        setupNetworkMonitoring()
 
         createNotificationChannel()
         checkAndRequestNotificationPermission()
         MediaPlaybackService.startOrUpdate(this)
-
-        showWelcomeDialogIfNeeded()
 
         handleIncomingIntent(intent)
     }
@@ -160,28 +165,20 @@ class MainActivity : AppCompatActivity() {
         // Bridge registration
         webView.addJavascriptInterface(WebAppInterface(this), "AndroidBridge")
 
+        // Clean WebViewClient without native progress spinners; webapp's skeleton loader handles UX
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 return false
             }
 
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                loadingSpinner.visibility = View.VISIBLE
-            }
-
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                loadingSpinner.visibility = View.GONE
                 // Inject real-time two-way media session bridge observer
                 injectMediaSessionObserver()
             }
 
             override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
                 super.onReceivedError(view, request, error)
-                if (request?.isForMainFrame == true && !isNetworkAvailable()) {
-                    showNoInternetDialog()
-                }
             }
         }
 
@@ -419,98 +416,12 @@ class MainActivity : AppCompatActivity() {
                         if (webView.canGoBack()) {
                             webView.goBack()
                         } else {
-                            showConfirmExitDialog()
+                            finish()
                         }
                     }
                 }
             }
         })
-    }
-
-    private fun showWelcomeDialogIfNeeded() {
-        if (!prefs.getBoolean(KEY_WELCOME_SHOWN, false)) {
-            MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Pawtify_MaterialAlertDialog)
-                .setTitle("Welcome to Pawtify 🐾")
-                .setMessage("Experience seamless background music streaming, notification controls, and offline capabilities tailored for Android.")
-                .setPositiveButton("Let's Play") { dialog, _ ->
-                    prefs.edit().putBoolean(KEY_WELCOME_SHOWN, true).apply()
-                    dialog.dismiss()
-                }
-                .setCancelable(false)
-                .show()
-        }
-    }
-
-    private fun setupNetworkMonitoring() {
-        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
-
-        networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onLost(network: Network) {
-                runOnUiThread {
-                    if (!isNetworkAvailable()) {
-                        showNoInternetDialog()
-                    }
-                }
-            }
-
-            override fun onAvailable(network: Network) {
-                runOnUiThread {
-                    noInternetDialog?.dismiss()
-                    noInternetDialog = null
-                }
-            }
-        }
-
-        try {
-            connectivityManager?.registerNetworkCallback(request, networkCallback!!)
-        } catch (ignored: Exception) {}
-    }
-
-    private fun isNetworkAvailable(): Boolean {
-        val cm = connectivityManager ?: return true
-        val activeNetwork = cm.activeNetwork ?: return false
-        val capabilities = cm.getNetworkCapabilities(activeNetwork) ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
-
-    private fun showNoInternetDialog() {
-        if (isFinishing || isDestroyed || noInternetDialog?.isShowing == true) return
-
-        noInternetDialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Pawtify_MaterialAlertDialog)
-            .setTitle("No Internet Connection")
-            .setMessage("Pawtify requires an active network connection to stream music. Please check your Wi-Fi or mobile data.")
-            .setPositiveButton("Retry") { dialog, _ ->
-                dialog.dismiss()
-                noInternetDialog = null
-                if (isNetworkAvailable()) {
-                    webView.reload()
-                } else {
-                    showNoInternetDialog()
-                }
-            }
-            .setNegativeButton("Exit") { _, _ ->
-                MediaPlaybackService.stopService(this)
-                finishAffinity()
-            }
-            .setCancelable(false)
-            .show()
-    }
-
-    private fun showConfirmExitDialog() {
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Pawtify_MaterialAlertDialog)
-            .setTitle("Exit Pawtify?")
-            .setMessage("Do you want to exit the app and stop background music playback?")
-            .setPositiveButton("Exit") { _, _ ->
-                MediaPlaybackService.stopService(this)
-                finish()
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
     }
 
     private fun createNotificationChannel() {
@@ -553,10 +464,6 @@ class MainActivity : AppCompatActivity() {
         try {
             unregisterReceiver(mediaKeyReceiver)
         } catch (ignored: Exception) {}
-        try {
-            networkCallback?.let { connectivityManager?.unregisterNetworkCallback(it) }
-        } catch (ignored: Exception) {}
-        noInternetDialog?.dismiss()
         MediaPlaybackService.mediaActionListener = null
         super.onDestroy()
         webView.destroy()
