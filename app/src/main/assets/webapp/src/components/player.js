@@ -58,12 +58,14 @@ export async function play(song, queue = null, autoplay = true) {
   state.isPlaying = autoplay;
   saveJSON(STORAGE.CURRENT_TIME, 0);
   if (autoplay) startBackgroundAudio();
-  updateMediaSession(playableSong);
-  if ('mediaSession' in navigator) {
-    try {
+  try {
+    updateMediaSession(playableSong);
+  } catch (e) {}
+  try {
+    if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
       navigator.mediaSession.playbackState = autoplay ? 'playing' : 'paused';
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
   if (autoplay) startYtLoadTimeout();
   if (
     globals.ytPlayerReady &&
@@ -449,10 +451,12 @@ export function dismissPlayer() {
   state.progress = 0;
   state.duration = 0;
   saveJSON(STORAGE.CURRENT_TIME, 0);
-  if (navigator.mediaSession) {
-    navigator.mediaSession.playbackState = 'none';
-    navigator.mediaSession.metadata = null;
-  }
+  try {
+    if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'none';
+      navigator.mediaSession.metadata = null;
+    }
+  } catch (e) {}
   stopBackgroundAudio();
   if (globals.ytPlayerReady && globals.ytPlayer && typeof globals.ytPlayer.stopVideo === 'function') {
     try {

@@ -107,121 +107,154 @@ export function stopBackgroundAudio() {
 }
 
 export function wireMediaSessionActionHandlers() {
-  if (!('mediaSession' in navigator)) return;
-
-  const actionHandlers = [
-    ['play', () => {
-      if (!state.isPlaying) togglePlay();
-    }],
-    ['pause', () => {
-      if (state.isPlaying) pause();
-    }],
-    ['previoustrack', () => {
-      previousTrack();
-    }],
-    ['nexttrack', () => {
-      nextTrack();
-    }],
-    ['stop', () => {
-      pause();
-    }],
-    ['seekto', (details) => {
-      if (details && typeof details.seekTime === 'number') {
-        seekTo(details.seekTime);
-      }
-    }],
-    ['seekforward', (details) => {
-      const skip = (details && details.seekOffset) || 10;
-      seekTo(Math.min(state.duration, state.progress + skip));
-    }],
-    ['seekbackward', (details) => {
-      const skip = (details && details.seekOffset) || 10;
-      seekTo(Math.max(0, state.progress - skip));
-    }],
-  ];
-
-  for (const [action, handler] of actionHandlers) {
-    try {
-      navigator.mediaSession.setActionHandler(action, handler);
-    } catch (e) {
-      // Browser may not support specific action
+  try {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined' || !('mediaSession' in navigator)) {
+      return;
     }
-  }
 
-  // Register window hooks for native Android notification actions
-  if (typeof window !== 'undefined') {
-    window.onAndroidPlayPause = () => {
-      togglePlay();
-    };
-    window.onAndroidPlay = () => {
-      if (!state.isPlaying) togglePlay();
-    };
-    window.onAndroidPause = () => {
-      if (state.isPlaying) pause();
-    };
-    window.onAndroidNext = () => {
-      nextTrack();
-    };
-    window.onAndroidPrevious = () => {
-      previousTrack();
-    };
+    const actionHandlers = [
+      ['play', () => {
+        try {
+          if (!state.isPlaying) togglePlay();
+        } catch (e) {
+          console.warn('mediaSession play error:', e);
+        }
+      }],
+      ['pause', () => {
+        try {
+          if (state.isPlaying) pause();
+        } catch (e) {
+          console.warn('mediaSession pause error:', e);
+        }
+      }],
+      ['previoustrack', () => {
+        try {
+          previousTrack();
+        } catch (e) {
+          console.warn('mediaSession previoustrack error:', e);
+        }
+      }],
+      ['nexttrack', () => {
+        try {
+          nextTrack();
+        } catch (e) {
+          console.warn('mediaSession nexttrack error:', e);
+        }
+      }],
+      ['stop', () => {
+        try {
+          pause();
+        } catch (e) {}
+      }],
+      ['seekto', (details) => {
+        try {
+          if (details && typeof details.seekTime === 'number') {
+            seekTo(details.seekTime);
+          }
+        } catch (e) {}
+      }],
+      ['seekforward', (details) => {
+        try {
+          const skip = (details && details.seekOffset) || 10;
+          seekTo(Math.min(state.duration, state.progress + skip));
+        } catch (e) {}
+      }],
+      ['seekbackward', (details) => {
+        try {
+          const skip = (details && details.seekOffset) || 10;
+          seekTo(Math.max(0, state.progress - skip));
+        } catch (e) {}
+      }],
+    ];
+
+    for (const [action, handler] of actionHandlers) {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch (e) {
+        // Ignored: specific action might not be supported in current browser
+      }
+    }
+
+    // Register window hooks for native Android notification actions
+    if (typeof window !== 'undefined') {
+      window.onAndroidPlayPause = () => {
+        try { togglePlay(); } catch (e) {}
+      };
+      window.onAndroidPlay = () => {
+        try { if (!state.isPlaying) togglePlay(); } catch (e) {}
+      };
+      window.onAndroidPause = () => {
+        try { if (state.isPlaying) pause(); } catch (e) {}
+      };
+      window.onAndroidNext = () => {
+        try { nextTrack(); } catch (e) {}
+      };
+      window.onAndroidPrevious = () => {
+        try { previousTrack(); } catch (e) {}
+      };
+    }
+  } catch (err) {
+    console.warn('Safe wireMediaSessionActionHandlers caught:', err);
   }
 }
 
 export function updateMediaSession(song) {
-  if (!('mediaSession' in navigator)) return;
-  if (!song) {
-    try {
-      navigator.mediaSession.playbackState = 'none';
-    } catch (e) {}
-    return;
-  }
-
-  const rawCover = song.coverUrl || song.thumbnail || '/assets/pawtify.png';
-  const artwork512 = getOptimizedArtwork(rawCover, 512);
-  const artwork256 = getOptimizedArtwork(rawCover, 256);
-  const artwork192 = getOptimizedArtwork(rawCover, 192);
-  const artwork96 = getOptimizedArtwork(rawCover, 96);
-
   try {
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: song.title || 'Unknown Title',
-      artist: song.artist || 'Unknown Artist',
-      album: song.album || 'Pawtify Music',
-      artwork: [
-        { src: artwork96, sizes: '96x96', type: 'image/jpeg' },
-        { src: artwork192, sizes: '192x192', type: 'image/jpeg' },
-        { src: artwork256, sizes: '256x256', type: 'image/jpeg' },
-        { src: artwork512, sizes: '512x512', type: 'image/jpeg' },
-      ],
-    });
+    if (typeof window === 'undefined' || typeof navigator === 'undefined' || !('mediaSession' in navigator)) {
+      return;
+    }
+    if (!song) {
+      try {
+        navigator.mediaSession.playbackState = 'none';
+      } catch (e) {}
+      return;
+    }
+
+    const rawCover = song.coverUrl || song.thumbnail || '/assets/pawtify.png';
+    const artwork512 = getOptimizedArtwork(rawCover, 512);
+    const artwork256 = getOptimizedArtwork(rawCover, 256);
+    const artwork192 = getOptimizedArtwork(rawCover, 192);
+    const artwork96 = getOptimizedArtwork(rawCover, 96);
+
+    if (typeof window.MediaMetadata === 'function') {
+      try {
+        navigator.mediaSession.metadata = new window.MediaMetadata({
+          title: song.title || 'Unknown Title',
+          artist: song.artist || 'Unknown Artist',
+          album: song.album || 'Pawtify Music',
+          artwork: [
+            { src: artwork96, sizes: '96x96', type: 'image/jpeg' },
+            { src: artwork192, sizes: '192x192', type: 'image/jpeg' },
+            { src: artwork256, sizes: '256x256', type: 'image/jpeg' },
+            { src: artwork512, sizes: '512x512', type: 'image/jpeg' },
+          ],
+        });
+      } catch (err) {
+        console.warn('Failed to set MediaMetadata:', err);
+      }
+    }
+
+    try {
+      navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
+    } catch (e) {}
+
+    // Safely wire action handlers (only when track is active)
+    wireMediaSessionActionHandlers();
+
+    // Notify native Android wrapper bridge if running inside WebView
+    if (typeof window !== 'undefined' && window.AndroidBridge) {
+      try {
+        window.AndroidBridge.updateTrackInfo(
+          song.title || 'Unknown',
+          song.artist || 'Unknown',
+          artwork512
+        );
+        window.AndroidBridge.updatePlaybackState(Boolean(state.isPlaying));
+      } catch (e) {}
+    }
   } catch (err) {
-    console.warn('Failed to set MediaMetadata:', err);
+    console.warn('Safe updateMediaSession caught:', err);
   }
-
-  try {
-    navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
-  } catch (e) {}
-
-  // Ensure action handlers are active
-  wireMediaSessionActionHandlers();
-
-  // Notify native Android wrapper bridge if running inside WebView
-  if (typeof window !== 'undefined' && window.AndroidBridge) {
-    try {
-      window.AndroidBridge.updateTrackInfo(
-        song.title || 'Unknown',
-        song.artist || 'Unknown',
-        artwork512
-      );
-      window.AndroidBridge.updatePlaybackState(Boolean(state.isPlaying));
-    } catch (e) {}
-  }
-}
-
-// Automatically wire handlers upon module initialization
-if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
-  wireMediaSessionActionHandlers();
 }
 
 export function onPlayerReady(event) {
@@ -297,8 +330,11 @@ export function onPlayerStateChange(event) {
     state.isPlaying = true;
     state.isLoading = false;
     if (state.currentSong) state.currentSong._triedFallback = false;
-    if (navigator.mediaSession)
-      navigator.mediaSession.playbackState = 'playing';
+    try {
+      if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
+      }
+    } catch (e) {}
     if (typeof window !== 'undefined' && window.AndroidBridge) {
       try { window.AndroidBridge.updatePlaybackState(true); } catch (e) {}
     }
@@ -313,15 +349,19 @@ export function onPlayerStateChange(event) {
     // If the browser/OS paused playback automatically because the tab or PWA
     // was backgrounded, minimized, or the screen locked, but the app was in playing state:
     if (document.hidden && state.isPlaying) {
-      if (navigator.mediaSession) {
-        navigator.mediaSession.playbackState = 'playing';
-      }
+      try {
+        if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'playing';
+        }
+      } catch (e) {}
       return;
     }
     state.isPlaying = false;
-    if (navigator.mediaSession) {
-      navigator.mediaSession.playbackState = 'paused';
-    }
+    try {
+      if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
+    } catch (e) {}
     if (typeof window !== 'undefined' && window.AndroidBridge) {
       try { window.AndroidBridge.updatePlaybackState(false); } catch (e) {}
     }

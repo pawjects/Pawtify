@@ -9,8 +9,12 @@ import android.widget.Toast
 /**
  * JavaScript Bridge exposed as `window.AndroidBridge` to the hosted Pawtify web app.
  *
- * Dispatches real-time track metadata and playback state updates from the browser's
- * navigator.mediaSession and DOM audio events directly to MediaPlaybackService.
+ * Implements dynamic notification lifecycle:
+ * 1. Only accepts and caches real, valid track metadata (rejecting dummy placeholders).
+ * 2. Starts the Foreground Service ONLY when active playback begins (isPlaying == true)
+ *    and real track metadata is available.
+ * 3. Updates to paused state when isPlaying == false.
+ * 4. Stops the service and dismisses the notification when playback is completely stopped.
  */
 class WebAppInterface(
     private val context: Context,
@@ -18,17 +22,48 @@ class WebAppInterface(
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    companion object {
+        @Volatile
+        var cachedTitle: String? = null
+            private set
+        @Volatile
+        var cachedArtist: String? = null
+            private set
+        @Volatile
+        var cachedArtworkUrl: String? = null
+            private set
+
+        fun clearCache() {
+            cachedTitle = null
+            cachedArtist = null
+            cachedArtworkUrl = null
+        }
+    }
+
     /**
      * Called by the web app or injected script when a track starts playing or changes metadata.
+     * Rejects empty or placeholder strings.
      */
     @JavascriptInterface
     fun updateTrackInfo(title: String?, artist: String?, artworkUrl: String?) {
-        val safeTitle = if (title.isNullOrBlank() || title == "undefined" || title == "null") "Pawtify" else title.trim()
-        val safeArtist = if (artist.isNullOrBlank() || artist == "undefined" || artist == "null") "Ready to Play" else artist.trim()
-        val safeArtwork = if (artworkUrl.isNullOrBlank() || artworkUrl == "undefined" || artworkUrl == "null") null else artworkUrl.trim()
+        if (title.isNullOrBlank() || title == "undefined" || title == "null") return
+        val cleanTitle = title.trim()
+        if (cleanTitle.equals("Pawtify", ignoreCase = true) ||
+            cleanTitle.equals("Unknown Title", ignoreCase = true) ||
+            cleanTitle.equals("Ready to Play", ignoreCase = true)
+        ) {
+            return
+        }
+
+        val cleanArtist = if (artist.isNullOrBlank() || artist == "undefined" || artist == "null") "" else artist.trim()
+        val cleanArtwork = if (artworkUrl.isNullOrBlank() || artworkUrl == "undefined" || artworkUrl == "null") null else artworkUrl.trim()
+
+        cachedTitle = cleanTitle
+        cachedArtist = cleanArtist
+        cachedArtworkUrl = cleanArtwork
 
         mainHandler.post {
-            MediaPlaybackService.updateMetadata(context, safeTitle, safeArtist, safeArtwork)
+            MediaPlaybackService.activeInstance?.onTrackInfoChanged(cleanTitle, cleanArtist, cleanArtwork)
         }
     }
 
@@ -38,7 +73,33 @@ class WebAppInterface(
     @JavascriptInterface
     fun updatePlaybackState(isPlaying: Boolean) {
         mainHandler.post {
-            MediaPlaybackService.updatePlaybackState(context, isPlaying)
+            val title = cachedTitle
+            if (isPlaying) {
+                // Only start foreground service if real metadata is available
+                if (!title.isNullOrBlank()) {
+                    MediaPlaybackService.startWithMetadata(
+                        context,
+                        title,
+                        cachedArtist.orEmpty(),
+                        cachedArtworkUrl,
+                        true
+                    )
+                }
+            } else {
+                // If paused, update active service notification
+                MediaPlaybackService.activeInstance?.onPlaybackStateChanged(false)
+            }
+        }
+    }
+
+    /**
+     * Explicit stop/clear callback called by the web app when playback is dismissed.
+     */
+    @JavascriptInterface
+    fun stopPlayback() {
+        clearCache()
+        mainHandler.post {
+            MediaPlaybackService.stopService(context)
         }
     }
 
