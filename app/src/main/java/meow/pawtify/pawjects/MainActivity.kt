@@ -3,6 +3,7 @@ package meow.pawtify.pawjects
 import android.Manifest
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
@@ -10,6 +11,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -37,10 +39,10 @@ import androidx.core.view.WindowInsetsCompat
  *
  * Implements:
  * 1. Native AndroidX SplashScreen with a smooth 500ms alpha fade-out transition.
- * 2. Precise Media Controls via direct JavaScript evaluation (NO KeyEvents, avoiding
- *    misclicks on focused DOM elements).
- * 3. Dynamic Notification Lifecycle: Service starts ONLY when playback begins with real metadata,
- *    and terminates when stopped.
+ * 2. True edge-to-edge layout with transparent navigation bar and 0 bottom padding gap.
+ * 3. Bulletproof JavaScript playback observer that reliably detects mediaSession state
+ *    and launches the Foreground Service.
+ * 4. Precise Media Controls via direct JavaScript evaluation (NO KeyEvents).
  */
 class MainActivity : AppCompatActivity() {
 
@@ -62,7 +64,7 @@ class MainActivity : AppCompatActivity() {
 
     private val requestNotificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            // Permission result handled passively; service starts only when music plays
+            // Handled passively; notification is shown when playback begins
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,6 +86,13 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             fadeOut.start()
+        }
+
+        // True edge-to-edge rendering BEFORE setContentView()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.navigationBarColor = Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
         }
 
         super.onCreate(savedInstanceState)
@@ -128,15 +137,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Sets insets for system bars, strictly setting bottom padding to 0
+     * so the webapp extends completely behind the transparent navigation bar.
+     */
     private fun setupEdgeToEdgeInsets() {
         val rootContainer = findViewById<View>(R.id.rootContainer)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         ViewCompat.setOnApplyWindowInsetsListener(rootContainer) { view, windowInsets ->
             val insets = windowInsets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
-            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            // Crucial: Bottom padding set specifically to 0 to eliminate any navigation bar gap
+            view.setPadding(insets.left, insets.top, insets.right, 0)
             windowInsets
         }
     }
@@ -265,113 +278,63 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Injects a passive JavaScript observer in onPageFinished that monitors
-     * navigator.mediaSession.metadata and DOM media events, dispatching only REAL metadata.
+     * Injects a bulletproof JavaScript observer in onPageFinished.
+     * Constantly checks navigator.mediaSession every 1000ms:
+     * - If playing: grabs metadata, passes to updateTrackInfo, and calls updatePlaybackState(true)
+     * - If paused: calls updatePlaybackState(false)
      */
     private fun injectMediaSessionObserver() {
         val script = """
             (function() {
-                function getBestArtwork(meta) {
-                    if (!meta || !meta.artwork) return '';
-                    if (Array.isArray(meta.artwork) && meta.artwork.length > 0) {
-                        var art = meta.artwork[meta.artwork.length - 1] || meta.artwork[0];
-                        return (art && art.src) ? art.src : (typeof art === 'string' ? art : '');
+                function getArtworkUrl(artwork) {
+                    if (!artwork) return '';
+                    if (Array.isArray(artwork) && artwork.length > 0) {
+                        var item = artwork[artwork.length - 1] || artwork[0];
+                        return (item && item.src) ? item.src : (typeof item === 'string' ? item : '');
                     }
-                    return typeof meta.artwork === 'string' ? meta.artwork : '';
+                    return typeof artwork === 'string' ? artwork : '';
                 }
 
-                var lastSentTitle = '';
-                var lastSentArtist = '';
-                var lastSentArt = '';
-
-                function syncRealMetadata() {
+                function checkMediaSessionPlayback() {
                     if (!window.AndroidBridge) return;
                     try {
-                        var title = '';
-                        var artist = '';
-                        var artworkUrl = '';
+                        if ('mediaSession' in navigator) {
+                            var pState = navigator.mediaSession.playbackState;
+                            if (pState === 'playing') {
+                                var meta = navigator.mediaSession.metadata;
+                                var title = (meta && meta.title) ? meta.title : 'Now Playing';
+                                var artist = (meta && meta.artist) ? meta.artist : '';
+                                var artworkUrl = (meta && meta.artwork) ? getArtworkUrl(meta.artwork) : '';
 
-                        if ('mediaSession' in navigator && navigator.mediaSession.metadata) {
-                            var meta = navigator.mediaSession.metadata;
-                            title = (meta && meta.title) ? String(meta.title).trim() : '';
-                            artist = (meta && meta.artist) ? String(meta.artist).trim() : '';
-                            artworkUrl = getBestArtwork(meta);
-                        }
-
-                        // Fallback to DOM elements if mediaSession metadata is not yet set
-                        if (!title) {
-                            var media = document.querySelector('video, audio');
-                            if (media && media.title) {
-                                title = String(media.title).trim();
-                            }
-                        }
-
-                        // ONLY dispatch when real non-dummy metadata exists
-                        if (title &&
-                            title !== 'Pawtify' &&
-                            title !== 'Unknown Title' &&
-                            title !== 'Ready to Play'
-                        ) {
-                            if (title !== lastSentTitle || artist !== lastSentArtist || artworkUrl !== lastSentArt) {
-                                lastSentTitle = title;
-                                lastSentArtist = artist;
-                                lastSentArt = artworkUrl;
                                 window.AndroidBridge.updateTrackInfo(title, artist, artworkUrl);
+                                window.AndroidBridge.updatePlaybackState(true);
+                            } else if (pState === 'paused') {
+                                window.AndroidBridge.updatePlaybackState(false);
                             }
                         }
-                    } catch (e) {}
+                    } catch (e) {
+                        console.warn('[Pawtify Bridge] checkMediaSessionPlayback error:', e);
+                    }
                 }
 
-                function syncPlaybackState(isPlaying) {
-                    if (!window.AndroidBridge) return;
-                    try {
-                        window.AndroidBridge.updatePlaybackState(Boolean(isPlaying));
-                    } catch (e) {}
+                if (!window.__pawtify_playback_observer_interval) {
+                    window.__pawtify_playback_observer_interval = setInterval(checkMediaSessionPlayback, 1000);
                 }
+                checkMediaSessionPlayback();
 
-                // 1. Hook into document audio/video elements for state (capturing phase)
-                document.addEventListener('play', function() { syncRealMetadata(); syncPlaybackState(true); }, true);
-                document.addEventListener('playing', function() { syncRealMetadata(); syncPlaybackState(true); }, true);
-                document.addEventListener('pause', function() { syncPlaybackState(false); }, true);
-                document.addEventListener('ended', function() { syncPlaybackState(false); }, true);
-
-                // 2. Intercept navigator.mediaSession.metadata setter
-                if ('mediaSession' in navigator) {
-                    try {
-                        var proto = Object.getPrototypeOf(navigator.mediaSession);
-                        var metaDesc = Object.getOwnPropertyDescriptor(proto, 'metadata')
-                                    || Object.getOwnPropertyDescriptor(navigator.mediaSession, 'metadata');
-                        var currentMeta = navigator.mediaSession.metadata || null;
-
-                        Object.defineProperty(navigator.mediaSession, 'metadata', {
-                            configurable: true,
-                            enumerable: true,
-                            get: function() {
-                                return (metaDesc && metaDesc.get) ? metaDesc.get.call(navigator.mediaSession) : currentMeta;
-                            },
-                            set: function(val) {
-                                currentMeta = val;
-                                if (metaDesc && metaDesc.set) {
-                                    try { metaDesc.set.call(navigator.mediaSession, val); } catch (err) {}
-                                }
-                                syncRealMetadata();
-                            }
-                        });
-                    } catch (e) {}
-                }
-
-                // 3. Passive polling safety net (every 800ms)
-                if (!window.__pawtify_observer_interval) {
-                    window.__pawtify_observer_interval = setInterval(function() {
-                        syncRealMetadata();
-                        var media = document.querySelector('video, audio');
-                        if (media) {
-                            syncPlaybackState(!media.paused && media.currentTime > 0);
-                        } else if ('mediaSession' in navigator && navigator.mediaSession.playbackState) {
-                            syncPlaybackState(navigator.mediaSession.playbackState === 'playing');
-                        }
-                    }, 800);
-                }
+                // Capturing event listeners for instant state changes
+                document.addEventListener('play', checkMediaSessionPlayback, true);
+                document.addEventListener('playing', checkMediaSessionPlayback, true);
+                document.addEventListener('pause', function() {
+                    if (window.AndroidBridge) {
+                        try { window.AndroidBridge.updatePlaybackState(false); } catch (e) {}
+                    }
+                }, true);
+                document.addEventListener('ended', function() {
+                    if (window.AndroidBridge) {
+                        try { window.AndroidBridge.updatePlaybackState(false); } catch (e) {}
+                    }
+                }, true);
 
                 window.isAndroidContainer = true;
                 if (window.onAndroidReady) {
@@ -407,7 +370,7 @@ class MainActivity : AppCompatActivity() {
             val channel = NotificationChannel(MediaPlaybackService.CHANNEL_ID, name, importance).apply {
                 description = descriptionText
                 setShowBadge(false)
-                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 setSound(null, null)
                 enableLights(false)
                 enableVibration(false)

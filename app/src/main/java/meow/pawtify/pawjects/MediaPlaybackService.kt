@@ -290,8 +290,8 @@ class MediaPlaybackService : Service() {
      * Only displays a notification if real track metadata exists.
      */
     private fun startOrRefreshForeground() {
-        val title = currentTitle
-        // Do NOT show notification if no real track metadata is available
+        val title = currentTitle?.takeIf { it.isNotBlank() } ?: if (isPlaying) "Now Playing" else null
+        // Do NOT show notification if no track metadata is available and not playing
         if (title.isNullOrBlank()) {
             if (!isPlaying) {
                 cleanupAndStop()
