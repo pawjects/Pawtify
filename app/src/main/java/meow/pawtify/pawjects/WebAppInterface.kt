@@ -1,19 +1,21 @@
 package meow.pawtify.pawjects
 
 import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 
 /**
  * JavaScript Bridge exposed as `window.AndroidBridge` to the hosted Pawtify web app.
  *
  * Implements dynamic notification lifecycle:
- * 1. Only accepts and caches real, valid track metadata (rejecting dummy placeholders).
- * 2. Starts the Foreground Service ONLY when active playback begins (isPlaying == true)
- *    and real track metadata is available.
- * 3. Updates to paused state when isPlaying == false.
+ * 1. Accurately receives track metadata and caches it.
+ * 2. When updatePlaybackState(true) is received, actively launches MediaPlaybackService
+ *    via ContextCompat.startForegroundService() to ensure notification display.
+ * 3. Updates to paused state when updatePlaybackState(false) is received.
  * 4. Stops the service and dismisses the notification when playback is completely stopped.
  */
 class WebAppInterface(
@@ -42,19 +44,11 @@ class WebAppInterface(
 
     /**
      * Called by the web app or injected script when a track starts playing or changes metadata.
-     * Rejects empty or placeholder strings.
      */
     @JavascriptInterface
     fun updateTrackInfo(title: String?, artist: String?, artworkUrl: String?) {
         if (title.isNullOrBlank() || title == "undefined" || title == "null") return
         val cleanTitle = title.trim()
-        if (cleanTitle.equals("Pawtify", ignoreCase = true) ||
-            cleanTitle.equals("Unknown Title", ignoreCase = true) ||
-            cleanTitle.equals("Ready to Play", ignoreCase = true)
-        ) {
-            return
-        }
-
         val cleanArtist = if (artist.isNullOrBlank() || artist == "undefined" || artist == "null") "" else artist.trim()
         val cleanArtwork = if (artworkUrl.isNullOrBlank() || artworkUrl == "undefined" || artworkUrl == "null") null else artworkUrl.trim()
 
@@ -68,22 +62,34 @@ class WebAppInterface(
     }
 
     /**
-     * Called by the web app or injected script when playback state changes (play, pause, stop).
+     * Called by the web app or injected script when playback state changes.
+     * Actively calls ContextCompat.startForegroundService() when isPlaying is true.
      */
     @JavascriptInterface
     fun updatePlaybackState(isPlaying: Boolean) {
         mainHandler.post {
-            val title = cachedTitle
             if (isPlaying) {
-                // Only start foreground service if real metadata is available
-                if (!title.isNullOrBlank()) {
-                    MediaPlaybackService.startWithMetadata(
-                        context,
-                        title,
-                        cachedArtist.orEmpty(),
-                        cachedArtworkUrl,
-                        true
-                    )
+                val title = cachedTitle?.takeIf { it.isNotBlank() } ?: "Now Playing"
+                val artist = cachedArtist.orEmpty()
+                val artworkUrl = cachedArtworkUrl
+
+                // Actively launch MediaPlaybackService as a Foreground Service
+                val intent = Intent(context, MediaPlaybackService::class.java).apply {
+                    action = MediaPlaybackService.ACTION_START_WITH_METADATA
+                    putExtra(MediaPlaybackService.EXTRA_TITLE, title)
+                    putExtra(MediaPlaybackService.EXTRA_ARTIST, artist)
+                    putExtra(MediaPlaybackService.EXTRA_ARTWORK_URL, artworkUrl)
+                    putExtra(MediaPlaybackService.EXTRA_IS_PLAYING, true)
+                }
+                try {
+                    ContextCompat.startForegroundService(context, intent)
+                } catch (e: Exception) {
+                    try { context.startService(intent) } catch (ignored: Exception) {}
+                }
+
+                MediaPlaybackService.activeInstance?.let { service ->
+                    service.onTrackInfoChanged(title, artist, artworkUrl)
+                    service.onPlaybackStateChanged(true)
                 }
             } else {
                 // If paused, update active service notification
