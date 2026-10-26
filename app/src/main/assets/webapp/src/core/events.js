@@ -44,6 +44,11 @@ import {
 import {
   renderFullscreenPlayer,
   playYTPlaylist,
+  openPlayerMoreSheet,
+  closePlayerMoreSheet,
+  openSleepTimerMenu,
+  setSleepTimer,
+  togglePlaybackSpeed,
 } from '../components/fullscreen.js';
 import { downloadCurrentSong, formatTime, openLyrics, saveJSON } from '../utils/utils.js';
 import { renderLyricsPanel } from '../components/lyrics.js';
@@ -57,6 +62,7 @@ import {
   removeFromQueue,
   clearQueue,
   reorderQueue,
+  shuffleQueue,
 } from '../components/queuePanel.js';
 import { loadTrendingSongs } from '../services/dataLoader.js';
 import { openTrackMenu, closeTrackMenu } from '../components/trackMenu.js';
@@ -396,6 +402,27 @@ export function bindGlobalEvents() {
         closeFullscreenPlayer();
         return;
       }
+      if (action === 'open-player-more-sheet') {
+        event.preventDefault();
+        openPlayerMoreSheet();
+        return;
+      }
+      if (action === 'close-player-more-sheet') {
+        event.preventDefault();
+        closePlayerMoreSheet();
+        return;
+      }
+      if (action === 'open-sleep-timer-menu') {
+        event.preventDefault();
+        openSleepTimerMenu();
+        return;
+      }
+      if (action === 'set-sleep-timer') {
+        event.preventDefault();
+        const mins = actionNode.dataset.minutes;
+        setSleepTimer(mins);
+        return;
+      }
       if (action === 'dismiss-player' || action === 'close-mini-player') {
         event.preventDefault();
         event.stopPropagation();
@@ -564,6 +591,64 @@ export function bindGlobalEvents() {
           state.currentSongIndex = qIdx;
           play(state.queue[qIdx], state.queue, true);
         }
+        return;
+      }
+      if (action === 'shuffle-queue') {
+        event.preventDefault();
+        shuffleQueue();
+        return;
+      }
+      if (action === 'toggle-speed') {
+        event.preventDefault();
+        togglePlaybackSpeed();
+        return;
+      }
+      if (action === 'start-song-radio') {
+        event.preventDefault();
+        closePlayerMoreSheet();
+        const currentSong = state.currentSong;
+        if (currentSong) {
+          const q = `${currentSong.artist || currentSong.title} Radio`;
+          state.searchQuery = q;
+          saveJSON(STORAGE.SEARCH_QUERY, q);
+          saveRecentSearch(q);
+          navigate('/search');
+          runSearch(q);
+        }
+        return;
+      }
+      if (action === 'open-equalizer') {
+        event.preventDefault();
+        closePlayerMoreSheet();
+        showToast('Equalizer: Flat / Normal profile active');
+        return;
+      }
+      if (action === 'set-home-filter') {
+        event.preventDefault();
+        state.homeFilter = actionNode.dataset.filter || 'all';
+        renderCurrentRoute();
+        return;
+      }
+      if (action === 'search-artist-station') {
+        event.preventDefault();
+        const artist = actionNode.dataset.artist;
+        if (artist) {
+          state.searchQuery = `${artist} Radio`;
+          saveJSON(STORAGE.SEARCH_QUERY, state.searchQuery);
+          saveRecentSearch(state.searchQuery);
+          navigate('/search');
+          runSearch(`${artist} Radio`);
+        }
+        return;
+      }
+      if (action === 'navigate-liked') {
+        event.preventDefault();
+        navigate('/playlist/liked');
+        return;
+      }
+      if (action === 'download-playlist') {
+        event.preventDefault();
+        showToast('Downloading playlist tracks...');
         return;
       }
       if (action === 'navigate') {

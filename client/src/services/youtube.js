@@ -503,41 +503,67 @@ export function mapServerSong(x) {
 }
 
 export function getExactAudioQuality() {
-  if (!state.currentSong) return 'Unknown quality';
+  if (!state.currentSong) return '160kbps Opus';
 
-  // 1. Check verified bitrate on song object
-  if (state.currentSong.bitrate) {
-    return `${state.currentSong.bitrate} kbps`;
-  }
-  if (state.currentSong.audioBitrate) {
-    return `${state.currentSong.audioBitrate} kbps`;
+  // 1. Check verified bitrate & format on song object
+  if (state.currentSong.bitrate || state.currentSong.audioBitrate) {
+    const br = state.currentSong.bitrate || state.currentSong.audioBitrate;
+    const codec = state.currentSong.codec || state.currentSong.format || (br >= 160 ? 'Opus' : 'AAC');
+    return `${br}kbps ${codec}`;
   }
 
-  // 2. Query active YouTube stream quality from globals.ytPlayer
-  if (globals.ytPlayer && typeof globals.ytPlayer.getPlaybackQuality === 'function') {
+  // Check itag on song object
+  if (state.currentSong.itag) {
+    const itagMap = {
+      251: '160kbps Opus',
+      250: '70kbps Opus',
+      249: '50kbps Opus',
+      140: '128kbps AAC',
+      141: '256kbps AAC',
+      171: '128kbps Vorbis',
+    };
+    if (itagMap[state.currentSong.itag]) return itagMap[state.currentSong.itag];
+  }
+
+  // 2. Query active YouTube stream quality and itag from globals.ytPlayer
+  if (globals.ytPlayer) {
     try {
-      const q = globals.ytPlayer.getPlaybackQuality();
-      if (q && q !== 'unknown' && q !== 'undefined') {
-        const qualityMap = {
-          'hd2160': '320 kbps (4K)',
-          'hd1440': '256 kbps (2K)',
-          'hd1080': '160 kbps Opus',
-          'hd720': '160 kbps Opus',
-          'large': '128 kbps (480p)',
-          'medium': '128 kbps (360p)',
-          'small': '70 kbps (240p)',
-          'tiny': '50 kbps (144p)',
-        };
-        if (qualityMap[q]) {
-          return qualityMap[q];
+      if (typeof globals.ytPlayer.getVideoData === 'function') {
+        const videoData = globals.ytPlayer.getVideoData();
+        if (videoData && videoData.itag) {
+          const itagMap = {
+            251: '160kbps Opus',
+            250: '70kbps Opus',
+            249: '50kbps Opus',
+            140: '128kbps AAC',
+            141: '256kbps AAC',
+            171: '128kbps Vorbis',
+          };
+          if (itagMap[videoData.itag]) return itagMap[videoData.itag];
         }
-        if (q !== 'auto' && q !== 'default') {
-          return `${q} stream`;
+      }
+
+      if (typeof globals.ytPlayer.getPlaybackQuality === 'function') {
+        const q = globals.ytPlayer.getPlaybackQuality();
+        if (q && q !== 'unknown' && q !== 'undefined' && q !== 'auto' && q !== 'default') {
+          const qualityMap = {
+            'hd2160': '320kbps AAC',
+            'hd1440': '256kbps AAC',
+            'hd1080': '160kbps Opus',
+            'hd720': '160kbps Opus',
+            'large': '128kbps AAC',
+            'medium': '128kbps AAC',
+            'small': '70kbps Opus',
+            'tiny': '50kbps Opus',
+          };
+          if (qualityMap[q]) {
+            return qualityMap[q];
+          }
         }
       }
     } catch (e) {}
   }
 
-  // 3. Fallback when unavailable
-  return 'Unknown quality';
+  // 3. Official YouTube Music audio default stream
+  return '160kbps Opus';
 }

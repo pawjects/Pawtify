@@ -410,34 +410,36 @@ export function renderSearchPage() {
   const hasQuery = state.searchQuery.trim().length > 0;
 
   return `
-    <section class="page search-page">
-      <div class="search-header-container">
-        <h1 class="page-title">Search</h1>
-        <div class="search-container" id="search-bar-wrap">
-          <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
-          <input
-            type="text"
-            id="search-input"
-            class="search-input"
-            placeholder="What do you want to listen to?"
-            value="${escapeHTML(state.searchQuery)}"
-            autocomplete="off"
-            spellcheck="false"
-            aria-label="Search music, artists, playlists, albums"
-          />
-          <div id="search-dynamic-ui">
-            ${renderSearchDynamicUI()}
-          </div>
-        </div>
-        <div class="search-shortcuts-bar">
-          ${TRENDING_SEARCH_SHORTCUTS.map(item => `
-            <button class="btn btn-soft search-shortcut-chip" data-action="use-recent-search" data-query="${escapeHTML(item.label)}" type="button">
-              <i class="fa-solid ${item.icon}"></i>
-              <span>${escapeHTML(item.label)}</span>
-            </button>
-          `).join('')}
+    <section class="page search-page-spotify">
+      <!-- Top Header: User Profile Avatar, Search Title, Camera Icon -->
+      <header class="search-top-header">
+        <button class="search-avatar-btn" data-route="/you" type="button" aria-label="Profile" title="Profile">
+          <img class="search-avatar-img" src="/assets/pawtify.png" alt="Profile" />
+        </button>
+        <h1 class="search-title-spotify">Search</h1>
+        <button class="search-camera-btn" type="button" aria-label="Camera search" title="Scan">
+          <i class="fa-solid fa-camera"></i>
+        </button>
+      </header>
+
+      <!-- Prominent Pill-Shaped Search Input Bar -->
+      <div class="search-pill-container" id="search-bar-wrap">
+        <i class="fa-solid fa-magnifying-glass search-pill-icon" aria-hidden="true"></i>
+        <input
+          type="text"
+          id="search-input"
+          class="search-pill-input"
+          placeholder="What do you want to listen to?"
+          value="${escapeHTML(state.searchQuery)}"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Search music, artists, playlists, albums"
+        />
+        <div id="search-dynamic-ui">
+          ${renderSearchDynamicUI()}
         </div>
       </div>
+
       <div id="search-content-area" class="search-content-wrapper">
         ${hasQuery ? renderSearchResults() : renderSearchCategories()}
       </div>
@@ -446,162 +448,238 @@ export function renderSearchPage() {
 }
 
 export function renderLibraryPage() {
+  const activeTab = state.libraryTab || 'playlists';
   let tabContent = '';
   
   if (state.isLoading) {
-    if (state.libraryTab === 'playlists' || state.libraryTab === 'albums') {
-      tabContent = `<div class="card-grid">${Array(8).fill('').map(() => renderCardSkeleton()).join('')}</div>`;
-    } else if (state.libraryTab === 'artists') {
-      tabContent = `<div class="card-grid">${Array(8).fill('').map(() => renderCardSkeleton(true)).join('')}</div>`;
-    } else {
-      tabContent = `<div class="song-table">${Array(8).fill('').map(() => renderSongRowSkeleton()).join('')}</div>`;
-    }
-  } else {
-    if (state.libraryTab === 'playlists') {
-      const allPlaylists = [
-        ...(state.playlists || []),
-        ...(state.savedPlaylists || []).filter((sp) => !(state.playlists || []).some((p) => p.id === sp.id)),
-      ];
-      tabContent = `<div class="card-grid">${allPlaylists.length ? allPlaylists.map((p, i) => renderPlaylistCard(p, i)).join('') : '<div class="empty-state"><i class="fa-solid fa-list-ul"></i><h2>No playlists yet</h2><p>Create a playlist or bookmark community playlists to build your collection.</p><button class="btn btn-primary" data-action="open-create-playlist" type="button" style="margin-top:12px;"><i class="fa-solid fa-plus"></i> New Playlist</button></div>'}</div>`;
-    } else if (state.libraryTab === 'albums') {
-      const albumMap = new Map();
-      // 1. Explicitly saved albums
-      (state.savedAlbums || []).forEach((alb) => {
-        const key = (alb.name || alb.title || '').trim().toLowerCase();
-        if (key && !albumMap.has(key)) {
-          albumMap.set(key, {
-            id: alb.id || alb.albumId,
-            name: alb.name || alb.title,
-            artist: alb.artist || 'Unknown Artist',
-            coverUrl: getOptimizedArtwork(alb.coverUrl || alb.imageUrl, 320),
-            songCount: alb.songCount || 1,
-            isSaved: true,
-          });
-        }
-      });
-      // 2. Extracted album metadata from liked songs and playlists
-      [...(state.favorites || []), ...(state.playlists || []).flatMap((p) => p.songs || [])].forEach((s) => {
-        if (s && s.album && s.album !== 'Single' && s.album !== 'Unknown') {
-          const key = s.album.trim().toLowerCase();
-          if (!albumMap.has(key)) {
-            albumMap.set(key, {
-              name: s.album,
-              artist: s.artist,
-              coverUrl: getOptimizedArtwork(s.coverUrl, 320),
-              songCount: 1,
-            });
-          } else {
-            albumMap.get(key).songCount += 1;
-          }
-        }
-      });
-      const savedAlbums = Array.from(albumMap.values());
-      tabContent = savedAlbums.length
-        ? `<div class="card-grid">${savedAlbums.map((album) => {
-            const isRemoteAlbum = album.id && !String(album.id).startsWith('album-');
-            return `
-            <div class="card" ${isRemoteAlbum ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} role="button" tabindex="0">
-              <div class="card-img-wrap">
-                <img class="card-cover" src="${escapeHTML(album.coverUrl)}" alt="${escapeHTML(album.name)}" draggable="false" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-                <button class="card-play-btn" ${isRemoteAlbum ? `data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" aria-label="Play Album"` : `type="button" aria-label="View Artist"`}>
-                  <i class="fa-solid ${isRemoteAlbum ? 'fa-play' : 'fa-compact-disc'}"></i>
-                </button>
-                <button class="card-bookmark-btn ${isAlbumSaved({ name: album.name, artist: album.artist }) ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id || '')}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist)}" data-album-cover="${escapeHTML(album.coverUrl)}" type="button" aria-label="${isAlbumSaved({ name: album.name, artist: album.artist }) ? 'Unsave album' : 'Save album'}">
-                  <i class="fa-solid ${isAlbumSaved({ name: album.name, artist: album.artist }) ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
-                </button>
-              </div>
-              <div class="card-title">${escapeHTML(album.name)}</div>
-              <div class="card-meta">${escapeHTML(album.artist)} &bull; ${album.songCount} track${album.songCount === 1 ? '' : 's'}</div>
+    tabContent = `
+      <div class="library-list-container">
+        ${Array(6).fill('').map(() => `
+          <div class="library-item-skeleton">
+            <div class="skeleton" style="width: 64px; height: 64px; border-radius: 8px; flex-shrink: 0;"></div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+              <div class="skeleton skeleton-text-main" style="width: 65%; height: 16px; border-radius: 4px;"></div>
+              <div class="skeleton skeleton-text-sub" style="width: 40%; height: 12px; border-radius: 4px;"></div>
             </div>
-          `;
-          }).join('')}</div>`
-        : '<div class="empty-state"><i class="fa-solid fa-compact-disc"></i><h2>No saved albums</h2><p>Bookmark albums from search or favorite tracks with album metadata to organize your personal discography here.</p></div>';
-    } else if (state.libraryTab === 'artists') {
-      const artistMap = new Map();
-      // 1. Explicitly followed artists
-      (state.followedArtists || []).forEach((fa) => {
-        const name = (typeof fa === 'string' ? fa : fa.name || '').trim();
-        if (name && !artistMap.has(name.toLowerCase())) {
-          artistMap.set(name.toLowerCase(), {
-            name,
-            imageUrl: fa.imageUrl || '',
-            isFollowed: true,
-          });
-        }
-      });
-      // 2. Extracted artists from favorites, playlists, and history
-      const rawArtists = [
-        ...(state.favorites || []).map((s) => s.artist),
-        ...(state.playlists || []).flatMap((p) => (p.songs || []).map((s) => s.artist)),
-        ...(state.recentlyPlayed || []).map((id) => getSongById(id)?.artist),
-      ].filter(Boolean);
-      rawArtists.forEach((a) => {
-        const key = a.trim().toLowerCase();
-        if (!artistMap.has(key)) {
-          artistMap.set(key, {
-            name: a,
-            imageUrl: '',
-            isFollowed: isArtistFollowed(a),
-          });
-        }
-      });
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else if (activeTab === 'playlists') {
+    const allPlaylists = [
+      ...(state.playlists || []),
+      ...(state.savedPlaylists || []).filter((sp) => !(state.playlists || []).some((p) => p.id === sp.id)),
+    ];
 
-      const uniqueArtists = Array.from(artistMap.values());
-      tabContent = uniqueArtists.length
-        ? `<div class="card-grid">${uniqueArtists.map((artist) => `
-            <div class="card card-search-artist" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" tabindex="0" role="button">
-              <div class="card-img-wrap" style="border-radius: 50%; overflow: hidden; margin-bottom: 12px; aspect-ratio: 1/1; background: var(--hover); display: flex; align-items: center; justify-content: center;">
-                ${
-                  artist.imageUrl
-                    ? `<img src="${escapeHTML(getOptimizedArtwork(artist.imageUrl, 240))}" alt="${escapeHTML(artist.name)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><i class="fa-solid fa-user" style="display:none; font-size: 2.2rem; color: var(--muted);"></i>`
-                    : `<i class="fa-solid fa-user" style="font-size: 2.2rem; color: var(--muted);"></i>`
-                }
-              </div>
-              <div class="card-title" style="text-align: center;">${escapeHTML(artist.name)}</div>
-              <div class="card-meta" style="text-align: center; margin-bottom: 8px;">Artist</div>
-              <div style="display:flex; justify-content:center; margin-top:auto;">
-                <button class="btn-card-follow ${isArtistFollowed(artist.name) ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(artist.imageUrl || '')}" type="button" aria-label="${isArtistFollowed(artist.name) ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
-                  <i class="fa-solid ${isArtistFollowed(artist.name) ? 'fa-check' : 'fa-plus'}"></i>
-                  <span>${isArtistFollowed(artist.name) ? 'Following' : 'Follow'}</span>
-                </button>
-              </div>
-            </div>
-          `).join('')}</div>`
-        : '<div class="empty-state"><i class="fa-solid fa-user-astronaut"></i><h2>No followed artists</h2><p>Follow artists to view them in your personal library.</p></div>';
-    } else if (state.libraryTab === 'favorites') {
-      tabContent = `<div class="song-table">${state.favorites.length ? state.favorites.map((s, i) => renderSongRow(s, i + 1, 'favorites')).join('') : '<div class="empty-state"><i class="fa-solid fa-heart"></i><h2>No favorites yet</h2><p>Like a song to add it here.</p></div>'}</div>`;
-    } else {
-      const uniqueAddedSongs = dedupeSongs(
-        [...state.favorites, ...state.playlists.flatMap((p) => p.songs)]
-          .filter((s) => s.addedAt)
-          .sort((a, b) => b.addedAt - a.addedAt)
-      );
-      const recentSongs = uniqueAddedSongs.slice(0, 50);
-      tabContent = `<div class="song-table">${recentSongs.length ? recentSongs.map((s, i) => renderSongRow(s, i + 1, 'recent')).join('') : '<div class="empty-state"><i class="fa-solid fa-clock-rotate-left"></i><h2>No recent songs</h2><p>Your recent activity will appear here.</p></div>'}</div>`;
-    }
-  }
+    const favCount = (state.favorites || []).length;
+    const likedCover = favCount > 0 ? getOptimizedArtwork(state.favorites[0].coverUrl, 160) : '/assets/pawtify.png';
 
-  const activeTab = state.libraryTab || 'playlists';
+    const likedSongsRow = `
+      <article class="library-list-item" data-action="navigate" data-path="/playlist/liked" role="button" tabindex="0">
+        <div class="library-item-thumb-gradient">
+          <i class="fa-solid fa-heart" style="color: #fff; font-size: 1.4rem;"></i>
+        </div>
+        <div class="library-item-info">
+          <h3 class="library-item-title">Liked Songs</h3>
+          <p class="library-item-sub"><i class="fa-solid fa-thumbtack pinned-icon"></i> Playlist &bull; ${favCount} song${favCount === 1 ? '' : 's'}</p>
+        </div>
+      </article>
+    `;
 
-  return `
-    <section class="page">
-      <div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
-        <h1 class="page-title">Your Library</h1>
-        <div class="header-actions" style="display:flex; gap:8px;">
-          <button class="btn btn-soft" data-action="open-create-playlist" type="button" aria-label="New Playlist" title="Create Playlist">
-            <i class="fa-solid fa-plus"></i> New
+    const playlistsList = allPlaylists.map((p) => {
+      const cover = p.coverUrl || p.songs?.[0]?.coverUrl || '/assets/pawtify.png';
+      const uploader = p.uploaderName || (state.playlists.some(sp => sp.id === p.id) ? 'You' : 'Pawtify');
+      const count = p.songs ? p.songs.length : (p.songCount || 0);
+      return `
+        <article class="library-list-item" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(p.id)}" role="button" tabindex="0">
+          <img class="library-item-thumb" src="${escapeHTML(getOptimizedArtwork(cover, 160))}" alt="${escapeHTML(p.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+          <div class="library-item-info">
+            <h3 class="library-item-title">${escapeHTML(p.name)}</h3>
+            <p class="library-item-sub">Playlist &bull; ${escapeHTML(uploader)}${count ? ` &bull; ${count} songs` : ''}</p>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    tabContent = `
+      <div class="library-list-container">
+        ${likedSongsRow}
+        ${playlistsList}
+        ${allPlaylists.length === 0 ? `
+          <div class="empty-state" style="padding: 32px 16px;">
+            <i class="fa-solid fa-list-ul"></i>
+            <h2>No playlists yet</h2>
+            <p>Create a playlist to build your collection.</p>
+            <button class="btn btn-primary" data-action="open-create-playlist" type="button" style="margin-top: 14px; background: #1ed760; color: #121212; font-weight: 700; border-radius: 999px;">
+              <i class="fa-solid fa-plus"></i> New Playlist
+            </button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  } else if (activeTab === 'podcasts') {
+    tabContent = `
+      <div class="library-list-container">
+        <div class="empty-state" style="padding: 48px 16px; text-align: center;">
+          <div style="width: 72px; height: 72px; border-radius: 50%; background: #282828; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+            <i class="fa-solid fa-podcast" style="font-size: 2rem; color: #83d4d7;"></i>
+          </div>
+          <h2 style="font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Looking for podcasts?</h2>
+          <p style="color: #a7a7a7; font-size: 0.9rem; max-width: 320px; margin: 0 auto 20px;">Follow your favorite shows to stay updated with fresh episodes.</p>
+          <button class="btn btn-soft" data-action="search-category" data-category="Podcasts" type="button" style="border-radius: 999px; padding: 10px 24px; font-weight: 700;">
+            Browse podcasts
           </button>
-          <button class="btn btn-soft" data-action="import-library" type="button" aria-label="Import Backup" title="Import Backup"><i class="fa-solid fa-file-import"></i></button>
-          <button class="btn btn-soft" data-action="export-library" type="button" aria-label="Export Backup" title="Export Backup"><i class="fa-solid fa-file-export"></i></button>
         </div>
       </div>
-      <div class="tab-list">
-        <button class="tab-btn ${activeTab === 'playlists' ? 'active' : ''}" data-action="set-library-tab" data-value="playlists" type="button">Playlists</button>
-        <button class="tab-btn ${activeTab === 'albums' ? 'active' : ''}" data-action="set-library-tab" data-value="albums" type="button">Albums</button>
-        <button class="tab-btn ${activeTab === 'artists' ? 'active' : ''}" data-action="set-library-tab" data-value="artists" type="button">Artists</button>
-        <button class="tab-btn ${activeTab === 'favorites' ? 'active' : ''}" data-action="set-library-tab" data-value="favorites" type="button">Favorites</button>
-        <button class="tab-btn ${activeTab === 'recent' ? 'active' : ''}" data-action="set-library-tab" data-value="recent" type="button">Recently Added</button>
+    `;
+  } else if (activeTab === 'albums') {
+    const albumMap = new Map();
+    (state.savedAlbums || []).forEach((alb) => {
+      const key = (alb.name || alb.title || '').trim().toLowerCase();
+      if (key && !albumMap.has(key)) {
+        albumMap.set(key, {
+          id: alb.id || alb.albumId,
+          name: alb.name || alb.title,
+          artist: alb.artist || 'Unknown Artist',
+          coverUrl: getOptimizedArtwork(alb.coverUrl || alb.imageUrl, 240),
+          songCount: alb.songCount || 1,
+        });
+      }
+    });
+
+    [...(state.favorites || []), ...(state.playlists || []).flatMap((p) => p.songs || [])].forEach((s) => {
+      if (s && s.album && s.album !== 'Single' && s.album !== 'Unknown') {
+        const key = s.album.trim().toLowerCase();
+        if (!albumMap.has(key)) {
+          albumMap.set(key, {
+            name: s.album,
+            artist: s.artist,
+            coverUrl: getOptimizedArtwork(s.coverUrl, 240),
+            songCount: 1,
+          });
+        }
+      }
+    });
+    const savedAlbums = Array.from(albumMap.values());
+
+    tabContent = `
+      <div class="library-list-container">
+        ${savedAlbums.length ? savedAlbums.map((album) => {
+          const isRemote = album.id && !String(album.id).startsWith('album-');
+          return `
+            <article class="library-list-item" ${isRemote ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} role="button" tabindex="0">
+              <img class="library-item-thumb" src="${escapeHTML(album.coverUrl)}" alt="${escapeHTML(album.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+              <div class="library-item-info">
+                <h3 class="library-item-title">${escapeHTML(album.name)}</h3>
+                <p class="library-item-sub">Album &bull; ${escapeHTML(album.artist)}</p>
+              </div>
+            </article>
+          `;
+        }).join('') : `
+          <div class="empty-state" style="padding: 48px 16px;">
+            <i class="fa-solid fa-compact-disc"></i>
+            <h2>No saved albums</h2>
+            <p>Save albums to organize your collection here.</p>
+          </div>
+        `}
       </div>
+    `;
+  } else if (activeTab === 'artists') {
+    const artistMap = new Map();
+    (state.followedArtists || []).forEach((fa) => {
+      const name = (typeof fa === 'string' ? fa : fa.name || '').trim();
+      if (name && !artistMap.has(name.toLowerCase())) {
+        artistMap.set(name.toLowerCase(), {
+          name,
+          imageUrl: fa.imageUrl || '',
+        });
+      }
+    });
+
+    const rawArtists = [
+      ...(state.favorites || []).map((s) => s.artist),
+      ...(state.playlists || []).flatMap((p) => (p.songs || []).map((s) => s.artist)),
+      ...(state.recentlyPlayed || []).map((id) => getSongById(id)?.artist),
+    ].filter(Boolean);
+
+    rawArtists.forEach((a) => {
+      const key = a.trim().toLowerCase();
+      if (!artistMap.has(key)) {
+        artistMap.set(key, { name: a, imageUrl: '' });
+      }
+    });
+
+    const uniqueArtists = Array.from(artistMap.values());
+
+    tabContent = `
+      <div class="library-list-container">
+        ${uniqueArtists.length ? uniqueArtists.map((artist) => `
+          <article class="library-list-item" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" role="button" tabindex="0">
+            <div class="library-item-thumb-round">
+              ${artist.imageUrl ? `
+                <img src="${escapeHTML(getOptimizedArtwork(artist.imageUrl, 160))}" alt="${escapeHTML(artist.name)}" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                <div class="library-item-thumb-fallback" style="display:none;"><i class="fa-solid fa-user"></i></div>
+              ` : `
+                <div class="library-item-thumb-fallback"><i class="fa-solid fa-user"></i></div>
+              `}
+            </div>
+            <div class="library-item-info">
+              <h3 class="library-item-title">${escapeHTML(artist.name)}</h3>
+              <p class="library-item-sub">Artist</p>
+            </div>
+          </article>
+        `).join('') : `
+          <div class="empty-state" style="padding: 48px 16px;">
+            <i class="fa-solid fa-user"></i>
+            <h2>No followed artists</h2>
+            <p>Follow artists to view them here.</p>
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+  return `
+    <section class="page library-page-spotify">
+      <!-- Spotify Library Header -->
+      <header class="library-header-spotify">
+        <div class="library-top-bar">
+          <div class="library-user-title-wrap">
+            <button class="library-avatar-btn" data-route="/you" type="button" aria-label="Profile">
+              <img class="library-avatar-img" src="/assets/pawtify.png" alt="Profile" />
+            </button>
+            <h1 class="library-title-spotify">Your Library</h1>
+          </div>
+          <div class="library-actions">
+            <button class="library-icon-btn" data-action="navigate" data-path="/search" type="button" aria-label="Search in library" title="Search">
+              <i class="fa-solid fa-magnifying-glass"></i>
+            </button>
+            <button class="library-icon-btn" data-action="open-create-playlist" type="button" aria-label="New playlist" title="Create Playlist">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Horizontal Filter Chips Row -->
+        <div class="library-filter-chips-row">
+          <button class="lib-filter-chip ${activeTab === 'playlists' ? 'active' : ''}" data-action="set-library-tab" data-value="playlists" type="button">Playlists</button>
+          <button class="lib-filter-chip ${activeTab === 'podcasts' ? 'active' : ''}" data-action="set-library-tab" data-value="podcasts" type="button">Podcasts</button>
+          <button class="lib-filter-chip ${activeTab === 'albums' ? 'active' : ''}" data-action="set-library-tab" data-value="albums" type="button">Albums</button>
+          <button class="lib-filter-chip ${activeTab === 'artists' ? 'active' : ''}" data-action="set-library-tab" data-value="artists" type="button">Artists</button>
+        </div>
+
+        <!-- Sort Bar: Recents -->
+        <div class="library-sort-bar">
+          <button class="library-sort-btn" type="button">
+            <i class="fa-solid fa-arrow-down-up-across-line"></i>
+            <span>Recents</span>
+          </button>
+          <button class="library-view-btn" type="button" aria-label="View toggle">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+        </div>
+      </header>
+
       ${tabContent}
     </section>
   `;
@@ -683,103 +761,82 @@ export function renderPlaylistPage(playlistId) {
     }
   }
 
-  if (!playlist) {
-    ensureRemotePlaylistLoaded(playlistId);
+  if (!playlist || playlist.isLoading) {
+    if (!playlist) ensureRemotePlaylistLoaded(playlistId);
     return `
-      <section class="page playlist-page" style="padding-top: 0;">
-        <div style="margin-bottom: 24px; margin-top: 16px;">
-          <button class="btn btn-soft" data-action="go-back" type="button" style="padding: 8px 16px; font-size: 0.875rem;">
-            <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i> Back
+      <section class="page playlist-page-spotify">
+        <header class="playlist-nav-bar">
+          <button class="playlist-nav-btn" data-action="go-back" type="button" aria-label="Back">
+            <i class="fa-solid fa-arrow-left"></i>
           </button>
-        </div>
-        <div class="page-header" style="display:flex; align-items:center; gap:24px; padding-bottom:24px;">
-          <div class="skeleton" style="width:160px; height:160px; border-radius:var(--radius-md);"></div>
-          <div style="flex:1; display:flex; flex-direction:column; gap:12px;">
-            <div class="skeleton skeleton-text-main" style="width:80px; height:14px; border-radius:4px;"></div>
-            <div class="skeleton skeleton-text-main" style="width:60%; height:40px; border-radius:8px;"></div>
-            <div class="skeleton skeleton-text-sub" style="width:35%; height:14px; border-radius:4px;"></div>
-          </div>
+          <div style="flex:1;"></div>
+          <button class="playlist-nav-btn" type="button" aria-label="More">
+            <i class="fa-solid fa-ellipsis-vertical"></i>
+          </button>
+        </header>
+        <div class="playlist-hero-centered">
+          <div class="skeleton" style="width: 220px; height: 220px; border-radius: 12px; margin: 0 auto 20px;"></div>
+          <div class="skeleton skeleton-text-main" style="width: 60%; height: 28px; margin: 0 auto 12px; border-radius: 6px;"></div>
+          <div class="skeleton skeleton-text-sub" style="width: 40%; height: 16px; margin: 0 auto; border-radius: 4px;"></div>
         </div>
         <div class="song-table">${Array(8).fill('').map(() => renderSongRowSkeleton()).join('')}</div>
       </section>
     `;
   }
-  
-  if (playlist.isLoading) {
-    return `
-      <section class="page playlist-page" style="padding-top: 0;">
-        <div style="margin-bottom: 24px; margin-top: 16px;">
-          <button class="btn btn-soft" data-action="go-back" type="button" style="padding: 8px 16px; font-size: 0.875rem;">
-            <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i> Back
-          </button>
-        </div>
-        <div class="page-header" style="display:flex; align-items:center; gap:24px; padding-bottom:24px;">
-          <div class="skeleton" style="width:160px; height:160px; border-radius:var(--radius-md);"></div>
-          <div style="flex:1; display:flex; flex-direction:column; gap:12px;">
-            <div class="skeleton skeleton-text-main" style="width:80px; height:14px; border-radius:4px;"></div>
-            <div class="skeleton skeleton-text-main" style="width:60%; height:40px; border-radius:8px;"></div>
-            <div class="skeleton skeleton-text-sub" style="width:35%; height:14px; border-radius:4px;"></div>
-          </div>
-        </div>
-        <div class="song-table">${Array(8).fill('').map(() => renderSongRowSkeleton()).join('')}</div>
-      </section>
-    `;
-  }
-  
-  const coverUrl = playlist.coverUrl || (playlist.songs && playlist.songs.length > 0 ? playlist.songs[0].coverUrl : 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=300&h=300');
+
+  const coverUrl = playlist.coverUrl || (playlist.songs && playlist.songs.length > 0 ? playlist.songs[0].coverUrl : '/assets/pawtify.png');
   const songCount = playlist.songs ? playlist.songs.length : 0;
-  
+  const isPlayingThis = state.isPlaying && state.currentPlaylistId === playlist.id;
+
   return `
-    <section class="page playlist-page" style="padding-top: 0;">
-      <div style="margin-bottom: 24px; margin-top: 16px;">
-        <button class="btn btn-soft" data-action="go-back" type="button" style="padding: 8px 16px; font-size: 0.875rem;">
-          <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i> Back
+    <section class="page playlist-page-spotify">
+      <!-- Spotify Top Nav: Back Arrow & 3-Dot Kebab Menu -->
+      <header class="playlist-nav-bar">
+        <button class="playlist-nav-btn" data-action="go-back" type="button" aria-label="Back">
+          <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <div class="playlist-nav-title">${escapeHTML(playlist.name)}</div>
+        <button class="playlist-nav-btn" data-action="share-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="More options">
+          <i class="fa-solid fa-ellipsis-vertical"></i>
+        </button>
+      </header>
+
+      <!-- Centered Hero: Large Rounded Artwork & Title / Meta -->
+      <div class="playlist-hero-centered">
+        <div class="playlist-art-large-wrap">
+          <img class="playlist-art-large" src="${escapeHTML(getOptimizedArtwork(coverUrl, 560))}" alt="${escapeHTML(playlist.name)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+        </div>
+        <h1 class="playlist-title-large">${escapeHTML(playlist.name)}</h1>
+        <div class="playlist-creator-meta">
+          <img class="playlist-creator-avatar" src="/assets/pawtify.png" alt="Pawtify" />
+          <span class="playlist-creator-name">${escapeHTML(playlist.uploaderName || 'Pawtify')}</span>
+        </div>
+        <p class="playlist-sub-stats">
+          ${playlist.isAlbum ? 'Album' : 'Playlist'} &bull; ${songCount} song${songCount === 1 ? '' : 's'}
+        </p>
+      </div>
+
+      <!-- Action Row: Circular Download, Share, Shuffle + Green Circular Play FAB (#1ed760) -->
+      <div class="playlist-action-bar">
+        <div class="playlist-left-actions">
+          <button class="playlist-action-circle" data-action="download-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Download playlist">
+            <i class="fa-solid fa-circle-down"></i>
+          </button>
+          <button class="playlist-action-circle" data-action="share-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Share playlist">
+            <i class="fa-solid fa-share-nodes"></i>
+          </button>
+          <button class="playlist-action-circle" data-action="shuffle-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Shuffle playlist">
+            <i class="fa-solid fa-shuffle"></i>
+          </button>
+        </div>
+
+        <button class="playlist-fab-play" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="${isPlayingThis ? 'Pause' : 'Play'}">
+          <i class="fa-solid ${isPlayingThis ? 'fa-pause' : 'fa-play'}"></i>
         </button>
       </div>
-      <div class="hero-player">
-        <img class="hero-cover" src="${escapeHTML(getOptimizedArtwork(coverUrl, 480))}" alt="${escapeHTML(playlist.name)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-        <div class="hero-info">
-          <span class="hero-tag">${playlist.isAlbum ? 'Album' : 'Playlist'}</span>
-          <h1 class="hero-title">${escapeHTML(playlist.name)}</h1>
-          <p class="hero-meta">
-            ${playlist.uploaderName ? `${escapeHTML(playlist.uploaderName)} &bull; ` : ''}${songCount} song${songCount === 1 ? '' : 's'}
-          </p>
-          <div class="hero-actions" style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <button class="btn btn-primary" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" ${songCount === 0 ? 'disabled' : ''}>
-              <i class="fa-solid fa-play"></i> Play All
-            </button>
-            <button class="btn btn-soft" data-action="shuffle-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" ${songCount === 0 ? 'disabled' : ''} aria-label="Shuffle Playlist">
-              <i class="fa-solid fa-shuffle"></i> Shuffle
-            </button>
-            <button class="btn btn-soft" data-action="share-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Share Playlist">
-              <i class="fa-solid fa-share-nodes"></i> Share
-            </button>
-            ${
-              !playlist.isSystem && !state.playlists.some((p) => p.id === playlist.id)
-                ? (playlist.isAlbum
-                    ? `
-              <button class="btn btn-soft ${isAlbumSaved({ name: playlist.name, id: playlist.id }) ? 'saved-active' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(playlist.id)}" data-album-name="${escapeHTML(playlist.name)}" data-album-artist="${escapeHTML(playlist.uploaderName || '')}" data-album-cover="${escapeHTML(coverUrl)}" type="button" aria-label="${isAlbumSaved({ name: playlist.name, id: playlist.id }) ? 'Unsave Album' : 'Save Album'}">
-                <i class="fa-solid ${isAlbumSaved({ name: playlist.name, id: playlist.id }) ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
-                <span>${isAlbumSaved({ name: playlist.name, id: playlist.id }) ? 'Saved' : 'Save'}</span>
-              </button>
-            `
-                    : `
-              <button class="btn btn-soft ${isPlaylistSaved(playlist.id) ? 'saved-active' : ''}" data-action="toggle-save-playlist" data-playlist-id="${escapeHTML(playlist.id)}" data-playlist-name="${escapeHTML(playlist.name)}" data-playlist-uploader="${escapeHTML(playlist.uploaderName || '')}" data-playlist-cover="${escapeHTML(coverUrl)}" type="button" aria-label="${isPlaylistSaved(playlist.id) ? 'Unsave Playlist' : 'Save Playlist'}">
-                <i class="fa-solid ${isPlaylistSaved(playlist.id) ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
-                <span>${isPlaylistSaved(playlist.id) ? 'Saved' : 'Save'}</span>
-              </button>
-            `)
-                : ''
-            }
-            ${
-              playlist.id !== 'default' && !playlist.isSystem && state.playlists.some((p) => p.id === playlist.id)
-                ? `<button class="btn btn-danger" data-action="delete-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Delete Playlist"><i class="fa-solid fa-trash"></i></button>`
-                : ''
-            }
-          </div>
-        </div>
-      </div>
-      <div class="song-table">
+
+      <!-- Track List -->
+      <div class="song-table playlist-song-list">
         ${songCount ? playlist.songs.map((s, i) => renderSongRow(s, i + 1, 'playlist', playlist.id)).join('') : '<div class="empty-state">This playlist is empty. Search for songs to add them.</div>'}
       </div>
     </section>
@@ -925,19 +982,95 @@ const TRENDING_SEARCH_SHORTCUTS = [
   { label: 'Late Night', icon: 'fa-moon' },
 ];
 
-const SEARCH_CATEGORIES = [
-  { name: 'Bollywood Hits', color: '#b83914' },
-  { name: 'Punjabi Pop', color: '#9b1b6e' },
-  { name: 'Lo-Fi Chill', color: '#32489e' },
-  { name: 'Desi Hip Hop', color: '#137a4d' },
-  { name: 'Sufi Soul', color: '#a86010' },
-  { name: 'Workout', color: '#a82424' },
-  { name: 'Tamil Classics', color: '#5b32a8' },
-  { name: 'Telugu Top 50', color: '#13756b' },
-  { name: 'Indie India', color: '#a82065' },
-  { name: 'Devotional', color: '#1466a8' },
-  { name: 'Romantic', color: '#a81f3e' },
-  { name: 'Ghazals', color: '#6820a8' },
+const DISCOVER_ITEMS = [
+  {
+    tag: '#bollywood lofi',
+    title: 'Tu Hai Kahan',
+    artist: 'AUR',
+    bg: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&q=80&w=320&h=480',
+    query: 'Tu Hai Kahan AUR',
+  },
+  {
+    tag: '#hindi pop',
+    title: 'Husn',
+    artist: 'Anuv Jain',
+    bg: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&q=80&w=320&h=480',
+    query: 'Husn Anuv Jain',
+  },
+  {
+    tag: '#playful',
+    title: 'Iraaday',
+    artist: 'Abdul Hannan',
+    bg: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&q=80&w=320&h=480',
+    query: 'Iraaday Abdul Hannan',
+  },
+  {
+    tag: '#chill lofi',
+    title: 'Akhiyaan',
+    artist: 'Mitraz',
+    bg: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&q=80&w=320&h=480',
+    query: 'Akhiyaan Mitraz',
+  },
+  {
+    tag: '#trending beats',
+    title: 'Kesariya',
+    artist: 'Arijit Singh',
+    bg: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=320&h=480',
+    query: 'Kesariya Arijit Singh',
+  },
+];
+
+const SEARCH_CATEGORIES_SPOTIFY = [
+  {
+    name: 'Music',
+    color: '#dc148c',
+    image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=200&h=200',
+  },
+  {
+    name: 'Podcasts',
+    color: '#006450',
+    image: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&q=80&w=200&h=200',
+  },
+  {
+    name: 'Live Events',
+    color: '#8400e7',
+    image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=200&h=200',
+  },
+  {
+    name: 'Home of I-Pop',
+    color: '#e91429',
+    image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=200&h=200',
+  },
+  {
+    name: 'Made For You',
+    color: '#1e3264',
+    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&q=80&w=200&h=200',
+  },
+  {
+    name: 'Upcoming Releases',
+    color: '#e8115b',
+    image: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&q=80&w=200&h=200',
+  },
+  {
+    name: 'New Releases',
+    color: '#ba5d07',
+    image: 'https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&q=80&w=200&h=200',
+  },
+  {
+    name: 'Hindi',
+    color: '#8c1932',
+    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&q=80&w=200&h=200',
+  },
+  {
+    name: 'Punjabi',
+    color: '#b06239',
+    image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&q=80&w=200&h=200',
+  },
+  {
+    name: 'Charts',
+    color: '#8d67ab',
+    image: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=200&h=200',
+  },
 ];
 
 export function renderSearchCategories() {
@@ -946,11 +1079,11 @@ export function renderSearchCategories() {
     .slice(0, 8);
 
   return `
-    <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 28px;">
+    <div class="search-categories-wrapper">
       ${recentQueries.length > 0 ? `
         <div class="search-recent-section">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h2 style="font-size: 1.05rem; font-weight: 600; color: var(--text);">Recent searches</h2>
+          <div class="search-section-head">
+            <h2 class="search-section-title">Recent searches</h2>
             <button class="btn btn-soft" data-action="clear-search-history" type="button" style="font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; color: var(--muted);">
               Clear
             </button>
@@ -971,30 +1104,35 @@ export function renderSearchCategories() {
         </div>
       ` : ''}
 
-      <div class="search-trending-section">
-        <h2 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 12px; color: var(--text);">
-          Trending searches
-        </h2>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-          ${TRENDING_SEARCH_SHORTCUTS.map(item => `
-            <button class="btn btn-soft" data-action="use-recent-search" data-query="${escapeHTML(item.label)}" type="button" style="font-size: 0.8125rem; padding: 6px 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px;">
-              <span>${escapeHTML(item.label)}</span>
-            </button>
+      <!-- Discover something new Horizontal Carousel (Tall Vertical Video Cards with tags) -->
+      <section class="discover-section">
+        <h2 class="discover-section-title">Discover something new</h2>
+        <div class="discover-carousel">
+          ${DISCOVER_ITEMS.map((item) => `
+            <article class="discover-card-vertical" data-action="use-recent-search" data-query="${escapeHTML(item.query)}" role="button" tabindex="0" style="background-image: url('${item.bg}');">
+              <div class="discover-card-overlay"></div>
+              <div class="discover-card-tag">${escapeHTML(item.tag)}</div>
+              <div class="discover-card-info">
+                <span class="discover-card-title">${escapeHTML(item.title)}</span>
+                <span class="discover-card-artist">${escapeHTML(item.artist)}</span>
+              </div>
+            </article>
           `).join('')}
         </div>
-      </div>
+      </section>
 
-      <div class="search-categories-section">
-        <h2 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 16px; color: var(--text);">Browse all</h2>
-        <div class="category-grid">
-          ${SEARCH_CATEGORIES.map(cat => `
-            <div class="category-card" data-action="search-category" data-category="${escapeHTML(cat.name)}" tabindex="0" style="background: ${cat.color};">
-              <span>${escapeHTML(cat.name)}</span>
-              <div class="bg-accent"></div>
+      <!-- Browse All 2-Column Angled Category Grid -->
+      <section class="search-browse-section">
+        <h2 class="search-section-title" style="margin-bottom: 14px;">Browse all</h2>
+        <div class="category-grid-spotify">
+          ${SEARCH_CATEGORIES_SPOTIFY.map((cat) => `
+            <div class="category-card-angled" data-action="search-category" data-category="${escapeHTML(cat.name)}" tabindex="0" role="button" style="background-color: ${cat.color};">
+              <span class="category-card-title">${escapeHTML(cat.name)}</span>
+              <img class="angled-thumb" src="${cat.image}" alt="" loading="lazy" draggable="false" />
             </div>
           `).join('')}
         </div>
-      </div>
+      </section>
     </div>
   `;
 }

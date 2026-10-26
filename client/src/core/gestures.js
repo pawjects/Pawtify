@@ -90,13 +90,8 @@ export function setupSwipeGestures() {
       return;
     }
 
-    // Check if touching fullscreen player
-    const fs = target.closest('#fullscreen-player');
-    if (fs && state.fullscreenPlayer && fs.classList.contains('active')) {
-      // Fullscreen player element itself has overflow-y: auto
-      const scrollable = fs;
-      initialScrollTop = scrollable.scrollTop || 0;
-      activeDragElement = { element: fs, type: 'fullscreen', scrollable };
+    // Fullscreen player pull-down is handled directly by initFullscreenGestures in fullscreen.js
+    if (target.closest('#fullscreen-player')) {
       return;
     }
   }
