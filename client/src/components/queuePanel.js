@@ -1,7 +1,7 @@
-import { state, STORAGE } from '../config/config.js';
+import { state, STORAGE, showToast } from '../config/config.js';
 import { queuePanel, miniPlayer } from '../config/dom.js';
 import { escapeHTML, saveJSON, getOptimizedArtwork } from '../utils/utils.js';
-import { renderPlayerBar } from './playerBar.js';
+import { renderPlayerBar, refreshPlaybackUI } from './playerBar.js';
 import { previousTrack, nextTrack, play } from './player.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
 import { rememberSongs } from '../core/details.js';
@@ -19,6 +19,22 @@ export function ensureQueueIds() {
   });
 }
 
+export function shuffleQueue() {
+  if (!state.queue || state.queue.length <= 1) return;
+  const currentSong = state.queue[state.currentSongIndex];
+  const others = state.queue.filter((_, idx) => idx !== state.currentSongIndex);
+  for (let i = others.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [others[i], others[j]] = [others[j], others[i]];
+  }
+  state.queue = currentSong ? [currentSong, ...others] : others;
+  state.currentSongIndex = 0;
+  saveJSON(STORAGE.QUEUE, state.queue);
+  showToast('Queue shuffled');
+  renderQueuePanel();
+  refreshPlaybackUI();
+}
+
 export function renderQueuePanel() {
   if (!queuePanel) return;
   if (!state.queuePanel) {
@@ -31,130 +47,73 @@ export function renderQueuePanel() {
   const queue = state.queue || [];
   const currentIdx = typeof state.currentSongIndex === 'number' ? state.currentSongIndex : 0;
 
-  const nowPlaying =
-    currentIdx >= 0 && currentIdx < queue.length ? queue[currentIdx] : null;
-  const upcoming = queue.slice(currentIdx + 1);
-  const previous = queue.slice(0, currentIdx);
-
-  if (nowPlaying) rememberSongs([nowPlaying]);
-  if (upcoming.length) rememberSongs(upcoming);
-  if (previous.length) rememberSongs(previous);
-
   queuePanel.innerHTML = `
-     <div class="queue-header">
-       <h2><i class="fa-solid fa-list-ul" style="margin-right:8px; color:var(--md-sys-color-primary);"></i>Queue</h2>
+     <div class="queue-sheet-handle"></div>
+     <div class="queue-header queue-sheet-header">
+       <div class="queue-sheet-title-wrap">
+         <h2 class="queue-sheet-title">Up next</h2>
+         <span class="queue-sheet-sub">${queue.length} track${queue.length === 1 ? '' : 's'}</span>
+       </div>
        <div class="queue-header-actions">
-         <button class="queue-clear-btn" data-action="clear-queue" type="button">Clear</button>
+         <button class="queue-shuffle-pill-btn" data-action="shuffle-queue" type="button" aria-label="Shuffle list">
+           <i class="fa-solid fa-shuffle"></i>
+           <span>Shuffle List</span>
+         </button>
          <button class="queue-close-btn" data-action="close-queue" type="button" aria-label="Close queue">
            <i class="fa-solid fa-xmark"></i>
          </button>
        </div>
      </div>
+
      <div class="queue-list" id="queue-list-container">
        ${!queue.length ? '<div class="empty-state"><i class="fa-solid fa-list-ul"></i><h2>Queue is empty</h2><p>Add songs to start listening.</p></div>' : ''}
 
-       ${
-         nowPlaying
-           ? `
-         <div class="queue-section-title">Now Playing</div>
-         <div class="queue-item active" data-action="play-queue-track" data-queue-index="${currentIdx}" data-song-id="${escapeHTML(nowPlaying.id)}" type="button" role="listitem">
-           <div class="queue-item-index"><i class="fa-solid fa-volume-high" style="font-size:0.75rem;"></i></div>
-           <img class="queue-item-cover" src="${escapeHTML(getOptimizedArtwork(nowPlaying.coverUrl, 100))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-           <div class="queue-item-info">
-             <div class="queue-item-title">${escapeHTML(nowPlaying.title)}</div>
-             <div class="queue-item-artist">${escapeHTML(nowPlaying.artist)}</div>
-           </div>
-           <div class="queue-actions">
-             <button class="song-action-btn song-menu-trigger queue-menu-btn" data-action="open-track-menu" data-song-id="${escapeHTML(nowPlaying.id)}" type="button" aria-label="More options for ${escapeHTML(nowPlaying.title)}" title="More options">
-               <i class="fa-solid fa-ellipsis-vertical"></i>
-             </button>
-           </div>
-         </div>
-       `
-           : ''
-       }
-
-       ${
-         upcoming.length
-           ? `
-         <div class="queue-section-title" style="display:flex; justify-content:space-between; align-items:center;">
-           <span>Next Up (${upcoming.length})</span>
-           <span style="font-size:0.6875rem; text-transform:none; font-weight:normal; opacity:0.75;">Drag or use arrows to reorder</span>
-         </div>
-         <div class="queue-reorderable-list" id="queue-reorderable-list">
-           ${upcoming
-             .map((s, i) => {
-               const absIdx = currentIdx + 1 + i;
-               const canMoveUp = i > 0;
-               const canMoveDown = i < upcoming.length - 1;
-               return `
-             <div class="queue-item queue-item-reorderable"
-                  draggable="true"
-                  data-queue-id="${escapeHTML(s?._queueId || '')}"
-                  data-queue-index="${absIdx}"
-                  data-action="play-queue-track"
-                  type="button"
-                  role="listitem">
-               <div class="queue-drag-handle" title="Drag to reorder" aria-label="Drag to reorder">
-                 <i class="fa-solid fa-grip-vertical"></i>
+       <div class="queue-vertical-list" id="queue-reorderable-list">
+         ${queue
+           .map((s, idx) => {
+             const isCurrent = idx === currentIdx;
+             const durText = formatTime(s?.durationSec || 0);
+             return `
+               <div class="queue-item ${isCurrent ? 'queue-item-current active' : ''} queue-item-reorderable"
+                    draggable="true"
+                    data-queue-id="${escapeHTML(s?._queueId || '')}"
+                    data-queue-index="${idx}"
+                    data-action="play-queue-track"
+                    type="button"
+                    role="listitem">
+                 <img class="queue-item-cover queue-item-thumb" src="${escapeHTML(getOptimizedArtwork(s?.coverUrl || '', 120))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+                 <div class="queue-item-info">
+                   <div class="queue-item-title">${escapeHTML(s?.title || 'Unknown Track')}</div>
+                   <div class="queue-item-artist">${escapeHTML(s?.artist || 'Unknown Artist')}</div>
+                 </div>
+                 <div class="queue-item-meta-right">
+                   ${
+                     isCurrent
+                       ? `
+                     <div class="animated-equalizer" aria-label="Currently playing" title="Playing">
+                       <span class="eq-bar eq-bar-1"></span>
+                       <span class="eq-bar eq-bar-2"></span>
+                       <span class="eq-bar eq-bar-3"></span>
+                     </div>
+                   `
+                       : `
+                     <span class="queue-item-duration">${durText}</span>
+                   `
+                   }
+                   <button class="song-action-btn song-menu-trigger queue-menu-btn" data-action="open-track-menu" data-song-id="${escapeHTML(s?.id || '')}" type="button" aria-label="More options" title="More options">
+                     <i class="fa-solid fa-ellipsis-vertical"></i>
+                   </button>
+                 </div>
                </div>
-               <div class="queue-item-index">${absIdx + 1}</div>
-               <img class="queue-item-cover" src="${escapeHTML(getOptimizedArtwork(s?.coverUrl || '', 100))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-               <div class="queue-item-info">
-                 <div class="queue-item-title">${escapeHTML(s?.title || 'Unknown Track')}</div>
-                 <div class="queue-item-artist">${escapeHTML(s?.artist || 'Unknown Artist')}</div>
-               </div>
-               <div class="queue-actions">
-                 <button class="queue-reorder-btn" data-action="queue-move-up" data-queue-index="${absIdx}" type="button" aria-label="Move ${escapeHTML(s?.title || '')} up" title="Move up" ${!canMoveUp ? 'disabled' : ''}>
-                   <i class="fa-solid fa-chevron-up"></i>
-                 </button>
-                 <button class="queue-reorder-btn" data-action="queue-move-down" data-queue-index="${absIdx}" type="button" aria-label="Move ${escapeHTML(s?.title || '')} down" title="Move down" ${!canMoveDown ? 'disabled' : ''}>
-                   <i class="fa-solid fa-chevron-down"></i>
-                 </button>
-                 <button class="song-action-btn song-menu-trigger queue-menu-btn" data-action="open-track-menu" data-song-id="${escapeHTML(s?.id || '')}" type="button" aria-label="More options for ${escapeHTML(s?.title || '')}" title="More options">
-                   <i class="fa-solid fa-ellipsis-vertical"></i>
-                 </button>
-                 <button class="queue-item-remove" data-action="remove-from-queue" data-queue-id="${escapeHTML(s?._queueId || '')}" data-song-id="${escapeHTML(s?.id || '')}" type="button" aria-label="Remove from queue" title="Remove from queue">
-                   <i class="fa-solid fa-xmark"></i>
-                 </button>
-               </div>
-             </div>
-           `;
-             })
-             .join('')}
-         </div>
-       `
-           : ''
-       }
-
-       ${
-         previous.length
-           ? `
-         <div class="queue-section-title">Previous (${previous.length})</div>
-         ${previous
-           .map(
-             (s, i) => `
-           <div class="queue-item queue-item-previous" data-action="play-queue-track" data-queue-index="${i}" data-song-id="${escapeHTML(s?.id || '')}" type="button" role="listitem">
-             <div class="queue-item-index">${i + 1}</div>
-             <img class="queue-item-cover" src="${escapeHTML(getOptimizedArtwork(s?.coverUrl || '', 100))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-             <div class="queue-item-info">
-               <div class="queue-item-title">${escapeHTML(s?.title || 'Unknown Track')}</div>
-               <div class="queue-item-artist">${escapeHTML(s?.artist || 'Unknown Artist')}</div>
-             </div>
-             <div class="queue-actions">
-               <button class="song-action-btn song-menu-trigger queue-menu-btn" data-action="open-track-menu" data-song-id="${escapeHTML(s?.id || '')}" type="button" aria-label="More options" title="More options">
-                 <i class="fa-solid fa-ellipsis-vertical"></i>
-               </button>
-             </div>
-           </div>
-         `
-           )
+             `;
+           })
            .join('')}
-       `
-           : ''
-       }
+       </div>
      </div>
    `;
+
+  bindQueueDragAndDrop();
+}
 
   bindQueueDragAndDrop();
 }

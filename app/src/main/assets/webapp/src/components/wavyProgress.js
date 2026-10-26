@@ -142,6 +142,12 @@ function drawFrame() {
     fsCurrentLabel.textContent = formatTime(curSec);
   }
 
+  const fsTotalLabel = document.getElementById('fs-time-total');
+  if (fsTotalLabel && !state.isSeeking) {
+    const remaining = Math.max(0, maxSec - curSec);
+    fsTotalLabel.textContent = `-${formatTime(remaining)}`;
+  }
+
   const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const targetAmp = (state.isPlaying && !isReduced) ? 4.5 : 0;
   currentAmp += (targetAmp - currentAmp) * 0.12;
@@ -159,7 +165,7 @@ function drawFrame() {
     waveCtx.stroke();
   }
 
-  // 2. Played portion: Wavy / Curved line with Spotify Accent Green
+  // 2. Played portion: Wavy / Curved line with Muted Cyan (#83d4d7)
   if (scrubX > 0) {
     waveCtx.beginPath();
     waveCtx.moveTo(0, cy);
@@ -181,22 +187,23 @@ function drawFrame() {
       waveCtx.lineTo(scrubX, cy);
     }
 
-    waveCtx.strokeStyle = '#1db954';
+    waveCtx.strokeStyle = '#83d4d7';
     waveCtx.lineWidth = 3.5;
     waveCtx.lineCap = 'round';
     waveCtx.lineJoin = 'round';
     waveCtx.stroke();
   }
 
-  // 3. Dynamic Scrubber Bead (Crisp Material 3 thumb)
-  const beadRadius = state.isSeeking ? 7 : 5.5;
+  // 3. Vertical Scrubber Bar (as seen in Spotify reference screenshot)
+  const barW = 4;
+  const barH = 18;
+  const barRadius = 2;
   waveCtx.beginPath();
-  waveCtx.arc(scrubX, cy, beadRadius, 0, Math.PI * 2);
-  waveCtx.fillStyle = '#1db954';
-  waveCtx.fill();
-
-  waveCtx.beginPath();
-  waveCtx.arc(scrubX, cy, Math.max(1, beadRadius - 3), 0, Math.PI * 2);
-  waveCtx.fillStyle = '#000000';
+  if (typeof waveCtx.roundRect === 'function') {
+    waveCtx.roundRect(scrubX - barW / 2, cy - barH / 2, barW, barH, barRadius);
+  } else {
+    waveCtx.rect(scrubX - barW / 2, cy - barH / 2, barW, barH);
+  }
+  waveCtx.fillStyle = '#83d4d7';
   waveCtx.fill();
 }
