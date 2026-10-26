@@ -1,6 +1,6 @@
 import { state, STORAGE, showToast } from '../config/config.js';
 import { queuePanel, miniPlayer } from '../config/dom.js';
-import { escapeHTML, saveJSON, getOptimizedArtwork } from '../utils/utils.js';
+import { escapeHTML, saveJSON, getOptimizedArtwork, formatTime } from '../utils/utils.js';
 import { renderPlayerBar, refreshPlaybackUI } from './playerBar.js';
 import { previousTrack, nextTrack, play } from './player.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
@@ -111,9 +111,6 @@ export function renderQueuePanel() {
        </div>
      </div>
    `;
-
-  bindQueueDragAndDrop();
-}
 
   bindQueueDragAndDrop();
 }

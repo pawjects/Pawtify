@@ -2,6 +2,7 @@ import { state } from '../config/config.js';
 import {
   renderHomeScrollCard,
   renderHomeScrollSkeleton,
+  renderHomeGridSkeleton,
 } from './components.js';
 import { escapeHTML, getOptimizedArtwork } from '../utils/utils.js';
 import { getSongById } from '../core/details.js';
@@ -124,24 +125,26 @@ export function renderHomePage() {
   }
 
   // 2-Column Grid HTML
-  const compactGridHTML = topRecentPicks
-    .slice(0, 8)
-    .map((item) => {
-      const cover = getOptimizedArtwork(item.coverUrl, 160);
-      return `
-        <article class="home-compact-card"
-                 ${item.route ? `data-route="${escapeHTML(item.route)}"` : ''}
-                 ${item.playlistId ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(item.playlistId)}"` : ''}
-                 ${item.songId ? `data-action="play-song" data-song-id="${escapeHTML(item.songId)}" data-source="home-compact"` : ''}
-                 role="button"
-                 tabindex="0"
-                 aria-label="Play ${escapeHTML(item.title)}">
-          <img class="home-compact-thumb" src="${escapeHTML(cover)}" alt="" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-          <span class="home-compact-title">${escapeHTML(item.title)}</span>
-        </article>
-      `;
-    })
-    .join('');
+  const compactGridHTML = topRecentPicks.length
+    ? topRecentPicks
+        .slice(0, 8)
+        .map((item) => {
+          const cover = getOptimizedArtwork(item.coverUrl, 160);
+          return `
+            <article class="home-compact-card"
+                     ${item.route ? `data-route="${escapeHTML(item.route)}"` : ''}
+                     ${item.playlistId ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(item.playlistId)}"` : ''}
+                     ${item.songId ? `data-action="play-song" data-song-id="${escapeHTML(item.songId)}" data-source="home-compact"` : ''}
+                     role="button"
+                     tabindex="0"
+                     aria-label="Play ${escapeHTML(item.title)}">
+              <img class="home-compact-thumb" src="${escapeHTML(cover)}" alt="" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+              <span class="home-compact-title">${escapeHTML(item.title)}</span>
+            </article>
+          `;
+        })
+        .join('')
+    : Array(8).fill('').map(() => renderHomeGridSkeleton()).join('');
 
   // Recommended Stations Carousel HTML
   const stationsHTML = RECOMMENDED_STATIONS.map((st) => `
@@ -219,6 +222,17 @@ export function renderHomePage() {
       `;
     }
   });
+
+  if (!rec.length && !categories.length) {
+    sectionsHTML += `
+      <section class="home-section">
+        <h2 class="home-section-title">Trending Now</h2>
+        <div class="home-scroll">
+          ${Array(5).fill('').map(() => renderHomeScrollSkeleton()).join('')}
+        </div>
+      </section>
+    `;
+  }
 
   return `
     <section class="page home-page-spotify">

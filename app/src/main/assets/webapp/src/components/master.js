@@ -84,94 +84,174 @@ export async function handleSongDeepLink(songId) {
 }
 
 export function renderCurrentRoute() {
-  if (!appMain) return;
+  const main = appMain || document.getElementById('app-main');
+  if (!main) {
+    console.error('[Mount Crash: appMain missing] "#app-main" container was not found in the DOM.');
+    return;
+  }
+
   try {
     const prevKey = previousRoute?.name === 'playlist' ? `playlist-${previousRoute.playlistId}` : previousRoute?.name || 'home';
-    tabScrollPositions.set(prevKey, appMain.scrollTop);
+    tabScrollPositions.set(prevKey, main.scrollTop);
 
-    state.route = parseRoute();
-    markActiveNav();
+    try {
+      state.route = parseRoute();
+    } catch (routeErr) {
+      console.error('[Mount Crash: parseRoute]', routeErr);
+      state.route = { name: 'home' };
+    }
 
-    if (state.route.name === 'search') {
-      const activeId = document.activeElement
-        ? document.activeElement.id
-        : null;
+    try {
+      markActiveNav();
+    } catch (navErr) {
+      console.warn('[Mount Warning: markActiveNav]', navErr);
+    }
 
-      const existingInput = document.getElementById('search-input');
-      const isAlreadyOnSearchPage =
-        !!existingInput &&
-        appMain.querySelector('.page-title')?.textContent === 'Search';
+    // Isolated mount of main page route content
+    try {
+      if (state.route.name === 'search') {
+        const activeId = document.activeElement
+          ? document.activeElement.id
+          : null;
 
-      if (isAlreadyOnSearchPage) {
-        updateSearchPageUI();
-      } else {
-        appMain.innerHTML = renderSearchPage();
-        const searchInput = document.getElementById('search-input');
-        if (searchInput) {
-          searchInput.value = state.searchQuery;
-          if (activeId === 'search-input') {
-            searchInput.focus();
-            const len = searchInput.value.length;
-            searchInput.setSelectionRange(len, len);
+        const existingInput = document.getElementById('search-input');
+        const isAlreadyOnSearchPage =
+          !!existingInput &&
+          main.querySelector('.page-title')?.textContent === 'Search';
+
+        if (isAlreadyOnSearchPage) {
+          updateSearchPageUI();
+        } else {
+          main.innerHTML = renderSearchPage();
+          const searchInput = document.getElementById('search-input');
+          if (searchInput) {
+            searchInput.value = state.searchQuery;
+            if (activeId === 'search-input') {
+              searchInput.focus();
+              const len = searchInput.value.length;
+              searchInput.setSelectionRange(len, len);
+            }
           }
         }
-      }
 
-      if (state.pendingSearchQuery) {
-        const pending = state.pendingSearchQuery;
-        state.pendingSearchQuery = '';
-        runSearch(pending);
-      } else if (
-        state.searchQuery &&
-        (!state.searchResults.songs || state.searchResults.songs.length === 0)
-      ) {
-        runSearch(state.searchQuery);
-      }
-    } else if (state.route.name === 'library') {
-      if (state.route.subTab) {
-        state.libraryTab = state.route.subTab;
-      }
-      appMain.innerHTML = renderLibraryPage();
-    } else if (state.route.name === 'settings') {
-      appMain.innerHTML = renderSettingsPage();
-    } else if (state.route.name === 'you') {
-      appMain.innerHTML = renderYouPage();
-    } else if (state.route.name === 'playlist') {
-      appMain.innerHTML = renderPlaylistPage(state.route.playlistId);
-    } else if (state.route.name === 'song') {
-      appMain.innerHTML = renderHomePage();
-      if (state.route.songId) {
-        handleSongDeepLink(state.route.songId);
+        if (state.pendingSearchQuery) {
+          const pending = state.pendingSearchQuery;
+          state.pendingSearchQuery = '';
+          runSearch(pending);
+        } else if (
+          state.searchQuery &&
+          (!state.searchResults.songs || state.searchResults.songs.length === 0)
+        ) {
+          runSearch(state.searchQuery);
+        }
+      } else if (state.route.name === 'library') {
+        if (state.route.subTab) {
+          state.libraryTab = state.route.subTab;
+        }
+        main.innerHTML = renderLibraryPage();
+      } else if (state.route.name === 'settings') {
+        main.innerHTML = renderSettingsPage();
+      } else if (state.route.name === 'you') {
+        main.innerHTML = renderYouPage();
+      } else if (state.route.name === 'playlist') {
+        main.innerHTML = renderPlaylistPage(state.route.playlistId);
+      } else if (state.route.name === 'song') {
+        main.innerHTML = renderHomePage();
+        if (state.route.songId) {
+          handleSongDeepLink(state.route.songId);
+        } else {
+          navigate('/');
+        }
       } else {
-        navigate('/');
+        main.innerHTML = renderHomePage();
       }
-    } else {
-      appMain.innerHTML = renderHomePage();
+    } catch (routeMountErr) {
+      console.error(`[Mount Crash: Route "${state.route?.name}"]`, routeMountErr);
+      main.innerHTML = `
+        <div class="empty-state" style="padding: 40px 20px; text-align: center;">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size: 2.5rem; color: var(--danger, #ef4444); margin-bottom: 16px;"></i>
+          <h2 style="font-size: 1.4rem; margin-bottom: 8px;">View Render Error</h2>
+          <p style="color: var(--muted); font-size: 0.9rem; max-width: 420px; margin: 0 auto 16px;">
+            An error occurred while mounting the "${state.route?.name || 'current'}" screen.
+          </p>
+          <button class="btn btn-primary" onclick="window.location.hash='#/'; window.location.reload();" type="button" style="padding: 8px 20px;">
+            <i class="fa-solid fa-rotate-right"></i> Reload App
+          </button>
+        </div>
+      `;
     }
 
     const newKey = state.route.name === 'playlist' ? `playlist-${state.route.playlistId}` : state.route.name;
     const targetScroll = tabScrollPositions.get(newKey) || 0;
     if (prevKey !== newKey) {
       if (previousRoute) {
-        hapticTabChange();
+        try {
+          hapticTabChange();
+        } catch (_) {}
       }
-      appMain.scrollTop = targetScroll;
+      main.scrollTop = targetScroll;
       requestAnimationFrame(() => {
-        if (appMain) appMain.scrollTop = targetScroll;
+        if (main) main.scrollTop = targetScroll;
       });
     }
     previousRoute = { ...state.route };
 
-    renderPlayerBar();
-    renderMiniPlayer();
-    renderFullscreenPlayer();
-    renderLyricsPanel();
-    renderArtistProfile();
-    renderQueuePanel();
-    renderOverlay();
-    renderSidebarPlaylists();
-    refreshPlaybackUI();
-  } catch (e) {
-    console.error('renderCurrentRoute error:', e);
+    // Isolated mount of UI peripheral components
+    try {
+      renderPlayerBar();
+    } catch (err) {
+      console.error('[Mount Crash: PlayerBar]', err);
+    }
+
+    try {
+      renderMiniPlayer();
+    } catch (err) {
+      console.error('[Mount Crash: MiniPlayer]', err);
+    }
+
+    try {
+      renderFullscreenPlayer();
+    } catch (err) {
+      console.error('[Mount Crash: FullscreenPlayer]', err);
+    }
+
+    try {
+      renderLyricsPanel();
+    } catch (err) {
+      console.error('[Mount Crash: LyricsPanel]', err);
+    }
+
+    try {
+      renderArtistProfile();
+    } catch (err) {
+      console.error('[Mount Crash: ArtistProfile]', err);
+    }
+
+    try {
+      renderQueuePanel();
+    } catch (err) {
+      console.error('[Mount Crash: QueuePanel]', err);
+    }
+
+    try {
+      renderOverlay();
+    } catch (err) {
+      console.error('[Mount Crash: Overlay]', err);
+    }
+
+    try {
+      renderSidebarPlaylists();
+    } catch (err) {
+      console.error('[Mount Crash: SidebarPlaylists]', err);
+    }
+
+    try {
+      refreshPlaybackUI();
+    } catch (err) {
+      console.error('[Mount Crash: PlaybackUI]', err);
+    }
+  } catch (topLevelErr) {
+    console.error('[Mount Crash: renderCurrentRoute Top-Level Exception]', topLevelErr);
   }
 }
+

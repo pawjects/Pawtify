@@ -1,4 +1,4 @@
-import { appMain } from './dom.js';
+import { appMain, refreshDom } from './dom.js';
 import { parseRoute } from './router.js';
 import { refreshPlaybackUI } from '../components/playerBar.js';
 import {
@@ -272,39 +272,59 @@ Object.assign(state, {
 });
 
 export async function initApp() {
+  console.info('[Pawtify Init] Starting application initialization sequence...');
   try {
-    // Restore from IndexedDB
-    const idbPlaylists = await idbGet(STORAGE.PLAYLISTS);
+    refreshDom();
+  } catch (domErr) {
+    console.warn('[Pawtify Init Warning: refreshDom]', domErr);
+  }
+
+  // Restore from IndexedDB
+  try {
+    const idbPlaylists = await idbGet(STORAGE.PLAYLISTS).catch(() => null);
     if (idbPlaylists) state.playlists = normalizePlaylists(idbPlaylists);
 
-    const idbFavorites = await idbGet(STORAGE.FAVORITES);
+    const idbFavorites = await idbGet(STORAGE.FAVORITES).catch(() => null);
     if (idbFavorites) state.favorites = dedupeSongs(idbFavorites);
 
-    const idbQueue = await idbGet(STORAGE.QUEUE);
+    const idbQueue = await idbGet(STORAGE.QUEUE).catch(() => null);
     if (idbQueue) state.queue = dedupeSongs(idbQueue);
 
-    const idbRecent = await idbGet(STORAGE.RECENT_PLAYED);
+    const idbRecent = await idbGet(STORAGE.RECENT_PLAYED).catch(() => null);
     if (idbRecent) state.recentlyPlayed = idbRecent;
 
-    const idbFollowedArtists = await idbGet(STORAGE.FOLLOWED_ARTISTS);
+    const idbFollowedArtists = await idbGet(STORAGE.FOLLOWED_ARTISTS).catch(() => null);
     if (idbFollowedArtists) state.followedArtists = idbFollowedArtists;
 
-    const idbSavedPlaylists = await idbGet(STORAGE.SAVED_PLAYLISTS);
+    const idbSavedPlaylists = await idbGet(STORAGE.SAVED_PLAYLISTS).catch(() => null);
     if (idbSavedPlaylists) state.savedPlaylists = idbSavedPlaylists;
 
-    const idbSavedAlbums = await idbGet(STORAGE.SAVED_ALBUMS);
+    const idbSavedAlbums = await idbGet(STORAGE.SAVED_ALBUMS).catch(() => null);
     if (idbSavedAlbums) state.savedAlbums = idbSavedAlbums;
 
-    const idbSong = await idbGet(STORAGE.CURRENT_SONG);
+    const idbSong = await idbGet(STORAGE.CURRENT_SONG).catch(() => undefined);
     if (idbSong !== undefined) state.currentSong = idbSong;
     
-    const idbTime = await idbGet(STORAGE.CURRENT_TIME);
+    const idbTime = await idbGet(STORAGE.CURRENT_TIME).catch(() => undefined);
     if (idbTime !== undefined) state.progress = Number(idbTime) || 0;
+  } catch (idbErr) {
+    console.warn('[Pawtify Init Warning: IndexedDB restore non-fatal]', idbErr);
+  }
 
+  try {
     seedCatalog();
     restoreCurrentSongIndex();
-    loadYTApi();
+  } catch (catalogErr) {
+    console.error('[Pawtify Init Error: seedCatalog]', catalogErr);
+  }
 
+  try {
+    loadYTApi();
+  } catch (ytErr) {
+    console.error('[Pawtify Init Error: loadYTApi]', ytErr);
+  }
+
+  try {
     document.body.classList.toggle('has-active-track', !!state.currentSong);
     applyTheme(state.theme);
     if (typeof window !== 'undefined' && window.matchMedia) {
@@ -312,9 +332,13 @@ export async function initApp() {
         if (state.theme === 'system') applyTheme('system');
       });
     }
+  } catch (themeErr) {
+    console.warn('[Pawtify Init Warning: applyTheme]', themeErr);
+  }
 
-    // Prevent pause() calls on the global HTMLMediaElement when document.hidden becomes true
-    if (typeof window !== 'undefined') {
+  // Prevent pause() calls on the global HTMLMediaElement when document.hidden becomes true
+  if (typeof window !== 'undefined') {
+    try {
       window.addEventListener('visibilitychange', () => {
         const globalAudio =
           getNativeAudio() ||
@@ -339,10 +363,18 @@ export async function initApp() {
           }
         }
       });
+    } catch (visErr) {
+      console.warn('[Pawtify Init Warning: visibilitychange listener]', visErr);
     }
+  }
 
+  try {
     bindGlobalEvents();
+  } catch (eventErr) {
+    console.error('[Pawtify Init Error: bindGlobalEvents]', eventErr);
+  }
 
+  try {
     const initialRoute = parseRoute();
     if (initialRoute.name === 'song' && initialRoute.songId) {
       window.location.hash = `#/song/${encodeURIComponent(initialRoute.songId)}`;
@@ -360,29 +392,40 @@ export async function initApp() {
     if (!welcomeSeen && !state.userName && initialRoute.name !== 'song') {
       state.modal = { type: 'welcome' };
     }
+  } catch (routeSetupErr) {
+    console.error('[Pawtify Init Error: Route parse setup]', routeSetupErr);
+  }
 
+  try {
+    console.info('[Pawtify Init] Executing initial renderCurrentRoute...');
     renderCurrentRoute();
-
-    // Safely update media session in the background after UI rendering is complete
-    if (state.currentSong) {
-      setTimeout(() => {
-        try {
-          updateMediaSession(state.currentSong);
-        } catch (e) {
-          console.warn('Deferred mediaSession error:', e);
-        }
-      }, 500);
+    console.info('[Pawtify Init] Initial renderCurrentRoute completed successfully.');
+  } catch (mountErr) {
+    console.error('[Pawtify Init Fatal: renderCurrentRoute failed]', mountErr);
+    const main = appMain || (typeof document !== 'undefined' ? document.getElementById('app-main') : null);
+    if (main) {
+      main.innerHTML = `<div class="empty-state"><h2>App Error</h2><p>Something went wrong loading Pawtify. Please refresh the page.</p></div>`;
     }
+  }
 
-    loadTrendingSongs().then(() => {
+  // Safely update media session in the background after UI rendering is complete
+  if (state.currentSong) {
+    setTimeout(() => {
+      try {
+        updateMediaSession(state.currentSong);
+      } catch (e) {
+        console.warn('Deferred mediaSession error:', e);
+      }
+    }, 500);
+  }
+
+  loadTrendingSongs()
+    .then(() => {
       if (state.currentSong) {
         loadRecommendations();
       }
+    })
+    .catch((err) => {
+      console.warn('Background loadTrendingSongs error:', err);
     });
-  } catch (e) {
-    console.error('Critical initialization error:', e);
-    if (appMain) {
-      appMain.innerHTML = `<div class="empty-state"><h2>App Error</h2><p>Something went wrong loading Pawtify. Please refresh the page.</p></div>`;
-    }
-  }
 }
