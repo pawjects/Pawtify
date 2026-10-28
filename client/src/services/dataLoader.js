@@ -129,6 +129,97 @@ export async function loadTrendingSongs(forceRefresh = false) {
   }
 }
 
+let isSilentlyRefreshing = false;
+
+/**
+ * Real-Time Async Feed Refresh
+ * Fetches fresh feed, discover, and recommendation data in the background
+ * without setting isLoading: true or causing any screen blanking.
+ */
+export async function refreshFeedSilently() {
+  if (isSilentlyRefreshing || (typeof document !== 'undefined' && document.hidden)) {
+    return;
+  }
+  isSilentlyRefreshing = true;
+
+  try {
+    const parseSafe = (res) => {
+      if (!res || !res.items) return [];
+      return res.items
+        .filter(isValidMusicContent)
+        .sort(prioritizeMusic)
+        .map(mapServerSong)
+        .filter((s) => s && s.id);
+    };
+
+    const selectedCategories = getDiscoveryCategories();
+    const results = await Promise.allSettled(
+      selectedCategories.map((cat) =>
+        fetch(`/api/search?q=${encodeURIComponent(cat.query)}`)
+      )
+    );
+
+    const feed = await Promise.all(
+      results.map(async (res, idx) => {
+        try {
+          if (res.status === 'fulfilled') {
+            const data = await res.value.json();
+            const songs = parseSafe(data);
+            return {
+              title: selectedCategories[idx].title,
+              id: `feed-${idx}`,
+              songs: dedupeSongs(songs),
+            };
+          }
+        } catch (e) {
+          console.warn('Silent refresh parse error:', e);
+        }
+        return {
+          title: selectedCategories[idx].title,
+          id: `feed-${idx}`,
+          songs: [],
+        };
+      })
+    );
+
+    const validFeed = feed.filter((cat) => cat.songs.length > 0);
+    if (validFeed.length > 0) {
+      state.feedCategories = validFeed;
+      const all = dedupeSongs(state.feedCategories.flatMap((c) => c.songs));
+      rememberSongs(all);
+      state.trendingSongs = all;
+      if (state.route?.name === 'home') {
+        renderCurrentRoute();
+      }
+    }
+
+    if (state.currentSong?.id) {
+      await loadRecommendations();
+      if (state.route?.name === 'home') {
+        renderCurrentRoute();
+      }
+    }
+  } catch (err) {
+    console.warn('[Real-Time Refresh Error]', err);
+  } finally {
+    isSilentlyRefreshing = false;
+  }
+}
+
+let feedPollingTimer = null;
+
+/**
+ * Initializes continuous background polling (every 45s) for the Feed and Recommendations
+ */
+export function startFeedPolling() {
+  if (feedPollingTimer || typeof window === 'undefined') return;
+  feedPollingTimer = setInterval(() => {
+    if (!document.hidden && state.route?.name === 'home') {
+      refreshFeedSilently();
+    }
+  }, 45000);
+}
+
 export async function loadRecommendations() {
   if (!state.currentSong?.id) {
     state.recommendedSongs = [];

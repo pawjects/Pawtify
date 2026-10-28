@@ -160,12 +160,12 @@ function drawFrame() {
     waveCtx.moveTo(scrubX, cy);
     waveCtx.lineTo(W, cy);
     waveCtx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
-    waveCtx.lineWidth = 3.5;
+    waveCtx.lineWidth = 4;
     waveCtx.lineCap = 'round';
     waveCtx.stroke();
   }
 
-  // 2. Played portion: Wavy / Curved line with Muted Cyan (#83d4d7)
+  // 2. Played portion: Wavy / Curved line with Spotify Green (#1DB954)
   if (scrubX > 0) {
     waveCtx.beginPath();
     waveCtx.moveTo(0, cy);
@@ -187,16 +187,16 @@ function drawFrame() {
       waveCtx.lineTo(scrubX, cy);
     }
 
-    waveCtx.strokeStyle = '#83d4d7';
-    waveCtx.lineWidth = 3.5;
+    waveCtx.strokeStyle = '#1db954';
+    waveCtx.lineWidth = 4;
     waveCtx.lineCap = 'round';
     waveCtx.lineJoin = 'round';
     waveCtx.stroke();
   }
 
-  // 3. Vertical Scrubber Bar (as seen in Spotify reference screenshot)
+  // 3. Vertical Scrubber Bar (Solid Green Accent #1DB954)
   const barW = 4;
-  const barH = 18;
+  const barH = 16;
   const barRadius = 2;
   waveCtx.beginPath();
   if (typeof waveCtx.roundRect === 'function') {
@@ -204,6 +204,6 @@ function drawFrame() {
   } else {
     waveCtx.rect(scrubX - barW / 2, cy - barH / 2, barW, barH);
   }
-  waveCtx.fillStyle = '#83d4d7';
+  waveCtx.fillStyle = '#1db954';
   waveCtx.fill();
 }

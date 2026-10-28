@@ -142,7 +142,7 @@ function initFullscreenGestures() {
  * Renders the full-screen player matching the Spotify-inspired AMOLED design:
  * - Maximized album artwork to a large, rounded-corner square
  * - Wavy line progress bar with negative remaining time
- * - Redesigned Play/Pause button: prominent muted-cyan rounded square flanked by circular Next/Previous
+ * - Redesigned Play/Pause button: prominent solid green squircle flanked by circular Next/Previous
  * - Bottom row with pill-shaped toggle buttons for Speed, Lyrics, and Queue
  */
 export function renderFullscreenPlayer(force = false) {
@@ -189,7 +189,6 @@ export function renderFullscreenPlayer(force = false) {
   const shuffleActive = state.shuffleMode ? 'active' : '';
 
   fullscreenPlayer.innerHTML = `
-     <div class="fs-backdrop" style="background-image: url('${escapeHTML(song.coverUrl)}')"></div>
      <div class="fs-content">
        <div class="fs-header">
          <button class="fs-close-btn" data-action="close-fullscreen-player" type="button" aria-label="Collapse player" title="Collapse">
@@ -238,7 +237,7 @@ export function renderFullscreenPlayer(force = false) {
            <button class="fs-nav-circle-btn" data-action="prev-track" type="button" aria-label="Previous">
              <i class="fa-solid fa-backward-step"></i>
            </button>
-           <button class="fs-play-btn-cyan" data-action="toggle-play" type="button" aria-label="Play/Pause">
+           <button class="fs-play-btn-accent fs-play-btn-cyan" data-action="toggle-play" type="button" aria-label="Play/Pause">
              ${state.isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>'}
            </button>
            <button class="fs-nav-circle-btn" data-action="next-track" type="button" aria-label="Next">

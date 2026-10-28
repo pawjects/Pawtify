@@ -17,6 +17,7 @@ import {
 import { persistPlayer } from '../core/details.js';
 import { loadJSON, saveJSON, getOptimizedArtwork } from '../utils/utils.js';
 import { refreshPlaybackUI } from '../components/playerBar.js';
+import { updateDynamicNowPlayingTheme } from '../utils/themeEngine.js';
 
 export function loadYTApi() {
   if (globals.ytPlayer) return;
@@ -83,8 +84,10 @@ export function getNativeAudio() {
       nativeAudioElement = document.createElement('audio');
       nativeAudioElement.id = 'pawtify-native-audio';
       nativeAudioElement.playsInline = true;
-      nativeAudioElement.preload = 'metadata';
+      nativeAudioElement.preload = 'auto';
       nativeAudioElement.style.display = 'none';
+      nativeAudioElement.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      nativeAudioElement.loop = true;
       document.body.appendChild(nativeAudioElement);
     }
   }
@@ -95,6 +98,12 @@ export function startBackgroundAudio() {
   const audio = getNativeAudio();
   if (!audio) return;
   audio.volume = typeof state.volume === 'number' ? state.volume : 0.7;
+  try {
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {});
+    }
+  } catch (e) {}
 }
 
 export function stopBackgroundAudio() {
@@ -113,16 +122,45 @@ export function wireMediaSessionActionHandlers() {
     }
 
     const actionHandlers = [
-      ['play', () => {
+      ['play', async () => {
         try {
-          if (!state.isPlaying) togglePlay();
+          const audio = getNativeAudio();
+          if (audio) {
+            try {
+              const p = audio.play();
+              if (p && typeof p.catch === 'function') p.catch(() => {});
+            } catch (e) {}
+          }
+          if (globals.ytPlayer && typeof globals.ytPlayer.playVideo === 'function') {
+            try { globals.ytPlayer.playVideo(); } catch (e) {}
+          }
+          if (!state.isPlaying) {
+            await togglePlay();
+          } else {
+            state.isPlaying = true;
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+            refreshPlaybackUI();
+          }
         } catch (e) {
           console.warn('mediaSession play error:', e);
         }
       }],
       ['pause', () => {
         try {
-          if (state.isPlaying) pause();
+          const audio = getNativeAudio();
+          if (audio && !audio.paused) {
+            try { audio.pause(); } catch (e) {}
+          }
+          if (globals.ytPlayer && typeof globals.ytPlayer.pauseVideo === 'function') {
+            try { globals.ytPlayer.pauseVideo(); } catch (e) {}
+          }
+          if (state.isPlaying) {
+            pause();
+          } else {
+            state.isPlaying = false;
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+            refreshPlaybackUI();
+          }
         } catch (e) {
           console.warn('mediaSession pause error:', e);
         }
@@ -197,6 +235,11 @@ export function wireMediaSessionActionHandlers() {
     console.warn('Safe wireMediaSessionActionHandlers caught:', err);
   }
 }
+
+// Initial binding of media session action handlers on load
+try {
+  wireMediaSessionActionHandlers();
+} catch (e) {}
 
 export function updateMediaSession(song) {
   try {
@@ -330,6 +373,7 @@ export function onPlayerStateChange(event) {
     state.isPlaying = true;
     state.isLoading = false;
     if (state.currentSong) state.currentSong._triedFallback = false;
+    updateDynamicNowPlayingTheme(state.currentSong, true);
     try {
       if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
@@ -357,6 +401,7 @@ export function onPlayerStateChange(event) {
       return;
     }
     state.isPlaying = false;
+    updateDynamicNowPlayingTheme(state.currentSong, false);
     try {
       if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
@@ -383,6 +428,7 @@ export function onPlayerStateChange(event) {
       nextTrack();
     } else {
       state.isPlaying = false;
+      updateDynamicNowPlayingTheme(state.currentSong, false);
       stopBackgroundAudio();
       refreshPlaybackUI();
     }

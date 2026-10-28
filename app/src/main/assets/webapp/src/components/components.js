@@ -3,6 +3,7 @@ import { state } from '../config/config.js';
 import { getSongById, dedupeSongs, rememberSongs } from '../core/details.js';
 import { fetchPlaylistDetails } from '../services/apiMapping.js';
 import { isArtistFollowed, isPlaylistSaved, isAlbumSaved } from './player.js';
+import { RECOMMENDED_STATIONS } from './home.js';
 
 export function renderSongRowSkeleton() {
   return `
@@ -303,7 +304,7 @@ export function renderSearchDynamicUI() {
   let html = '';
   if (hasQuery) {
     html += `
-      <button class="clear-search" data-action="clear-search-input" type="button" aria-label="Clear Search Input" title="Clear">
+      <button class="clear-search search-clear-btn" data-action="clear-search-input" type="button" aria-label="Clear Search Input" title="Clear">
         <i class="fa-solid fa-xmark"></i>
       </button>
     `;
@@ -517,19 +518,57 @@ export function renderLibraryPage() {
         ` : ''}
       </div>
     `;
-  } else if (activeTab === 'podcasts') {
+  } else if (activeTab === 'liked') {
+    const favorites = state.favorites || [];
     tabContent = `
       <div class="library-list-container">
-        <div class="empty-state" style="padding: 48px 16px; text-align: center;">
-          <div style="width: 72px; height: 72px; border-radius: 50%; background: #282828; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-            <i class="fa-solid fa-podcast" style="font-size: 2rem; color: #83d4d7;"></i>
+        ${favorites.length ? favorites.map((song, i) => `
+          <article class="library-list-item" data-action="play-song" data-song-id="${escapeHTML(song.id)}" data-source="favorites" role="button" tabindex="0">
+            <img class="library-item-thumb" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" alt="${escapeHTML(song.title)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+            <div class="library-item-info">
+              <h3 class="library-item-title">${escapeHTML(song.title)}</h3>
+              <p class="library-item-sub"><i class="fa-solid fa-heart" style="color:var(--green); font-size:0.75rem;"></i> ${escapeHTML(song.artist)}</p>
+            </div>
+            <button class="icon-btn small song-menu-trigger" data-action="open-track-menu" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Options">
+              <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+          </article>
+        `).join('') : `
+          <div class="empty-state" style="padding: 48px 16px;">
+            <i class="fa-solid fa-heart"></i>
+            <h2>No liked songs</h2>
+            <p>Tap the heart icon on any playing track to save it here.</p>
           </div>
-          <h2 style="font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Looking for podcasts?</h2>
-          <p style="color: #a7a7a7; font-size: 0.9rem; max-width: 320px; margin: 0 auto 20px;">Follow your favorite shows to stay updated with fresh episodes.</p>
-          <button class="btn btn-soft" data-action="search-category" data-category="Podcasts" type="button" style="border-radius: 999px; padding: 10px 24px; font-weight: 700;">
-            Browse podcasts
+        `}
+      </div>
+    `;
+  } else if (activeTab === 'downloads') {
+    tabContent = `
+      <div class="library-list-container">
+        <article class="library-list-item" data-action="install-pwa" role="button" tabindex="0">
+          <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
+            <i class="fa-solid fa-download" style="color: #1db954; font-size: 1.3rem;"></i>
+          </div>
+          <div class="library-item-info">
+            <h3 class="library-item-title">Offline Cache &amp; PWA</h3>
+            <p class="library-item-sub">Fast local media caching active</p>
+          </div>
+          <button class="btn btn-soft btn-sm" data-action="install-pwa" type="button">
+            Install
           </button>
-        </div>
+        </article>
+        <article class="library-list-item" data-action="export-library" role="button" tabindex="0">
+          <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
+            <i class="fa-solid fa-file-export" style="color: #1db954; font-size: 1.3rem;"></i>
+          </div>
+          <div class="library-item-info">
+            <h3 class="library-item-title">Export Library Backup</h3>
+            <p class="library-item-sub">Save all playlists and history to JSON</p>
+          </div>
+          <button class="btn btn-soft btn-sm" data-action="export-library" type="button">
+            Export
+          </button>
+        </article>
       </div>
     `;
   } else if (activeTab === 'albums') {
@@ -663,9 +702,10 @@ export function renderLibraryPage() {
         <!-- Horizontal Filter Chips Row -->
         <div class="library-filter-chips-row">
           <button class="lib-filter-chip ${activeTab === 'playlists' ? 'active' : ''}" data-action="set-library-tab" data-value="playlists" type="button">Playlists</button>
-          <button class="lib-filter-chip ${activeTab === 'podcasts' ? 'active' : ''}" data-action="set-library-tab" data-value="podcasts" type="button">Podcasts</button>
+          <button class="lib-filter-chip ${activeTab === 'liked' ? 'active' : ''}" data-action="set-library-tab" data-value="liked" type="button">Liked</button>
           <button class="lib-filter-chip ${activeTab === 'albums' ? 'active' : ''}" data-action="set-library-tab" data-value="albums" type="button">Albums</button>
           <button class="lib-filter-chip ${activeTab === 'artists' ? 'active' : ''}" data-action="set-library-tab" data-value="artists" type="button">Artists</button>
+          <button class="lib-filter-chip ${activeTab === 'downloads' ? 'active' : ''}" data-action="set-library-tab" data-value="downloads" type="button">Downloads</button>
         </div>
 
         <!-- Sort Bar: Recents -->
@@ -1130,6 +1170,28 @@ export function renderSearchCategories() {
               <span class="category-card-title">${escapeHTML(cat.name)}</span>
               <img class="angled-thumb" src="${cat.image}" alt="" loading="lazy" draggable="false" />
             </div>
+          `).join('')}
+        </div>
+      </section>
+
+      <!-- Recommended Stations Horizontal Carousel (Moved from Home Page) -->
+      <section class="search-section search-stations-section" style="margin-top: 20px;">
+        <h2 class="search-section-title" style="margin-bottom: 14px;">Recommended Stations</h2>
+        <div class="home-scroll station-scroll">
+          ${RECOMMENDED_STATIONS.map((st) => `
+            <article class="station-card" style="background-color: ${st.bgColor}; color: ${st.textColor};" data-action="search-artist-station" data-artist="${escapeHTML(st.artist)}" role="button" tabindex="0">
+              <div class="station-header">
+                <i class="fa-brands fa-spotify station-logo" style="font-size: 1.15rem;"></i>
+                <span class="station-badge">RADIO</span>
+              </div>
+              <div class="station-art-wrap">
+                <img class="station-artist-photo" src="${escapeHTML(st.artistImg)}" alt="${escapeHTML(st.artist)}" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+              </div>
+              <div class="station-footer">
+                <h3 class="station-title" style="color: ${st.textColor};">${escapeHTML(st.artist)}</h3>
+                <p class="station-subtitle" style="color: rgba(0,0,0,0.65);">${escapeHTML(st.subtitle)}</p>
+              </div>
+            </article>
           `).join('')}
         </div>
       </section>

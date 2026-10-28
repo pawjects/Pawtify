@@ -736,6 +736,12 @@ export function bindGlobalEvents() {
         if (state.route.name === 'library') renderCurrentRoute();
         return;
       }
+      if (action === 'set-you-filter') {
+        event.preventDefault();
+        state.youFilter = actionNode.dataset.filter || 'all';
+        if (state.route.name === 'you') renderCurrentRoute();
+        return;
+      }
       if (action === 'clear-search-history') {
         event.preventDefault();
         state.recentSearches = [];
