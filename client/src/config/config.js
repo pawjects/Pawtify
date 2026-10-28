@@ -24,6 +24,7 @@ import {
   loadTrendingSongs,
   loadRecommendations,
 } from '../services/dataLoader.js';
+import { updateDynamicNowPlayingTheme } from '../utils/themeEngine.js';
 
 export const LOGO_URL =
   '/assets/pawtify.png';
@@ -327,6 +328,7 @@ export async function initApp() {
   try {
     document.body.classList.toggle('has-active-track', !!state.currentSong);
     applyTheme(state.theme);
+    updateDynamicNowPlayingTheme(state.currentSong, !!state.isPlaying);
     if (typeof window !== 'undefined' && window.matchMedia) {
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
         if (state.theme === 'system') applyTheme('system');

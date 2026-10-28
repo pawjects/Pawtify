@@ -5,74 +5,85 @@ import {
   getOptimizedArtwork,
   formatRelativeTime,
 } from '../utils/utils.js';
-import { renderPlaylistCard, renderSongRow } from './components.js';
 import { getSongById } from '../core/details.js';
 import { isArtistFollowed, isPlaylistSaved, isAlbumSaved } from './player.js';
 
+/**
+ * High-Density Material Design 3 (MD3) You / Personal Library Page
+ * Features compact list items, pill-shaped filter chips, and square artwork.
+ */
 export function renderYouPage() {
-  const playlistsCount = (state.playlists ? state.playlists.length : 0) + (state.savedPlaylists ? state.savedPlaylists.length : 0);
+  const activeFilter = state.youFilter || 'all';
+
+  const playlistsCount =
+    (state.playlists ? state.playlists.length : 0) +
+    (state.savedPlaylists ? state.savedPlaylists.length : 0);
   const favoritesCount = state.favorites ? state.favorites.length : 0;
   const historyCount = state.recentlyPlayed ? state.recentlyPlayed.length : 0;
-  const albumsCount = (state.savedAlbums ? state.savedAlbums.length : 0);
-  const artistsCount = (state.followedArtists ? state.followedArtists.length : 0);
-  const queueCount = state.queue ? state.queue.length : 0;
+  const albumsCount = state.savedAlbums ? state.savedAlbums.length : 0;
+  const artistsCount = state.followedArtists ? state.followedArtists.length : 0;
 
-  const hour = new Date().getHours();
-  let greeting = 'Welcome back';
-  if (hour >= 5 && hour < 12) greeting = 'Good morning';
-  else if (hour >= 12 && hour < 18) greeting = 'Good afternoon';
-  else greeting = 'Good evening';
+  // Filter chips row
+  const filterChipsHTML = `
+    <div class="you-filter-chips-row" role="tablist">
+      <button class="you-filter-chip ${activeFilter === 'all' ? 'active' : ''}" data-action="set-you-filter" data-filter="all" type="button">All</button>
+      <button class="you-filter-chip ${activeFilter === 'playlists' ? 'active' : ''}" data-action="set-you-filter" data-filter="playlists" type="button">Playlists (${playlistsCount})</button>
+      <button class="you-filter-chip ${activeFilter === 'liked' ? 'active' : ''}" data-action="set-you-filter" data-filter="liked" type="button">Liked (${favoritesCount})</button>
+      <button class="you-filter-chip ${activeFilter === 'albums' ? 'active' : ''}" data-action="set-you-filter" data-filter="albums" type="button">Albums (${albumsCount})</button>
+      <button class="you-filter-chip ${activeFilter === 'artists' ? 'active' : ''}" data-action="set-you-filter" data-filter="artists" type="button">Artists (${artistsCount})</button>
+      <button class="you-filter-chip ${activeFilter === 'downloads' ? 'active' : ''}" data-action="set-you-filter" data-filter="downloads" type="button">Downloads</button>
+    </div>
+  `;
 
-  // 1. Liked Songs cover art preview & songs (up to 4)
-  const recentFavorites = (state.favorites || []).slice(0, 4);
-  const firstFavCover =
-    recentFavorites.length > 0
-      ? getOptimizedArtwork(recentFavorites[0].coverUrl, 320)
-      : '';
+  // Content generation based on filter
+  let listItemsHTML = '';
 
-  const likedSongsHTML = recentFavorites.length > 0
-    ? `
-      <div class="song-table">
-        ${recentFavorites.map((song, i) => renderSongRow(song, i + 1, 'favorites')).join('')}
+  // 1. Liked Songs Item
+  const likedRow = `
+    <article class="library-list-item" data-action="navigate" data-path="/playlist/liked" role="button" tabindex="0">
+      <div class="library-item-thumb-gradient">
+        <i class="fa-solid fa-heart" style="color: #ffffff; font-size: 1.35rem;"></i>
       </div>
-    `
-    : `
-      <div class="you-empty-card">
-        <div class="you-empty-icon"><i class="fa-solid fa-heart"></i></div>
-        <div class="you-empty-text">
-          <strong>No liked songs yet</strong>
-          <span>Heart any track in the player or search to save it to your library.</span>
-        </div>
-        <button class="btn btn-soft you-action-btn" data-action="navigate" data-path="/search" type="button">
-          <i class="fa-solid fa-magnifying-glass"></i> Explore Music
-        </button>
+      <div class="library-item-info">
+        <h3 class="library-item-title">Liked Songs</h3>
+        <p class="library-item-sub"><i class="fa-solid fa-thumbtack pinned-icon" style="color:var(--green); font-size:0.75rem;"></i> Pinned &bull; ${favoritesCount} song${favoritesCount === 1 ? '' : 's'}</p>
       </div>
-    `;
+      <button class="icon-btn small" data-action="play-favorites" type="button" aria-label="Play Liked Songs">
+        <i class="fa-solid fa-play"></i>
+      </button>
+    </article>
+  `;
 
-  // 2. Saved Playlists (combining custom user playlists & bookmarked saved playlists)
+  // 2. Playlists
   const allUserAndSavedPlaylists = [
     ...(state.playlists || []),
-    ...(state.savedPlaylists || []).filter((sp) => !(state.playlists || []).some((p) => p.id === sp.id)),
+    ...(state.savedPlaylists || []).filter(
+      (sp) => !(state.playlists || []).some((p) => p.id === sp.id)
+    ),
   ];
-  const playlistsPreview = allUserAndSavedPlaylists.slice(0, 4);
-  const playlistsHTML = playlistsPreview.length > 0
-    ? `<div class="card-grid">${playlistsPreview.map((p, i) => renderPlaylistCard(p, i)).join('')}</div>`
-    : `
-      <div class="you-empty-card">
-        <div class="you-empty-icon"><i class="fa-solid fa-list-ul"></i></div>
-        <div class="you-empty-text">
-          <strong>No playlists saved</strong>
-          <span>Create custom playlists or bookmark playlists from search to access them here.</span>
+
+  const playlistsItems = allUserAndSavedPlaylists.map((p) => {
+    const cover = p.coverUrl || p.songs?.[0]?.coverUrl || '/assets/pawtify.png';
+    const uploader =
+      p.uploaderName ||
+      (state.playlists.some((sp) => sp.id === p.id) ? 'You' : 'Pawtify');
+    const count = p.songs ? p.songs.length : p.songCount || 0;
+    return `
+      <article class="library-list-item" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(p.id)}" role="button" tabindex="0">
+        <img class="library-item-thumb" src="${escapeHTML(getOptimizedArtwork(cover, 160))}" alt="${escapeHTML(p.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+        <div class="library-item-info">
+          <h3 class="library-item-title">${escapeHTML(p.name)}</h3>
+          <p class="library-item-sub">Playlist &bull; ${escapeHTML(uploader)}${count ? ` &bull; ${count} songs` : ''}</p>
         </div>
-        <button class="btn btn-primary you-action-btn" data-action="open-create-playlist" type="button">
-          <i class="fa-solid fa-plus"></i> New Playlist
+        <button class="icon-btn small" data-action="play-all-playlist" data-playlist-id="${escapeHTML(p.id)}" type="button" aria-label="Play playlist">
+          <i class="fa-solid fa-play"></i>
         </button>
-      </div>
+      </article>
     `;
+  }).join('');
 
   // 3. Saved Albums
   const albumMap = new Map();
-  // Add explicitly saved albums first
   (state.savedAlbums || []).forEach((alb) => {
     const key = (alb.name || alb.title || '').trim().toLowerCase();
     if (key && !albumMap.has(key)) {
@@ -80,432 +91,161 @@ export function renderYouPage() {
         id: alb.id || alb.albumId,
         name: alb.name || alb.title,
         artist: alb.artist || 'Unknown Artist',
-        coverUrl: getOptimizedArtwork(alb.coverUrl || alb.imageUrl, 320),
+        coverUrl: getOptimizedArtwork(alb.coverUrl || alb.imageUrl, 240),
         songCount: alb.songCount || 1,
-        isExplicitlySaved: true,
       });
     }
   });
-  // Also collect albums from liked tracks and playlists if available
-  [
-    ...(state.favorites || []),
-    ...(state.playlists || []).flatMap((p) => p.songs || []),
-  ].forEach((s) => {
-    if (s && s.album && s.album !== 'Single' && s.album !== 'Unknown') {
-      const key = s.album.trim().toLowerCase();
-      if (!albumMap.has(key)) {
-        albumMap.set(key, {
-          name: s.album,
-          artist: s.artist,
-          coverUrl: getOptimizedArtwork(s.coverUrl, 320),
-          songCount: 1,
-          isExplicitlySaved: isAlbumSaved({ name: s.album, artist: s.artist }),
-        });
-      } else {
-        albumMap.get(key).songCount += 1;
-      }
-    }
-  });
-  const savedAlbums = Array.from(albumMap.values()).slice(0, 4);
-  const albumsHTML = savedAlbums.length
-    ? `
-      <div class="card-grid">
-        ${savedAlbums
-          .map(
-            (album) => {
-              const saved = isAlbumSaved({ name: album.name, artist: album.artist });
-              const isRemoteAlbum = album.id && !String(album.id).startsWith('album-');
-              return `
-              <div class="card" ${isRemoteAlbum ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} role="button" tabindex="0">
-                <div class="card-img-wrap">
-                  <img class="card-cover" src="${escapeHTML(album.coverUrl)}" alt="${escapeHTML(album.name)}" draggable="false" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-                  <button class="card-play-btn" ${isRemoteAlbum ? `data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" aria-label="Play Album"` : `type="button" aria-label="View Artist"`}>
-                    <i class="fa-solid ${isRemoteAlbum ? 'fa-play' : 'fa-compact-disc'}"></i>
-                  </button>
-                  <button class="card-bookmark-btn ${saved ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id || '')}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist)}" data-album-cover="${escapeHTML(album.coverUrl)}" type="button" aria-label="${saved ? 'Unsave album' : 'Save album'}">
-                    <i class="fa-solid ${saved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
-                  </button>
-                </div>
-                <div class="card-title">${escapeHTML(album.name)}</div>
-                <div class="card-meta">${escapeHTML(album.artist)} &bull; ${album.songCount} track${album.songCount === 1 ? '' : 's'}</div>
-              </div>
-            `;
-            }
-          )
-          .join('')}
-      </div>
-    `
-    : `
-      <div class="you-empty-card">
-        <div class="you-empty-icon"><i class="fa-solid fa-compact-disc"></i></div>
-        <div class="you-empty-text">
-          <strong>No albums saved</strong>
-          <span>Save albums from search results or like songs with album metadata.</span>
+
+  const albumsItems = Array.from(albumMap.values()).map((album) => {
+    const isRemote = album.id && !String(album.id).startsWith('album-');
+    return `
+      <article class="library-list-item" ${isRemote ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} role="button" tabindex="0">
+        <img class="library-item-thumb" src="${escapeHTML(album.coverUrl)}" alt="${escapeHTML(album.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+        <div class="library-item-info">
+          <h3 class="library-item-title">${escapeHTML(album.name)}</h3>
+          <p class="library-item-sub">Album &bull; ${escapeHTML(album.artist)} &bull; ${album.songCount} track${album.songCount === 1 ? '' : 's'}</p>
         </div>
-        <button class="btn btn-soft you-action-btn" data-action="navigate" data-path="/search" type="button">
-          <i class="fa-solid fa-magnifying-glass"></i> Find Albums
+        <button class="icon-btn small" ${isRemote ? `data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} type="button" aria-label="Play Album">
+          <i class="fa-solid fa-play"></i>
         </button>
-      </div>
+      </article>
     `;
+  }).join('');
 
   // 4. Followed Artists
   const artistMap = new Map();
-  // Add explicitly followed artists first
   (state.followedArtists || []).forEach((fa) => {
     const name = (typeof fa === 'string' ? fa : fa.name || '').trim();
     if (name && !artistMap.has(name.toLowerCase())) {
       artistMap.set(name.toLowerCase(), {
         name,
         imageUrl: fa.imageUrl || '',
-        isFollowed: true,
-      });
-    }
-  });
-  // Supplement with artists from favorites, playlists, and history
-  const recentSongObjects = (state.recentlyPlayed || [])
-    .map((id) => getSongById(id))
-    .filter(Boolean);
-
-  const rawArtists = [
-    ...(state.favorites || []).map((s) => s.artist),
-    ...(state.playlists || []).flatMap((p) => (p.songs || []).map((s) => s.artist)),
-    ...recentSongObjects.map((s) => s.artist),
-  ].filter(Boolean);
-
-  rawArtists.forEach((artistName) => {
-    const key = artistName.trim().toLowerCase();
-    if (!artistMap.has(key)) {
-      artistMap.set(key, {
-        name: artistName,
-        imageUrl: '',
-        isFollowed: isArtistFollowed(artistName),
       });
     }
   });
 
-  const uniqueArtists = Array.from(artistMap.values()).slice(0, 6);
-  const artistsHTML = uniqueArtists.length
-    ? `
-      <div class="card-grid">
-        ${uniqueArtists
-          .map(
-            (artist) => {
-              const followed = isArtistFollowed(artist.name);
-              return `
-              <div class="card card-search-artist" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" role="button" tabindex="0">
-                <div class="card-img-wrap" style="border-radius: 50%; overflow: hidden; margin-bottom: 12px; aspect-ratio: 1/1; background: var(--hover); display: flex; align-items: center; justify-content: center;">
-                  ${
-                    artist.imageUrl
-                      ? `<img src="${escapeHTML(getOptimizedArtwork(artist.imageUrl, 240))}" alt="${escapeHTML(artist.name)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><i class="fa-solid fa-user" style="display:none; font-size: 2.2rem; color: var(--muted);"></i>`
-                      : `<i class="fa-solid fa-user" style="font-size: 2.2rem; color: var(--muted);"></i>`
-                  }
-                </div>
-                <div class="card-title text-center">${escapeHTML(artist.name)}</div>
-                <div class="card-meta text-center" style="margin-bottom: 8px;">Artist</div>
-                <div style="display: flex; justify-content: center; margin-top: auto;">
-                  <button class="btn-card-follow ${followed ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(artist.imageUrl || '')}" type="button" aria-label="${followed ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
-                    <i class="fa-solid ${followed ? 'fa-check' : 'fa-plus'}"></i>
-                    <span>${followed ? 'Following' : 'Follow'}</span>
-                  </button>
-                </div>
-              </div>
-            `;
-            }
-          )
-          .join('')}
-      </div>
-    `
-    : `
-      <div class="you-empty-card">
-        <div class="you-empty-icon"><i class="fa-solid fa-user-astronaut"></i></div>
-        <div class="you-empty-text">
-          <strong>No followed artists</strong>
-          <span>Tap Follow on any artist page or search result to see them here.</span>
+  const artistsItems = Array.from(artistMap.values()).map((artist) => {
+    return `
+      <article class="library-list-item" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" role="button" tabindex="0">
+        <div style="width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: var(--hover); flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+          ${
+            artist.imageUrl
+              ? `<img src="${escapeHTML(getOptimizedArtwork(artist.imageUrl, 160))}" alt="${escapeHTML(artist.name)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><i class="fa-solid fa-user" style="display:none; font-size: 1.5rem; color: var(--muted);"></i>`
+              : `<i class="fa-solid fa-user" style="font-size: 1.5rem; color: var(--muted);"></i>`
+          }
         </div>
-        <button class="btn btn-soft you-action-btn" data-action="navigate" data-path="/search" type="button">
-          <i class="fa-solid fa-magnifying-glass"></i> Discover Artists
+        <div class="library-item-info">
+          <h3 class="library-item-title">${escapeHTML(artist.name)}</h3>
+          <p class="library-item-sub">Artist &bull; Following</p>
+        </div>
+        <button class="icon-btn small" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" type="button" aria-label="View artist">
+          <i class="fa-solid fa-chevron-right"></i>
         </button>
-      </div>
+      </article>
     `;
+  }).join('');
 
-  // 5. Recently Played (latest 4 tracks)
-  const recentPreviewSongs = recentSongObjects.slice(0, 4);
-  const recentTracksHTML = recentPreviewSongs.length
-    ? `
-      <div class="song-table">
-        ${recentPreviewSongs.map((song, i) => renderSongRow(song, i + 1, 'history')).join('')}
+  // 5. Downloads / Offline Item
+  const downloadsItems = `
+    <article class="library-list-item" data-action="install-pwa" role="button" tabindex="0">
+      <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
+        <i class="fa-solid fa-download" style="color: #1db954; font-size: 1.3rem;"></i>
       </div>
-    `
-    : `
-      <div class="you-empty-card">
-        <div class="you-empty-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
-        <div class="you-empty-text">
-          <strong>No recent tracks</strong>
-          <span>Tracks you stream will be recorded here in your listening history.</span>
-        </div>
-        <button class="btn btn-soft you-action-btn" data-action="play-something" type="button">
-          <i class="fa-solid fa-play"></i> Play Something
+      <div class="library-item-info">
+        <h3 class="library-item-title">Offline Cache &amp; PWA</h3>
+        <p class="library-item-sub">Native app installation and cached resources</p>
+      </div>
+      <button class="btn btn-soft btn-sm" data-action="install-pwa" type="button">
+        Install
+      </button>
+    </article>
+    <article class="library-list-item" data-action="export-library" role="button" tabindex="0">
+      <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
+        <i class="fa-solid fa-file-export" style="color: #1db954; font-size: 1.3rem;"></i>
+      </div>
+      <div class="library-item-info">
+        <h3 class="library-item-title">Export Library Backup</h3>
+        <p class="library-item-sub">Save all playlists and history to JSON file</p>
+      </div>
+      <button class="btn btn-soft btn-sm" data-action="export-library" type="button">
+        Export
+      </button>
+    </article>
+  `;
+
+  if (activeFilter === 'all') {
+    listItemsHTML = likedRow + playlistsItems + albumsItems + artistsItems + downloadsItems;
+  } else if (activeFilter === 'playlists') {
+    listItemsHTML = `
+      <div style="padding: 4px 10px 10px;">
+        <button class="btn btn-primary btn-sm" data-action="open-create-playlist" type="button" style="border-radius: 9999px; width: 100%;">
+          <i class="fa-solid fa-plus"></i> New Playlist
         </button>
       </div>
+      ${playlistsItems || '<div class="empty-state"><p>No custom playlists saved yet.</p></div>'}
     `;
+  } else if (activeFilter === 'liked') {
+    const favorites = state.favorites || [];
+    listItemsHTML = favorites.length
+      ? favorites.map((song) => `
+        <article class="library-list-item" data-action="play-song" data-song-id="${escapeHTML(song.id)}" data-source="favorites" role="button" tabindex="0">
+          <img class="library-item-thumb" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" alt="${escapeHTML(song.title)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+          <div class="library-item-info">
+            <h3 class="library-item-title">${escapeHTML(song.title)}</h3>
+            <p class="library-item-sub"><i class="fa-solid fa-heart" style="color:var(--green); font-size:0.75rem;"></i> ${escapeHTML(song.artist)}</p>
+          </div>
+          <button class="icon-btn small song-menu-trigger" data-action="open-track-menu" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="More options">
+            <i class="fa-solid fa-ellipsis-vertical"></i>
+          </button>
+        </article>
+      `).join('')
+      : '<div class="empty-state"><p>No liked songs yet.</p></div>';
+  } else if (activeFilter === 'albums') {
+    listItemsHTML = albumsItems || '<div class="empty-state"><p>No saved albums found.</p></div>';
+  } else if (activeFilter === 'artists') {
+    listItemsHTML = artistsItems || '<div class="empty-state"><p>No followed artists found.</p></div>';
+  } else if (activeFilter === 'downloads') {
+    listItemsHTML = downloadsItems;
+  }
 
   return `
-    <section class="page you-page">
-      <!-- 📌 1. Page Header -->
-      <div class="you-header">
-        <div class="you-header-titles">
-          <span class="you-header-kicker">Personal Library</span>
-          <h1 class="you-header-title">You</h1>
+    <section class="page you-page-spotify">
+      <!-- High-Density Header -->
+      <header class="library-header-spotify" style="padding: 16px 16px 6px;">
+        <div class="library-top-bar" style="margin-bottom: 10px;">
+          <div class="library-user-title-wrap">
+            <button class="library-avatar-btn" data-action="edit-user-name" type="button" aria-label="Profile">
+              <img class="library-avatar-img" src="${LOGO_URL}" alt="Profile" />
+            </button>
+            <h1 class="library-title-spotify">${escapeHTML(state.userName || 'You')}</h1>
+          </div>
+          <div class="library-actions">
+            <button class="library-icon-btn" data-action="open-create-playlist" type="button" aria-label="New Playlist" title="Create Playlist">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+            <button class="library-icon-btn" data-action="open-settings" type="button" aria-label="Settings" title="Settings">
+              <i class="fa-solid fa-gear"></i>
+            </button>
+          </div>
         </div>
-        <div class="you-header-actions">
-          <button class="btn btn-soft btn-sm" data-action="edit-user-name" type="button" title="Edit Profile">
-            <i class="fa-solid fa-pen"></i>
-            <span>Edit Profile</span>
-          </button>
-          <button class="btn btn-soft btn-sm" data-action="open-settings" type="button" title="Settings">
-            <i class="fa-solid fa-gear"></i>
-            <span>Settings</span>
-          </button>
-        </div>
-      </div>
 
-      <!-- 👤 2. Profile / Welcome Area -->
-      <header class="you-profile-card">
-        <div class="you-profile-main">
-          <div class="you-avatar-wrap">
-            <img src="${LOGO_URL}" alt="Pawtify" class="you-avatar-img" draggable="false" />
-            <span class="you-status-dot" title="Active session" aria-hidden="true"></span>
-          </div>
-          <div class="you-profile-details">
-            <span class="you-profile-greeting">${greeting}</span>
-            <div class="you-title-row">
-              <h2 class="you-name">${escapeHTML(state.userName || 'Pawtify Listener')}</h2>
-              <span class="you-badge-member"><i class="fa-solid fa-shield-cat"></i> Pawtify Member</span>
-            </div>
-            <div class="you-tagline">
-              <span class="you-tagline-stat"><strong>${favoritesCount}</strong> Liked</span>
-              <span class="you-tagline-dot" aria-hidden="true">&bull;</span>
-              <span class="you-tagline-stat"><strong>${playlistsCount}</strong> Playlists</span>
-              <span class="you-tagline-dot" aria-hidden="true">&bull;</span>
-              <span class="you-tagline-stat"><strong>${albumsCount}</strong> Albums</span>
-              <span class="you-tagline-dot" aria-hidden="true">&bull;</span>
-              <span class="you-tagline-stat"><strong>${artistsCount}</strong> Artists</span>
-            </div>
-          </div>
-        </div>
-        <div class="you-profile-quick-actions">
-          <button class="btn btn-primary btn-sm" data-action="open-create-playlist" type="button">
-            <i class="fa-solid fa-plus"></i> New Playlist
-          </button>
-          <button class="btn btn-soft btn-sm" data-action="open-favorites" type="button">
-            <i class="fa-solid fa-heart"></i> Liked Songs
-          </button>
-        </div>
+        <!-- Filter Chips Row -->
+        ${filterChipsHTML}
       </header>
 
-      <!-- 🎵 1. Liked Songs -->
-      <section class="you-section">
-        <div class="you-section-head">
-          <div class="you-section-head-titles">
-            <h2 class="you-section-title"><i class="fa-solid fa-heart" style="color:var(--green);"></i>Liked Songs</h2>
-            <span class="you-section-sub">Your favorite tracks in one personal collection</span>
-          </div>
-          <div class="you-section-actions">
-            ${
-              favoritesCount > 0
-                ? `
-                <button class="btn btn-soft btn-sm" data-action="play-favorites" type="button" aria-label="Play Liked Songs">
-                  <i class="fa-solid fa-play"></i> Play All
-                </button>
-                <button class="btn btn-soft btn-sm" data-action="open-favorites" type="button">
-                  View all (${favoritesCount})
-                </button>
-              `
-                : ''
-            }
-          </div>
-        </div>
-        ${likedSongsHTML}
-      </section>
-
-      <!-- 📋 2. Saved Playlists -->
-      <section class="you-section">
-        <div class="you-section-head">
-          <div class="you-section-head-titles">
-            <h2 class="you-section-title"><i class="fa-solid fa-list-ul"></i>Saved Playlists</h2>
-            <span class="you-section-sub">Your custom mixes and bookmarked playlists</span>
-          </div>
-          <div class="you-section-actions">
-            <button class="btn btn-soft btn-sm" data-action="open-create-playlist" type="button">
-              <i class="fa-solid fa-plus"></i> New
-            </button>
-            <button class="btn btn-soft btn-sm" data-action="navigate" data-path="/library" type="button">
-              View all
-            </button>
-          </div>
-        </div>
-        ${playlistsHTML}
-      </section>
-
-      <!-- 💿 3. Saved Albums -->
-      <section class="you-section">
-        <div class="you-section-head">
-          <div class="you-section-head-titles">
-            <h2 class="you-section-title"><i class="fa-solid fa-compact-disc"></i>Saved Albums</h2>
-            <span class="you-section-sub">Bookmarked albums and personal discographies</span>
-          </div>
-          <div class="you-section-actions">
-            <button class="btn btn-soft btn-sm" data-action="navigate" data-path="/albums" type="button">
-              View all
-            </button>
-          </div>
-        </div>
-        ${albumsHTML}
-      </section>
-
-      <!-- 👨‍🎤 4. Followed Artists -->
-      <section class="you-section">
-        <div class="you-section-head">
-          <div class="you-section-head-titles">
-            <h2 class="you-section-title"><i class="fa-solid fa-user-group"></i>Followed Artists</h2>
-            <span class="you-section-sub">Artists you follow for new releases and updates</span>
-          </div>
-          <div class="you-section-actions">
-            <button class="btn btn-soft btn-sm" data-action="navigate" data-path="/artists" type="button">
-              View all
-            </button>
-          </div>
-        </div>
-        ${artistsHTML}
-      </section>
-
-      <!-- 🕐 5. Recently Played -->
-      <section class="you-section">
-        <div class="you-section-head">
-          <div class="you-section-head-titles">
-            <h2 class="you-section-title"><i class="fa-solid fa-clock-rotate-left"></i>Recently Played</h2>
-            <span class="you-section-sub">Your latest listening stream history</span>
-          </div>
-          <div class="you-section-actions">
-            ${
-              historyCount > 0
-                ? `
-                <button class="btn btn-soft btn-sm you-btn-danger" data-action="clear-history" type="button">
-                  <i class="fa-solid fa-trash"></i> Clear
-                </button>
-                <button class="btn btn-soft btn-sm" data-action="navigate" data-path="/playlist/history" type="button">
-                  View all
-                </button>
-              `
-                : ''
-            }
-          </div>
-        </div>
-        ${recentTracksHTML}
-      </section>
-
-      <!-- 🧭 6. Library Shortcuts Hub -->
-      <section class="you-section you-shortcuts-section">
-        <div class="you-section-head">
-          <div class="you-section-head-titles">
-            <h2 class="you-section-title"><i class="fa-solid fa-compass"></i>Library Shortcuts</h2>
-            <span class="you-section-sub">Quick navigation to your listening destinations</span>
-          </div>
-        </div>
-        <div class="you-hub-grid">
-          <!-- Liked Songs -->
-          <article class="you-hub-card you-hub-liked" data-action="open-favorites" role="button" tabindex="0" aria-label="Open Liked Songs">
-            <div class="you-hub-cover-wrap">
-              ${
-                firstFavCover
-                  ? `<img src="${escapeHTML(firstFavCover)}" alt="" class="you-hub-cover" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />`
-                  : `<div class="you-hub-icon hub-icon-heart"><i class="fa-solid fa-heart"></i></div>`
-              }
-            </div>
-            <div class="you-hub-content">
-              <strong class="you-hub-title">Liked Songs</strong>
-              <span class="you-hub-sub">${favoritesCount} track${favoritesCount === 1 ? '' : 's'}</span>
-            </div>
-            <div class="you-hub-end">
-              ${
-                favoritesCount > 0
-                  ? `<button class="you-hub-play" data-action="play-favorites" type="button" aria-label="Play Liked Songs"><i class="fa-solid fa-play"></i></button>`
-                  : `<i class="fa-solid fa-chevron-right you-hub-arrow" aria-hidden="true"></i>`
-              }
-            </div>
-          </article>
-
-          <!-- Playlists -->
-          <article class="you-hub-card" data-action="navigate" data-path="/library" role="button" tabindex="0" aria-label="Open Playlists">
-            <div class="you-hub-cover-wrap">
-              <div class="you-hub-icon hub-icon-playlist"><i class="fa-solid fa-list-ul"></i></div>
-            </div>
-            <div class="you-hub-content">
-              <strong class="you-hub-title">Playlists</strong>
-              <span class="you-hub-sub">${playlistsCount} playlist${playlistsCount === 1 ? '' : 's'}</span>
-            </div>
-            <div class="you-hub-end">
-              <i class="fa-solid fa-chevron-right you-hub-arrow" aria-hidden="true"></i>
-            </div>
-          </article>
-
-          <!-- Recently Played -->
-          <article class="you-hub-card" data-action="navigate" data-path="/playlist/history" role="button" tabindex="0" aria-label="Open Recently Played">
-            <div class="you-hub-cover-wrap">
-              <div class="you-hub-icon hub-icon-clock"><i class="fa-solid fa-clock-rotate-left"></i></div>
-            </div>
-            <div class="you-hub-content">
-              <strong class="you-hub-title">Recently Played</strong>
-              <span class="you-hub-sub">${historyCount} track${historyCount === 1 ? '' : 's'}</span>
-            </div>
-            <div class="you-hub-end">
-              <i class="fa-solid fa-chevron-right you-hub-arrow" aria-hidden="true"></i>
-            </div>
-          </article>
-
-          <!-- Queue -->
-          <article class="you-hub-card" data-action="open-queue" role="button" tabindex="0" aria-label="Open Playback Queue">
-            <div class="you-hub-cover-wrap">
-              <div class="you-hub-icon hub-icon-queue"><i class="fa-solid fa-bars-staggered"></i></div>
-            </div>
-            <div class="you-hub-content">
-              <strong class="you-hub-title">Current Queue</strong>
-              <span class="you-hub-sub">${queueCount > 0 ? `${queueCount} upcoming` : (state.currentSong ? '1 streaming' : 'Empty')}</span>
-            </div>
-            <div class="you-hub-end">
-              <i class="fa-solid fa-chevron-right you-hub-arrow" aria-hidden="true"></i>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <!-- ⚙️ 7. Settings Gateway Entry -->
-      <section class="you-section you-settings-gateway-section">
-        <div class="you-section-head">
-          <div class="you-section-head-titles">
-            <h2 class="you-section-title"><i class="fa-solid fa-gear"></i>Settings &amp; Preferences</h2>
-            <span class="you-section-sub">Appearance, playback, privacy and app preferences</span>
-          </div>
-        </div>
-        <div class="you-settings-gateway-card" data-action="open-settings" role="button" tabindex="0" aria-label="Open Settings and Preferences">
-          <div class="you-settings-gateway-left">
-            <div class="you-settings-gateway-icon">
-              <i class="fa-solid fa-sliders"></i>
-            </div>
-            <div class="you-settings-gateway-info">
-              <strong class="you-settings-gateway-title">Settings &amp; Preferences</strong>
-              <p class="you-settings-gateway-desc">Theme mode (AMOLED), audio stream quality, cache management, offline sync &amp; privacy controls</p>
-            </div>
-          </div>
-          <div class="you-settings-gateway-action">
-            <span class="you-settings-gateway-btn">Settings <i class="fa-solid fa-arrow-right"></i></span>
-          </div>
-        </div>
-      </section>
+      <!-- Compact MD3 List Container -->
+      <div class="library-list-container">
+        ${listItemsHTML}
+      </div>
     </section>
   `;
 }
 
+/**
+ * Clean, Flat Material Design 3 Settings Section
+ * Stripped of bulky nested cards and replaced with flat list rows and native-looking MD3 switches.
+ */
 export function renderSettingsSections() {
   const favoritesCount = state.favorites?.length || 0;
   const playlistsCount = state.playlists?.length || 0;
@@ -514,248 +254,156 @@ export function renderSettingsSections() {
   const quality = state.audioQuality || 'high';
 
   return `
-    <!-- 1. Appearance -->
-    <div class="you-settings-group">
-      <div class="you-settings-group-title"><i class="fa-solid fa-palette"></i> Appearance</div>
-      <div class="you-settings-box">
-        <div class="you-setting-row you-setting-row-stacked">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Theme Mode</div>
-            <div class="you-setting-desc">AMOLED pitch-black optimizes OLED battery life and visual comfort.</div>
+    <div class="settings-flat-container">
+      <!-- 1. Playback & Engine -->
+      <div class="settings-flat-header">
+        <i class="fa-solid fa-play"></i> Playback
+      </div>
+      <div class="settings-flat-group">
+        <div class="settings-flat-row">
+          <div class="settings-flat-info">
+            <div class="settings-flat-label">Continuous Streaming (Autoplay)</div>
+            <div class="settings-flat-desc">Play similar songs automatically when queue ends</div>
           </div>
-          <div class="you-theme-btn-group">
-            <button class="btn btn-soft you-theme-pill ${activeTheme === 'amoled' || activeTheme === 'dark' ? 'active' : ''}" data-action="set-theme" data-theme="amoled" type="button">
-              <i class="fa-solid fa-circle theme-icon-amoled"></i> AMOLED Dark
-            </button>
-            <button class="btn btn-soft you-theme-pill ${activeTheme === 'light' ? 'active' : ''}" data-action="set-theme" data-theme="light" type="button">
-              <i class="fa-solid fa-sun theme-icon-light"></i> Light
-            </button>
-          </div>
+          <button class="md3-switch ${state.autoplay !== false ? 'active' : ''}" data-action="toggle-autoplay" type="button" role="switch" aria-checked="${state.autoplay !== false ? 'true' : 'false'}" aria-label="Toggle Continuous Autoplay"></button>
         </div>
-        <div class="you-setting-divider"></div>
-        <div class="you-setting-row you-setting-row-inline">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Floating Video Window</div>
-            <div class="you-setting-desc">Display synchronized YouTube music video alongside playback controls.</div>
+
+        <div class="settings-flat-row">
+          <div class="settings-flat-info">
+            <div class="settings-flat-label">Shuffle Playback</div>
+            <div class="settings-flat-desc">Randomize the order of queued tracks</div>
           </div>
-          <button class="toggle-switch ${state.videoVisible ? 'active' : ''}" data-action="toggle-video" type="button" role="switch" aria-checked="${state.videoVisible ? 'true' : 'false'}" aria-label="Toggle Video Player">
-            <div class="toggle-switch-thumb"></div>
-          </button>
+          <button class="md3-switch ${state.shuffleMode ? 'active' : ''}" data-action="toggle-shuffle" type="button" role="switch" aria-checked="${state.shuffleMode ? 'true' : 'false'}" aria-label="Toggle Shuffle"></button>
+        </div>
+
+        <div class="settings-flat-row">
+          <div class="settings-flat-info">
+            <div class="settings-flat-label">Audio Quality</div>
+            <div class="settings-flat-desc">Target bitrate for audio streams</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-soft btn-sm ${quality === 'normal' ? 'active' : ''}" data-action="set-audio-quality" data-quality="normal" type="button" style="border-radius:9999px;">128k</button>
+            <button class="btn btn-soft btn-sm ${quality === 'high' ? 'active' : ''}" data-action="set-audio-quality" data-quality="high" type="button" style="border-radius:9999px;">160k Opus</button>
+            <button class="btn btn-soft btn-sm ${quality === 'very-high' ? 'active' : ''}" data-action="set-audio-quality" data-quality="very-high" type="button" style="border-radius:9999px;">256k</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- 3. Playback -->
-    <div class="you-settings-group">
-      <div class="you-settings-group-title"><i class="fa-solid fa-music"></i> Playback</div>
-      <div class="you-settings-box">
-        <div class="you-setting-row you-setting-row-inline">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Continuous Streaming (Autoplay)</div>
-            <div class="you-setting-desc">Automatically play similar tracks when current queue finishes.</div>
-          </div>
-          <button class="toggle-switch ${state.autoplay !== false ? 'active' : ''}" data-action="toggle-autoplay" type="button" role="switch" aria-checked="${state.autoplay !== false ? 'true' : 'false'}" aria-label="Toggle Continuous Autoplay">
-            <div class="toggle-switch-thumb"></div>
-          </button>
-        </div>
-        <div class="you-setting-divider"></div>
-        <div class="you-setting-row you-setting-row-stacked">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Audio Stream Quality</div>
-            <div class="you-setting-desc">Direct high-bitrate audio stream target.</div>
-          </div>
-          <div class="you-setting-actions">
-            <button class="btn btn-soft you-setting-btn ${quality === 'normal' ? 'active' : ''}" data-action="set-audio-quality" data-quality="normal" type="button">128k</button>
-            <button class="btn btn-soft you-setting-btn ${quality === 'high' ? 'active' : ''}" data-action="set-audio-quality" data-quality="high" type="button">160k Opus</button>
-            <button class="btn btn-soft you-setting-btn ${quality === 'very-high' ? 'active' : ''}" data-action="set-audio-quality" data-quality="very-high" type="button">256k</button>
-          </div>
-        </div>
-        <div class="you-setting-divider"></div>
-        <div class="you-setting-row you-setting-row-stacked">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Default Repeat Mode</div>
-            <div class="you-setting-desc">Control queue looping behavior.</div>
-          </div>
-          <div class="you-setting-actions">
-            <button class="btn btn-soft you-setting-btn ${state.repeatMode === 'none' ? 'active' : ''}" data-action="set-repeat" data-mode="none" type="button">Off</button>
-            <button class="btn btn-soft you-setting-btn ${state.repeatMode === 'all' ? 'active' : ''}" data-action="set-repeat" data-mode="all" type="button">All</button>
-            <button class="btn btn-soft you-setting-btn ${state.repeatMode === 'one' ? 'active' : ''}" data-action="set-repeat" data-mode="one" type="button">1 Track</button>
-          </div>
-        </div>
-        <div class="you-setting-divider"></div>
-        <div class="you-setting-row you-setting-row-inline">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Shuffle Playback</div>
-            <div class="you-setting-desc">Randomize the playback order of upcoming tracks.</div>
-          </div>
-          <button class="toggle-switch ${state.shuffleMode ? 'active' : ''}" data-action="toggle-shuffle" type="button" role="switch" aria-checked="${state.shuffleMode ? 'true' : 'false'}" aria-label="Toggle Shuffle">
-            <div class="toggle-switch-thumb"></div>
-          </button>
-        </div>
+      <!-- 2. Appearance & Dynamic AMOLED Theme -->
+      <div class="settings-flat-header">
+        <i class="fa-solid fa-palette"></i> Appearance &amp; Theming
       </div>
-    </div>
-
-    <!-- 4. Downloads / Storage -->
-    <div class="you-settings-group">
-      <div class="you-settings-group-title"><i class="fa-solid fa-database"></i> Downloads &amp; Storage</div>
-      <div class="you-settings-box">
-        <div class="you-setting-row you-setting-row-responsive">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Offline &amp; Service Worker</div>
-            <div class="you-setting-desc">App shell and cached metadata cached for fast offline launch.</div>
+      <div class="settings-flat-group">
+        <div class="settings-flat-row">
+          <div class="settings-flat-info">
+            <div class="settings-flat-label">Theme Mode</div>
+            <div class="settings-flat-desc">AMOLED pitch-black optimizes OLED battery life</div>
           </div>
-          <button class="btn btn-soft btn-sm" data-action="install-pwa" type="button">
-            <i class="fa-solid fa-download"></i> Install App
-          </button>
-        </div>
-        <div class="you-setting-divider"></div>
-        <div class="you-setting-row you-setting-row-responsive">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Clear Cached Data</div>
-            <div class="you-setting-desc">Flush temporary image and audio cache (keeps playlists).</div>
-          </div>
-          <button class="btn btn-soft btn-sm you-btn-danger" data-action="clear-cache" type="button">
-            <i class="fa-solid fa-trash-can"></i> Clear Cache
-          </button>
-        </div>
-        <div class="you-setting-divider"></div>
-        <div class="you-setting-row you-setting-row-inline">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Local Storage Status</div>
-            <div class="you-setting-desc">Dual IndexedDB + LocalStorage high-speed offline sync active.</div>
-          </div>
-          <span class="you-setting-tag">
-            ${playlistsCount} playlists &bull; ${favoritesCount} liked
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 5. Privacy & Data -->
-    <div class="you-settings-group">
-      <div class="you-settings-group-title"><i class="fa-solid fa-shield-halved"></i> Privacy &amp; Data</div>
-      <div class="you-settings-box">
-        <div class="you-setting-row you-setting-row-responsive">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Listening History</div>
-            <div class="you-setting-desc">Clear your locally recorded stream history (${historyCount} tracks recorded).</div>
-          </div>
-          <button class="btn btn-soft btn-sm you-btn-danger" data-action="clear-history" type="button" ${historyCount === 0 ? 'disabled' : ''}>
-            <i class="fa-solid fa-clock-rotate-left"></i> Clear History
-          </button>
-        </div>
-        <div class="you-setting-divider"></div>
-        <div class="you-setting-row you-setting-row-stacked">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Export / Import Library</div>
-            <div class="you-setting-desc">Save a portable JSON backup or restore saved playlists.</div>
-          </div>
-          <div class="you-setting-actions">
-            <button class="btn btn-soft btn-sm" data-action="export-library" type="button">
-              <i class="fa-solid fa-file-export"></i> Export JSON
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-soft btn-sm ${activeTheme === 'amoled' || activeTheme === 'dark' ? 'active' : ''}" data-action="set-theme" data-theme="amoled" type="button" style="border-radius:9999px;">
+              <i class="fa-solid fa-circle" style="color:#000000; margin-right:4px;"></i> AMOLED
             </button>
-            <button class="btn btn-soft btn-sm" data-action="import-library" type="button">
-              <i class="fa-solid fa-file-import"></i> Import File
+            <button class="btn btn-soft btn-sm ${activeTheme === 'light' ? 'active' : ''}" data-action="set-theme" data-theme="light" type="button" style="border-radius:9999px;">
+              <i class="fa-solid fa-sun" style="color:#f59e0b; margin-right:4px;"></i> Light
             </button>
           </div>
         </div>
-        <div class="you-setting-divider"></div>
-        <div class="you-setting-row you-setting-row-inline">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Zero-Telemetry Guarantee</div>
-            <div class="you-setting-desc">No tracking pixels, third-party cookies, or analytics scripts.</div>
+
+        <div class="settings-flat-row">
+          <div class="settings-flat-info">
+            <div class="settings-flat-label">Floating Video Window</div>
+            <div class="settings-flat-desc">Watch official music video alongside playback</div>
           </div>
-          <span class="you-badge-soft">
-            <i class="fa-solid fa-lock"></i> 100% Client-Side
-          </span>
+          <button class="md3-switch ${state.videoVisible ? 'active' : ''}" data-action="toggle-video" type="button" role="switch" aria-checked="${state.videoVisible ? 'true' : 'false'}" aria-label="Toggle Video Player"></button>
         </div>
       </div>
-    </div>
 
-    <!-- 6. App Settings -->
-    <div class="you-settings-group">
-      <div class="you-settings-group-title"><i class="fa-solid fa-sliders"></i> App Settings</div>
-      <div class="you-settings-box">
-        <div class="you-setting-row you-setting-row-inline">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Media Session Controls</div>
-            <div class="you-setting-desc">Lockscreen artwork, notification playback &amp; hardware media keys.</div>
+      <!-- 3. Storage & Offline -->
+      <div class="settings-flat-header">
+        <i class="fa-solid fa-database"></i> Storage &amp; Offline
+      </div>
+      <div class="settings-flat-group">
+        <div class="settings-flat-row">
+          <div class="settings-flat-info">
+            <div class="settings-flat-label">PWA Progressive App</div>
+            <div class="settings-flat-desc">Install to home screen for offline playback</div>
           </div>
-          <span class="you-badge-soft">
-            <i class="fa-solid fa-check"></i> Integrated
-          </span>
-        </div>
-        <div class="you-setting-divider"></div>
-        <div class="you-setting-row you-setting-row-responsive">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Recent Searches History</div>
-            <div class="you-setting-desc">Wipe quick query suggestions in the search bar.</div>
-          </div>
-          <button class="btn btn-soft btn-sm you-btn-danger" data-action="clear-recent-searches" type="button">
-            <i class="fa-solid fa-magnifying-glass-minus"></i> Clear Searches
+          <button class="btn btn-soft btn-sm" data-action="install-pwa" type="button" style="border-radius:9999px;">
+            <i class="fa-solid fa-download"></i> Install
           </button>
         </div>
-        <div class="you-setting-divider"></div>
-        <div class="you-setting-row you-setting-row-inline">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Safe Stream Fallback</div>
-            <div class="you-setting-desc">Automatically switch to alternative official releases if a stream restricts.</div>
-          </div>
-          <span class="you-setting-tag">
-            <i class="fa-solid fa-circle-check you-green-icon"></i> Active
-          </span>
-        </div>
-      </div>
-    </div>
 
-    <!-- 7. About -->
-    <div class="you-settings-group">
-      <div class="you-settings-group-title"><i class="fa-solid fa-circle-info"></i> About</div>
-      <div class="you-settings-box">
-        <div class="you-setting-row you-setting-row-responsive">
-          <div class="you-setting-info">
-            <div class="you-setting-label">Pawtify Web Player</div>
-            <div class="you-setting-desc">v1.0.0 &bull; Private, distraction-free music streaming</div>
+        <div class="settings-flat-row">
+          <div class="settings-flat-info">
+            <div class="settings-flat-label">Clear Cached Data</div>
+            <div class="settings-flat-desc">Flush temporary image/audio cache (preserves playlists)</div>
           </div>
-          <div class="you-setting-actions">
-            <a href="https://github.com/pawjects/Pawtify" target="_blank" rel="noopener noreferrer" class="btn btn-soft btn-sm you-nav-link">
-              <i class="fa-brands fa-github"></i> GitHub
-            </a>
-            <button class="btn btn-soft btn-sm" data-action="open-app-info" type="button">
-              <i class="fa-solid fa-paw"></i> Info
+          <button class="btn btn-soft btn-sm" data-action="clear-cache" type="button" style="border-radius:9999px; color:var(--danger);">
+            <i class="fa-solid fa-trash-can"></i> Clear
+          </button>
+        </div>
+
+        <div class="settings-flat-row">
+          <div class="settings-flat-info">
+            <div class="settings-flat-label">Export / Import Library</div>
+            <div class="settings-flat-desc">Export JSON backup or restore saved playlists</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-soft btn-sm" data-action="export-library" type="button" style="border-radius:9999px;">
+              <i class="fa-solid fa-file-export"></i> Export
+            </button>
+            <button class="btn btn-soft btn-sm" data-action="import-library" type="button" style="border-radius:9999px;">
+              <i class="fa-solid fa-file-import"></i> Import
             </button>
           </div>
         </div>
-        <div class="you-setting-divider"></div>
-        <div class="you-setting-row you-setting-row-responsive">
-          <div class="you-setting-info">
-            <div class="you-setting-label you-danger-text">Factory Reset</div>
-            <div class="you-setting-desc">Permanently wipe all local playlists, listening history, and personal settings.</div>
+      </div>
+
+      <!-- 4. Privacy & About -->
+      <div class="settings-flat-header">
+        <i class="fa-solid fa-shield-halved"></i> Privacy &amp; About
+      </div>
+      <div class="settings-flat-group">
+        <div class="settings-flat-row">
+          <div class="settings-flat-info">
+            <div class="settings-flat-label">Listening History</div>
+            <div class="settings-flat-desc">${historyCount} tracks recorded locally</div>
           </div>
-          <button class="btn btn-soft btn-sm you-btn-danger" data-action="reset-all-data" type="button">
-            <i class="fa-solid fa-triangle-exclamation"></i> Reset Everything
+          <button class="btn btn-soft btn-sm" data-action="clear-history" type="button" style="border-radius:9999px; color:var(--danger);" ${historyCount === 0 ? 'disabled' : ''}>
+            <i class="fa-solid fa-clock-rotate-left"></i> Wipe
           </button>
+        </div>
+
+        <div class="settings-flat-row">
+          <div class="settings-flat-info">
+            <div class="settings-flat-label">Pawtify Web Player</div>
+            <div class="settings-flat-desc">v1.0.0 &bull; 100% Client-Side &bull; Zero Telemetry</div>
+          </div>
+          <a href="https://github.com/pawjects/Pawtify" target="_blank" rel="noopener noreferrer" class="btn btn-soft btn-sm" style="border-radius:9999px;">
+            <i class="fa-brands fa-github"></i> GitHub
+          </a>
         </div>
       </div>
     </div>
   `;
 }
 
+/**
+ * Settings Page View
+ */
 export function renderSettingsPage() {
   return `
     <section class="page settings-page">
-      <div class="settings-header-sticky">
-        <button class="settings-back-btn" data-action="go-back" data-fallback="/you" type="button" aria-label="Back to You" title="Back">
+      <div class="settings-header-sticky" style="padding: 16px 16px 12px; display: flex; align-items: center; gap: 14px;">
+        <button class="settings-back-btn" data-action="go-back" data-fallback="/you" type="button" aria-label="Back" title="Back">
           <i class="fa-solid fa-arrow-left"></i>
         </button>
         <div>
-          <h1 class="settings-page-title">Settings</h1>
-          <p class="settings-page-sub">Personalize playback, appearance, and local storage</p>
+          <h1 class="settings-page-title" style="font-size: 1.35rem; font-weight: 700;">Settings</h1>
+          <p class="settings-page-sub" style="font-size: 0.825rem; color: var(--muted);">Material Design 3 preferences and audio controls</p>
         </div>
       </div>
-      <div class="settings-card-group">
-        ${renderSettingsSections()}
-      </div>
+      ${renderSettingsSections()}
     </section>
   `;
 }

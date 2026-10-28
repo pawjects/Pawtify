@@ -178,26 +178,33 @@ export function markActiveNav(targetRoute = null, skipTransition = false) {
     }
   }
 
-  let activeIndex = 0;
-  if (routeName === 'home') activeIndex = 0;
-  else if (routeName === 'search') activeIndex = 1;
+  // Desktop active index (4 items: Home 0, Search 1, Library 2, You 3)
+  let desktopActiveIndex = 0;
+  if (routeName === 'home') desktopActiveIndex = 0;
+  else if (routeName === 'search') desktopActiveIndex = 1;
   else if (
     routeName === 'library' ||
     routeName === 'playlist' ||
     routeName === 'album' ||
     routeName === 'artist'
   ) {
-    activeIndex = 2;
+    desktopActiveIndex = 2;
   } else if (routeName === 'you' || routeName === 'settings') {
-    activeIndex = 3;
+    desktopActiveIndex = 3;
   }
+
+  // Mobile active index (3 floating tabs: Home 0, Search 1, You 2)
+  let mobileActiveIndex = 0;
+  if (routeName === 'home') mobileActiveIndex = 0;
+  else if (routeName === 'search') mobileActiveIndex = 1;
+  else mobileActiveIndex = 2; // You (consolidating Library, Playlists, Settings)
 
   const shouldSkip = skipTransition || isInitialNav;
   if (isInitialNav) {
     isInitialNav = false;
   }
 
-  // 1. Mobile Bottom Nav Indicator
+  // 1. Mobile Bottom Nav Indicator (Floating 3-tab layout)
   const mobileNav = document.querySelector('.mobile-nav');
   if (mobileNav) {
     let indicator = mobileNav.querySelector('.mobile-nav-indicator');
@@ -210,7 +217,7 @@ export function markActiveNav(targetRoute = null, skipTransition = false) {
     if (shouldSkip) {
       indicator.style.transition = 'none';
     }
-    mobileNav.style.setProperty('--active-tab-index', String(activeIndex));
+    mobileNav.style.setProperty('--active-tab-index', String(mobileActiveIndex));
     if (shouldSkip) {
       void indicator.offsetWidth;
       indicator.style.transition = '';
@@ -230,14 +237,14 @@ export function markActiveNav(targetRoute = null, skipTransition = false) {
     if (shouldSkip) {
       sidebarIndicator.style.transition = 'none';
     }
-    sidebarNav.style.setProperty('--active-tab-index', String(activeIndex));
+    sidebarNav.style.setProperty('--active-tab-index', String(desktopActiveIndex));
     if (shouldSkip) {
       void sidebarIndicator.offsetWidth;
       sidebarIndicator.style.transition = '';
     }
   }
 
-  // 3. Update active classes on nav links
+  // 3. Update active classes on nav links (Desktop)
   document.querySelectorAll('.nav-link').forEach((btn) => {
     const route = btn.dataset.route;
     const active =
@@ -253,19 +260,19 @@ export function markActiveNav(targetRoute = null, skipTransition = false) {
     btn.classList.toggle('active', !!active);
   });
 
-  // 4. Update active classes on mobile nav items
+  // 4. Update active classes on mobile nav items (3 Tabs: Home, Search, You)
   document.querySelectorAll('.mobile-nav-item').forEach((btn) => {
     const route = btn.dataset.route;
     const active =
       (route === '/' && routeName === 'home') ||
       (route === '/search' && routeName === 'search') ||
-      (route === '/library' &&
-        (routeName === 'library' ||
+      (route === '/you' &&
+        (routeName === 'you' ||
+          routeName === 'library' ||
           routeName === 'playlist' ||
           routeName === 'album' ||
-          routeName === 'artist')) ||
-      (route === '/you' &&
-        (routeName === 'you' || routeName === 'settings'));
+          routeName === 'artist' ||
+          routeName === 'settings'));
     btn.classList.toggle('active', !!active);
     btn.setAttribute('aria-selected', active ? 'true' : 'false');
     if (active) {

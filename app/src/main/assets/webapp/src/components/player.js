@@ -35,6 +35,7 @@ import { getNextSong } from '../services/apiMapping.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
 import { updateWavyProgress } from './wavyProgress.js';
 import { renderQueuePanel } from './queuePanel.js';
+import { updateDynamicNowPlayingTheme } from '../utils/themeEngine.js';
 
 export async function play(song, queue = null, autoplay = true) {
   if (!song) return;
@@ -86,12 +87,14 @@ export async function play(song, queue = null, autoplay = true) {
   }
   addRecentlyPlayed(playableSong.id, playableSong);
   persistPlayer();
+  updateDynamicNowPlayingTheme(playableSong, autoplay);
   await loadRecommendations();
   renderCurrentRoute();
 }
 
 export function pause() {
   stopBackgroundAudio();
+  updateDynamicNowPlayingTheme(state.currentSong, false);
   if (globals.ytPlayerReady && globals.ytPlayer) {
     try {
       if (typeof globals.ytPlayer.pauseVideo === 'function')
@@ -162,6 +165,7 @@ export async function togglePlay() {
       loadYTApi();
     }
     state.isPlaying = true;
+    updateDynamicNowPlayingTheme(state.currentSong, true);
     if ('mediaSession' in navigator) {
       try {
         navigator.mediaSession.playbackState = 'playing';
@@ -451,6 +455,7 @@ export function dismissPlayer() {
   state.progress = 0;
   state.duration = 0;
   saveJSON(STORAGE.CURRENT_TIME, 0);
+  updateDynamicNowPlayingTheme(null, false);
   try {
     if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'none';

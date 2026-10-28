@@ -2,7 +2,7 @@ import { state, STORAGE, showToast } from '../config/config.js';
 import { queuePanel, miniPlayer } from '../config/dom.js';
 import { escapeHTML, saveJSON, getOptimizedArtwork, formatTime } from '../utils/utils.js';
 import { renderPlayerBar, refreshPlaybackUI } from './playerBar.js';
-import { previousTrack, nextTrack, play } from './player.js';
+import { previousTrack, nextTrack, play, dismissPlayer } from './player.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
 import { rememberSongs } from '../core/details.js';
 
@@ -330,46 +330,103 @@ export function clearQueue() {
   renderPlayerBar();
 }
 
-// Mobile mini-player swipe gestures
+// Mobile mini-player swipe gestures (Swipe-down to dismiss, Swipe-up to expand)
 export let miniPlayerTouchStartX = 0;
 export let miniPlayerTouchStartY = 0;
-export const SWIPE_THRESHOLD = 50;
+export const SWIPE_THRESHOLD = 40;
+let isMiniPlayerDragging = false;
 
 if (miniPlayer) {
   miniPlayer.addEventListener(
     'touchstart',
     (e) => {
+      if (e.target.closest('button, [role="button"], .mini-player-btn')) {
+        isMiniPlayerDragging = false;
+        return;
+      }
       miniPlayerTouchStartX = e.changedTouches[0].screenX;
       miniPlayerTouchStartY = e.changedTouches[0].screenY;
+      isMiniPlayerDragging = true;
+      miniPlayer.style.transition = 'none';
     },
     { passive: true }
   );
+
+  miniPlayer.addEventListener(
+    'touchmove',
+    (e) => {
+      if (!isMiniPlayerDragging) return;
+      const currentY = e.changedTouches[0].screenY;
+      const diffY = currentY - miniPlayerTouchStartY;
+      if (diffY > 0) {
+        // Dragging down toward dismiss
+        miniPlayer.style.transform = `translateY(${diffY}px)`;
+        miniPlayer.style.opacity = `${Math.max(0.35, 1 - diffY / 160)}`;
+      }
+    },
+    { passive: true }
+  );
+
   miniPlayer.addEventListener(
     'touchend',
     (e) => {
+      if (!isMiniPlayerDragging) return;
+      isMiniPlayerDragging = false;
       const touchEndX = e.changedTouches[0].screenX;
       const touchEndY = e.changedTouches[0].screenY;
       const diffX = touchEndX - miniPlayerTouchStartX;
       const diffY = touchEndY - miniPlayerTouchStartY;
-      if (
-        Math.abs(diffX) < SWIPE_THRESHOLD &&
-        Math.abs(diffY) < SWIPE_THRESHOLD
-      ) {
+
+      miniPlayer.style.transition = 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease';
+
+      // Swipe Down to Dismiss Miniplayer
+      if (diffY > SWIPE_THRESHOLD) {
+        miniPlayer.style.transform = 'translateY(120%)';
+        miniPlayer.style.opacity = '0';
+        setTimeout(() => {
+          miniPlayer.style.transform = '';
+          miniPlayer.style.opacity = '';
+          miniPlayer.style.transition = '';
+          dismissPlayer();
+        }, 220);
         return;
       }
-      if (Math.abs(diffX) > Math.abs(diffY)) {
+
+      // Swipe Up to Expand Fullscreen Player
+      if (diffY < -30) {
+        miniPlayer.style.transform = '';
+        miniPlayer.style.opacity = '';
+        state.fullscreenPlayer = true;
+        renderFullscreenPlayer();
+        return;
+      }
+
+      // Horizontal Swipe: Track Switching
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
+        miniPlayer.style.transform = '';
+        miniPlayer.style.opacity = '';
         if (diffX > 0) {
           previousTrack();
         } else {
           nextTrack();
         }
-      } else {
-        if (diffY < 0) {
-          state.fullscreenPlayer = true;
-          renderFullscreenPlayer();
-        }
+        return;
       }
+
+      // Reset to resting docked position
+      miniPlayer.style.transform = '';
+      miniPlayer.style.opacity = '';
+      setTimeout(() => {
+        miniPlayer.style.transition = '';
+      }, 250);
     },
     { passive: true }
   );
+
+  miniPlayer.addEventListener('touchcancel', () => {
+    isMiniPlayerDragging = false;
+    miniPlayer.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+    miniPlayer.style.transform = '';
+    miniPlayer.style.opacity = '';
+  });
 }
