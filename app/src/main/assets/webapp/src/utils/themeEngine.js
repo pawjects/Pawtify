@@ -18,6 +18,11 @@ export function enforceAmoledTheme() {
   root.style.setProperty('--bg-app', '#000000');
   root.style.setProperty('--md-sys-color-primary', '#1db954');
   root.style.setProperty('--accent', '#1db954');
+  root.style.setProperty('--md-sys-color-surface', '#121212');
+  root.style.setProperty('--md-sys-color-surface-variant', '#1e1e1e');
+  root.style.setProperty('--md-sys-color-on-primary', '#000000');
+  root.style.setProperty('--md-sys-color-on-surface', '#ffffff');
+  root.style.setProperty('--md-sys-color-on-surface-variant', '#a0afa4');
 
   if (body) {
     body.classList.remove('theme-active-playback');

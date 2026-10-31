@@ -20,8 +20,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static assets from both public/ and app/ directories
-
+// Serve static assets from public/ and client/ directories
+app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.static(path.join(__dirname, '../client')));
 
 // Search API endpoint
@@ -35,11 +35,13 @@ app.get('/health', (req, res) => {
 // SPA catch-all for any non-static route
 app.use((req, res) => {
   const appIndex = path.join(__dirname, '../client', 'index.html');
-
-  return res.sendFile(appIndex);
+  if (fs.existsSync(appIndex)) {
+    return res.sendFile(appIndex);
+  }
+  return res.status(404).send('Not Found');
 });
 
-// Run server only when executed directly (node server.js)
+// Run server only when executed directly (node server/index.js)
 if (require.main === module) {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);

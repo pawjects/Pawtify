@@ -51,8 +51,8 @@ export const RECOMMENDED_STATIONS = [
     id: 'station-weeknd',
     artist: 'The Weeknd',
     subtitle: 'The Weeknd, Post Malone, Bruno Mars, Dua Lipa',
-    bgColor: '#85d6d8',
-    textColor: '#121212',
+    bgColor: '#1db954',
+    textColor: '#000000',
     artistImg: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&q=80&w=300&h=300',
   },
 ];

@@ -158,7 +158,7 @@ export function setupSwipeGestures() {
       if (shouldDismiss) {
         // Animate smoothly to dismissed position
         el.style.transition =
-          'transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.22s ease';
+          'transform 0.28s cubic-bezier(0.2, 0, 0, 1), opacity 0.24s cubic-bezier(0.2, 0, 0, 1)';
         el.style.transform = 'translateY(100%)';
         el.style.opacity = '0';
         setTimeout(() => {
@@ -255,14 +255,14 @@ export function setupSwipeGestures() {
     const el = elementToReset || activeDragElement?.element;
     if (el) {
       el.style.transition =
-        'transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.2s ease';
+        'transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s ease';
       el.style.transform = 'translateY(0)';
       el.style.opacity = '1';
       setTimeout(() => {
         el.style.transform = '';
         el.style.opacity = '';
         el.style.transition = '';
-      }, 230);
+      }, 260);
     }
     isDraggingDown = false;
     isDraggingMiniUp = false;

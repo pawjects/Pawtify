@@ -14,21 +14,22 @@
 }
 
 :root {
-  /* ============ MATERIAL 3 TONAL PALETTE (AMOLED DARK BASE) ============ */
+  /* ============ MATERIAL 3 TONAL PALETTE (AMOLED DARK BASE SEEDED FROM #1DB954) ============ */
   --md-sys-color-background: #000000;
-  --md-sys-color-surface: #000000;
-  --md-sys-color-surface-dim: #000000;
-  --md-sys-color-surface-bright: #0c120e;
+  --md-sys-color-surface: #121212;
+  --md-sys-color-surface-variant: #1e1e1e;
+  --md-sys-color-surface-dim: #0c0c0c;
+  --md-sys-color-surface-bright: #181818;
   --md-sys-color-surface-container-lowest: #000000;
-  --md-sys-color-surface-container-low: #080d0a;
-  --md-sys-color-surface-container: #111813;
-  --md-sys-color-surface-container-high: #17211a;
-  --md-sys-color-surface-container-highest: #1f2c23;
+  --md-sys-color-surface-container-low: #0e0e0e;
+  --md-sys-color-surface-container: #121212;
+  --md-sys-color-surface-container-high: #181818;
+  --md-sys-color-surface-container-highest: #1e1e1e;
 
   /* On-Surfaces */
   --md-sys-color-on-surface: #ffffff;
   --md-sys-color-on-surface-variant: #a0afa4;
-  --md-sys-color-on-surface-muted: #647568;
+  --md-sys-color-on-surface-muted: #738077;
 
   /* Material 3 Primary Accent: Spotify Green */
   --md-sys-color-primary: #1db954;
@@ -86,18 +87,19 @@
 
   /* ============ SYSTEM-WIDE COMPATIBILITY ALIASES ============ */
   --bg-app: var(--md-sys-color-background);
-  --surface-base: var(--md-sys-color-surface-container-low);
-  --surface-low: var(--md-sys-color-surface-container-low);
-  --surface-card: var(--md-sys-color-surface-container);
-  --surface-elevated: var(--md-sys-color-surface-container-high);
-  --surface-hover: var(--md-sys-color-surface-container-highest);
-  --surface-active: #27382d;
-  --surface: var(--surface-card);
+  --surface-base: #121212;
+  --surface-low: #0e0e0e;
+  --surface-card: #121212;
+  --surface-elevated: #181818;
+  --surface-hover: #1e1e1e;
+  --surface-active: #24352a;
+  --surface: #121212;
+  --surface-variant: #1e1e1e;
 
   --black: #000000;
-  --dark-gray: var(--md-sys-color-surface-container-low);
-  --elevated: var(--surface-card);
-  --hover: var(--surface-hover);
+  --dark-gray: #121212;
+  --elevated: #181818;
+  --hover: #1e1e1e;
   --border: var(--md-sys-color-outline);
   --border-subtle: var(--md-sys-color-outline);
   --border-medium: rgba(255, 255, 255, 0.12);
@@ -132,19 +134,26 @@
 html[data-theme="amoled"],
 html[data-theme="dark"] {
   --md-sys-color-background: #000000;
-  --md-sys-color-surface: #000000;
-  --md-sys-color-surface-dim: #000000;
-  --md-sys-color-surface-bright: #0c120e;
+  --md-sys-color-primary: #1db954;
+  --md-sys-color-on-primary: #000000;
+  --md-sys-color-surface: #121212;
+  --md-sys-color-surface-dim: #0c0c0c;
+  --md-sys-color-surface-bright: #181818;
   --md-sys-color-surface-container-lowest: #000000;
-  --md-sys-color-surface-container-low: #060907;
-  --md-sys-color-surface-container: #0d130f;
-  --md-sys-color-surface-container-high: #131c16;
-  --md-sys-color-surface-container-highest: #1a251e;
+  --md-sys-color-surface-container-low: #0e0e0e;
+  --md-sys-color-surface-container: #121212;
+  --md-sys-color-surface-container-high: #181818;
+  --md-sys-color-surface-container-highest: #1e1e1e;
+  --md-sys-color-surface-variant: #1e1e1e;
+  --md-sys-color-on-surface: #ffffff;
+  --md-sys-color-on-surface-variant: #a0afa4;
+  --md-sys-color-on-surface-muted: #738077;
   --bg-app: #000000;
-  --surface-base: #000000;
-  --surface-card: #0d130f;
-  --surface-elevated: #131c16;
-  --surface-hover: #1a251e;
+  --surface-base: #121212;
+  --surface-card: #121212;
+  --surface-elevated: #181818;
+  --surface-hover: #1e1e1e;
+  --surface-variant: #1e1e1e;
 }
 
 /* ============ LIGHT THEME (CLEAN MATERIAL 3 LIGHT) ============ */
@@ -278,12 +287,15 @@ button:active,
 .search-tab-pill:active,
 .md3-chip:active,
 [role="button"]:active,
-.interactive-item:active {
-  transform: scale(0.98);
+.interactive-item:active,
+.player-more-card:active,
+.player-more-grid-btn:active {
+  transform: scale(0.98) !important;
+  opacity: 0.8 !important;
   background-color: rgba(255, 255, 255, 0.09);
 }
 
-/* MD3 Shape-Shifting Haptic Animations for Circular Buttons (Circle to Squircle on hover & active) */
+/* MD3 Shape-Shifting Haptic Animations for Circular Buttons (Circle to Squircle on active) */
 .btn-circle,
 .fab,
 .player-play,
@@ -299,7 +311,7 @@ button:active,
 .icon-btn.circle,
 .circle-btn {
   border-radius: 50%;
-  transition: border-radius 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
 }
 
 .btn-circle:hover,
@@ -332,6 +344,39 @@ button:active,
 .circle-btn:active {
   border-radius: 16px !important;
   transform: scale(0.95) !important;
+  opacity: 0.8 !important;
+}
+
+/* ============ MD3 LIGHTWEIGHT MATERIAL RIPPLE EFFECT ============ */
+.md3-ripple-host {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.md3-ripple-wave {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.14);
+  transform: scale(0);
+  animation: md3RippleAnim 0.5s cubic-bezier(0.2, 0, 0, 1) forwards;
+  z-index: 10;
+  will-change: transform, opacity;
+}
+
+.md3-ripple-wave.ripple-green {
+  background: rgba(29, 185, 84, 0.28);
+}
+
+@keyframes md3RippleAnim {
+  0% {
+    transform: scale(0);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
 }
 
 input,
@@ -579,6 +624,8 @@ img {
   box-shadow: var(--md-elevation-1);
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   position: relative;
   scroll-behavior: smooth;
   contain: layout;
@@ -1522,7 +1569,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   transform: translateY(0);
   opacity: 1;
   pointer-events: auto;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s cubic-bezier(0.2, 0, 0, 1);
   will-change: transform, opacity;
 }
 
@@ -2153,13 +2200,16 @@ input[type="range"]:hover::-webkit-slider-thumb {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
   user-select: none;
   -webkit-user-select: none;
   transform: translateY(100%);
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s cubic-bezier(0.2, 0, 0, 1), visibility 0.3s cubic-bezier(0.2, 0, 0, 1);
   will-change: transform, opacity;
 }
 
@@ -2503,7 +2553,7 @@ body.has-fullscreen-open .mobile-nav {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1), visibility 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .player-more-backdrop.active {
@@ -2526,12 +2576,15 @@ body.has-fullscreen-open .mobile-nav {
   margin: 0 auto;
   max-height: 85vh;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
   box-shadow: 0 -8px 36px rgba(0, 0, 0, 0.85);
   transform: translateY(100%);
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s cubic-bezier(0.2, 0, 0, 1), visibility 0.3s cubic-bezier(0.2, 0, 0, 1);
   will-change: transform, opacity;
 }
 
@@ -3588,14 +3641,24 @@ body.has-active-track #toast-container {
 }
 
 .skeleton {
-  background-color: var(--md-sys-color-surface-container-high);
-  border-radius: var(--md-shape-xs);
-  animation: pulse 1.5s ease-in-out infinite;
+  background: linear-gradient(
+    90deg,
+    var(--md-sys-color-surface-variant, #1e1e1e) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    var(--md-sys-color-surface-variant, #1e1e1e) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--md-shape-xs, 8px);
+  animation: md3SkeletonShimmer 1.8s infinite cubic-bezier(0.2, 0, 0, 1);
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.45; }
-  50% { opacity: 0.85; }
+@keyframes md3SkeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ============ RESPONSIVE LAYOUT (MOBILE FIRST) ============ */
@@ -5499,17 +5562,8 @@ body.has-active-track #toast-container {
 }
 
 /* ==========================================================================
-   CSS SKELETON LOADERS (PULSE 1.5s INFINITE ANIMATION)
+   CSS SKELETON LOADERS (MD3 SWEEPING LINEAR GRADIENT SHIMMER)
    ========================================================================== */
-@keyframes md3SkeletonPulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.38;
-  }
-}
-
 .skeleton,
 .skeleton-card,
 .skeleton-song-row,
@@ -5520,8 +5574,14 @@ body.has-active-track #toast-container {
 .home-grid-card.skeleton-card-item,
 .home-scroll-card.skeleton-card-item,
 .library-item-skeleton {
-  animation: md3SkeletonPulse 1.5s infinite ease-in-out !important;
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background: linear-gradient(
+    90deg,
+    var(--md-sys-color-surface-variant, #1e1e1e) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    var(--md-sys-color-surface-variant, #1e1e1e) 100%
+  ) !important;
+  background-size: 200% 100% !important;
+  animation: md3SkeletonShimmer 1.8s infinite cubic-bezier(0.2, 0, 0, 1) !important;
 }
 
 /* ==========================================================================
@@ -5817,5 +5877,28 @@ body.has-active-track #toast-container {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   MD3 SCROLL PHYSICS & TOUCH CONTAINMENT
+   ========================================================================== */
+.main-stage,
+.page,
+.fullscreen-player,
+.queue-list,
+.lyrics-body,
+.artist-content,
+.modal,
+.modal-body,
+.player-more-sheet,
+.sidebar-playlists,
+.search-suggestions-dropdown,
+.fs-lyrics-view,
+.fs-queue-view,
+.station-scroll,
+.library-track-list {
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
