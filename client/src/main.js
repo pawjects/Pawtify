@@ -18,6 +18,7 @@ import './components/fullscreen.js';
 import './components/artistProfile.js';
 import './components/queuePanel.js';
 import { setupSwipeGestures } from './core/gestures.js';
+import { setupMaterialRipple } from './core/ripple.js';
 import { startFeedPolling, refreshFeedSilently } from './services/dataLoader.js';
 
 // Global unhandled error and rejection listeners for immediate identification of runtime or module failures
@@ -99,11 +100,12 @@ async function bootApp() {
   }
 
   try {
-    console.info('[Pawtify Boot] Setting up swipe gestures...');
+    console.info('[Pawtify Boot] Setting up swipe gestures and Material ripples...');
     setupSwipeGestures();
-    console.info('[Pawtify Boot] Swipe gestures initialized.');
+    setupMaterialRipple();
+    console.info('[Pawtify Boot] Swipe gestures and ripples initialized.');
   } catch (err) {
-    console.warn('[Pawtify Boot Warning] Non-fatal swipe gestures error:', err);
+    console.warn('[Pawtify Boot Warning] Non-fatal swipe gestures or ripples error:', err);
   }
 
   try {

@@ -95,7 +95,7 @@ function initFullscreenGestures() {
 
       if (shouldDismiss) {
         fullscreenPlayer.style.transition =
-          'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          'transform 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.28s cubic-bezier(0.2, 0, 0, 1)';
         fullscreenPlayer.style.transform = 'translateY(100%)';
         fullscreenPlayer.style.opacity = '0';
 
@@ -107,7 +107,7 @@ function initFullscreenGestures() {
         }, 300);
       } else {
         fullscreenPlayer.style.transition =
-          'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          'transform 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.28s cubic-bezier(0.2, 0, 0, 1)';
         fullscreenPlayer.style.transform = 'translateY(0)';
         fullscreenPlayer.style.opacity = '1';
 
@@ -126,7 +126,7 @@ function initFullscreenGestures() {
     if (!isTrackingSwipe) return;
     isTrackingSwipe = false;
     fullscreenPlayer.style.transition =
-      'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+      'transform 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.28s cubic-bezier(0.2, 0, 0, 1)';
     fullscreenPlayer.style.transform = 'translateY(0)';
     fullscreenPlayer.style.opacity = '1';
     setTimeout(() => {

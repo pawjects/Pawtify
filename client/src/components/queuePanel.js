@@ -377,7 +377,7 @@ if (miniPlayer) {
       const diffX = touchEndX - miniPlayerTouchStartX;
       const diffY = touchEndY - miniPlayerTouchStartY;
 
-      miniPlayer.style.transition = 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease';
+      miniPlayer.style.transition = 'transform 0.28s cubic-bezier(0.2, 0, 0, 1), opacity 0.25s cubic-bezier(0.2, 0, 0, 1)';
 
       // Swipe Down to Dismiss Miniplayer
       if (diffY > SWIPE_THRESHOLD) {
