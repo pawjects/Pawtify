@@ -1725,12 +1725,13 @@ input[type="range"]:hover::-webkit-slider-thumb {
 
 .mobile-nav-indicator {
   position: absolute;
-  top: auto;
-  bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  top: 50%;
+  bottom: auto;
   left: 0;
   width: calc(100% / 3);
-  transform: translate3d(calc(var(--active-tab-index, 0) * 100%), 0, 0);
-  transition: transform 0.24s cubic-bezier(0.2, 0, 0, 1);
+  height: 32px;
+  transform: translate3d(calc(var(--active-tab-index, 0) * 100%), -50%, 0);
+  transition: transform 0.28s cubic-bezier(0.2, 0, 0, 1);
   pointer-events: none;
   display: flex;
   justify-content: center;
@@ -1738,48 +1739,53 @@ input[type="range"]:hover::-webkit-slider-thumb {
   z-index: 1;
 }
 
-/* Compact Navigation Simple Dot Indicator (No Pill Highlight) */
+/* Expressive MD3 Vibrant Pill Highlight (Monet Green Tonal Palette) */
 .mobile-nav-indicator::before {
   content: '';
-  width: 4px;
-  height: 4px;
-  background: var(--md-sys-color-primary, #1db954);
-  border-radius: 50%;
+  width: 64px;
+  height: 32px;
+  background-color: rgba(29, 185, 84, 0.24);
+  border: 1px solid rgba(29, 185, 84, 0.45);
+  border-radius: 16px;
+  transition: all 0.28s cubic-bezier(0.2, 0, 0, 1);
+  box-shadow: 0 0 16px rgba(29, 185, 84, 0.15);
 }
 
 .mobile-nav-item {
   position: relative;
   z-index: 2;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  color: var(--md-sys-color-on-surface-variant);
-  font-size: 0.6875rem;
-  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant, rgba(255, 255, 255, 0.65));
+  font-size: 1.25rem;
   height: 52px;
   width: 100%;
   border-radius: 0;
+  border: none;
   background: transparent !important;
-  transition: color 0.18s ease, transform 0.15s ease;
+  cursor: pointer;
+  transition: color 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.15s ease;
+}
+
+.mobile-nav-item span {
+  display: none !important;
 }
 
 .mobile-nav-item i {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   line-height: 1;
   transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), color 0.18s ease;
 }
 
 .mobile-nav-item.active {
   color: var(--md-sys-color-primary, #1db954) !important;
-  font-weight: 600;
   background: transparent !important;
 }
 
 .mobile-nav-item.active i {
   color: var(--md-sys-color-primary, #1db954) !important;
-  transform: scale(1.08);
+  transform: scale(1.15);
 }
 
 .mobile-nav-item:active {
@@ -2570,9 +2576,9 @@ body.has-fullscreen-open .mobile-nav {
   z-index: 135;
   background-color: #121212;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px 20px 0 0;
-  padding: 12px 16px calc(24px + env(safe-area-inset-bottom, 0px));
-  max-width: 460px;
+  border-radius: 28px 28px 0 0;
+  padding: 16px 20px calc(28px + env(safe-area-inset-bottom, 0px));
+  max-width: 480px;
   margin: 0 auto;
   max-height: 85vh;
   overflow-y: auto;
@@ -2598,18 +2604,18 @@ body.has-fullscreen-open .mobile-nav {
 .player-more-handle {
   width: 36px;
   height: 4px;
-  background-color: rgba(255, 255, 255, 0.28);
+  background-color: rgba(255, 255, 255, 0.3);
   border-radius: 2px;
-  margin: 0 auto 12px;
+  margin: 0 auto 16px;
 }
 
 .player-more-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-bottom: 12px;
+  gap: 14px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  margin-bottom: 8px;
 }
 
 .player-more-thumb {
@@ -4523,59 +4529,64 @@ body.has-active-track #toast-container {
 .player-more-top-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 16px;
+  width: 100%;
 }
 
 .player-more-card {
-  background: #242424;
-  border-radius: 14px;
-  padding: 14px 8px;
+  background: var(--md-sys-color-surface-variant, #1e1e1e);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 14px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: none;
   color: #ffffff;
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 600;
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease;
+  user-select: none;
 }
 
 .player-more-card:active {
-  transform: scale(0.96);
-  background: #2e2e2e;
+  transform: scale(0.92) !important;
+  background-color: #282828 !important;
 }
 
 .player-more-card-icon {
   font-size: 1.25rem;
-  color: #1db954;
+  color: var(--md-sys-color-primary, #1db954);
 }
 
 .player-more-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
 }
 
 .player-more-grid-btn {
-  background: #242424;
-  border-radius: 14px;
-  padding: 14px 12px;
+  background: var(--md-sys-color-surface-variant, #1e1e1e);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 14px 14px;
   display: flex;
   align-items: center;
   gap: 12px;
-  border: none;
   color: #ffffff;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease;
+  user-select: none;
 }
 
 .player-more-grid-btn:active {
-  background: #2e2e2e;
+  transform: scale(0.92) !important;
+  background-color: #282828 !important;
 }
 
 .player-more-grid-icon {
@@ -4933,6 +4944,112 @@ body.has-active-track #toast-container {
 .playlist-fab-play:active {
   transform: scale(0.92);
   background-color: #1abc54;
+}
+
+/* ==========================================================================
+   MD3 PLAYLIST TRACK ROWS LAYOUT (STRICT MD3 LIST ITEM FIX)
+   ========================================================================== */
+.playlist-song-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.playlist-song-list .song-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 8px 10px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: background-color 0.15s ease, transform 0.15s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.playlist-song-list .song-row:hover {
+  background-color: var(--md-sys-color-surface-variant, #1e1e1e) !important;
+}
+
+.playlist-song-list .song-row:active {
+  transform: scale(0.98) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.playlist-song-list .song-cover-sm {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  border-radius: 4px !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+  background-color: #1e1e1e !important;
+  display: block !important;
+  aspect-ratio: 1 / 1 !important;
+}
+
+.playlist-song-list .song-index {
+  width: 24px !important;
+  min-width: 24px !important;
+  flex-shrink: 0 !important;
+  text-align: center !important;
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.playlist-song-list .song-info {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  overflow: hidden !important;
+}
+
+.playlist-song-list .song-title {
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.25 !important;
+  margin: 0 !important;
+}
+
+.playlist-song-list .song-artist {
+  font-size: 0.75rem !important;
+  color: rgba(255, 255, 255, 0.65) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+}
+
+.playlist-song-list .song-duration {
+  font-size: 0.75rem !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+.playlist-song-list .song-actions {
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 /* 6. Library Page */
@@ -5380,7 +5497,6 @@ body.has-active-track #toast-container {
 .home-scroll-card .scroll-cover-wrap,
 .station-art-wrap,
 .card-img-wrap,
-.song-cover-sm,
 .player-bar-cover,
 .library-item-thumb,
 .playlist-header-cover,
@@ -5400,7 +5516,6 @@ body.has-active-track #toast-container {
 .station-artist-photo,
 .card-cover,
 .card-img-wrap img,
-.song-cover-sm,
 .player-bar-cover,
 .library-item-thumb,
 .playlist-header-cover img,
@@ -5762,7 +5877,8 @@ body.has-active-track #toast-container {
   line-height: 1.4;
 }
 
-/* Native-looking MD3 Toggle Switch with Custom Styling */
+/* Native-looking MD3 Toggle Switch & Checkbox Styling */
+input[type="checkbox"],
 .md3-switch {
   appearance: none;
   -webkit-appearance: none;
@@ -5775,13 +5891,14 @@ body.has-active-track #toast-container {
   border-radius: 9999px;
   outline: none;
   cursor: pointer;
-  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.25s cubic-bezier(0.2, 0, 0, 1), border-color 0.25s cubic-bezier(0.2, 0, 0, 1);
   display: inline-flex;
   align-items: center;
   padding: 0;
   flex-shrink: 0;
 }
 
+input[type="checkbox"]::after,
 .md3-switch::after {
   content: '';
   position: absolute;
@@ -5794,12 +5911,14 @@ body.has-active-track #toast-container {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
+input[type="checkbox"]:checked,
 .md3-switch:checked,
 .md3-switch.active {
-  background-color: var(--green) !important;
-  border-color: var(--green) !important;
+  background-color: var(--md-sys-color-primary, #1db954) !important;
+  border-color: var(--md-sys-color-primary, #1db954) !important;
 }
 
+input[type="checkbox"]:checked::after,
 .md3-switch:checked::after,
 .md3-switch.active::after {
   transform: translateX(20px) !important;
@@ -5816,7 +5935,7 @@ body.has-active-track #toast-container {
   border-radius: 9999px !important;
   position: relative !important;
   cursor: pointer !important;
-  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: background-color 0.25s cubic-bezier(0.2, 0, 0, 1), border-color 0.25s cubic-bezier(0.2, 0, 0, 1) !important;
   padding: 0 !important;
   flex-shrink: 0 !important;
 }
@@ -5901,4 +6020,78 @@ body.has-active-track #toast-container {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ==========================================================================
+   MD3 LARGE BOLD PAGE HEADERS
+   ========================================================================== */
+.page-title,
+.search-title-spotify,
+.playlist-title-large,
+.library-user-title-wrap h1,
+.library-user-title-wrap .library-user-title,
+.home-greeting {
+  font-size: 1.75rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.025em !important;
+  color: var(--md-sys-color-on-surface, #ffffff) !important;
+  line-height: 1.2 !important;
+}
+
+/* ==========================================================================
+   EXPRESSIVE MD3 HAPTICS FOR MEDIA CONTROLS
+   ========================================================================== */
+.fs-play-btn-accent,
+.fs-play-btn-cyan,
+.fs-nav-circle-btn,
+.fs-extra-btn,
+.playlist-fab-play,
+.playlist-action-circle,
+.player-play-btn,
+.player-nav-btn,
+[data-action="toggle-play"],
+[data-action="next-track"],
+[data-action="prev-track"],
+[data-action="toggle-shuffle"],
+[data-action="toggle-repeat"] {
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), border-radius 0.28s cubic-bezier(0.2, 0, 0, 1), background-color 0.18s ease, color 0.18s ease !important;
+}
+
+.fs-play-btn-accent:active,
+.fs-play-btn-cyan:active,
+.fs-nav-circle-btn:active,
+.fs-extra-btn:active,
+.playlist-fab-play:active,
+.playlist-action-circle:active,
+.player-play-btn:active,
+.player-nav-btn:active,
+[data-action="toggle-play"]:active,
+[data-action="next-track"]:active,
+[data-action="prev-track"]:active,
+[data-action="toggle-shuffle"]:active,
+[data-action="toggle-repeat"]:active {
+  transform: scale(0.92) !important;
+  opacity: 0.88 !important;
+}
+
+/* Play button loading shimmer indicator */
+.play-loading-shimmer {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: md3PulseDot 0.8s infinite alternate cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes md3PulseDot {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
 

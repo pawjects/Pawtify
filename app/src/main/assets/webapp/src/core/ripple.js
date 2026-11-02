@@ -34,7 +34,15 @@ export function setupMaterialRipple() {
     '.fs-nav-circle-btn',
     '.fs-play-btn-accent',
     '.fs-play-btn-cyan',
+    '.fs-extra-btn',
     '.mini-player-btn',
+    '.playlist-fab-play',
+    '.playlist-action-circle',
+    '[data-action="toggle-play"]',
+    '[data-action="next-track"]',
+    '[data-action="prev-track"]',
+    '[data-action="toggle-shuffle"]',
+    '[data-action="toggle-repeat"]',
     '.interactive-item',
     '[data-ripple="true"]'
   ].join(', ');

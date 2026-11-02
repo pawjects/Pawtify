@@ -333,9 +333,9 @@ export function refreshPlaybackUI() {
 
   const playToggles = document.querySelectorAll('[data-action="toggle-play"]');
   playToggles.forEach((playToggle) => {
-    if (playToggle && playToggle.querySelector('i')) {
+    if (playToggle) {
       if (state.isLoading) {
-        playToggle.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        playToggle.innerHTML = '<span class="play-loading-shimmer" aria-label="Loading audio"></span>';
       } else {
         playToggle.innerHTML = state.isPlaying
           ? '<i class="fa-solid fa-pause"></i>'
