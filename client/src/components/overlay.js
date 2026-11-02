@@ -23,7 +23,7 @@ export function renderOverlay() {
            <header class="modal-head">
              <h2 class="modal-title">Song Details</h2>
              <button class="icon-btn" data-action="close-modal" type="button" aria-label="Close" style="width:32px; height:32px; border-radius:999px;">
-               <i class="fa-solid fa-xmark"></i>
+               <span class="material-symbols-rounded">close</span>
              </button>
            </header>
            <div class="modal-body">
@@ -40,10 +40,10 @@ export function renderOverlay() {
              </div>
              <div style="display:flex; gap:10px; margin-top:16px;">
                <button class="btn btn-primary" data-action="download-song" type="button" style="flex:1;">
-                 <i class="fa-solid fa-download"></i> Download
+                 <span class="material-symbols-rounded">download</span> Download
                </button>
                <button class="btn btn-soft" data-action="share-song" type="button" style="flex:1;">
-                 <i class="fa-solid fa-share-nodes"></i> Share
+                 <span class="material-symbols-rounded">share</span> Share
                </button>
              </div>
            </div>
@@ -65,7 +65,7 @@ export function renderOverlay() {
            <header class="modal-head">
              <h2 class="modal-title">Add to Playlist</h2>
              <button class="icon-btn" data-action="close-modal" type="button" aria-label="Close" style="width:32px; height:32px; border-radius:999px;">
-               <i class="fa-solid fa-xmark"></i>
+               <span class="material-symbols-rounded">close</span>
              </button>
            </header>
            <div class="modal-body">
@@ -100,7 +100,7 @@ export function renderOverlay() {
            <header class="modal-head">
              <h2 class="modal-title">Create Playlist</h2>
              <button class="icon-btn" data-action="close-modal" type="button" aria-label="Close" style="width:32px; height:32px; border-radius:999px;">
-               <i class="fa-solid fa-xmark"></i>
+               <span class="material-symbols-rounded">close</span>
              </button>
            </header>
            <form id="create-playlist-form" class="modal-body">
@@ -124,7 +124,7 @@ export function renderOverlay() {
            <header class="modal-head" style="margin-bottom: 12px;">
              <h2 class="modal-title" style="font-size: 1.15rem; font-weight: 700;">${escapeHTML(title || 'Confirm')}</h2>
              <button class="icon-btn" data-action="close-modal" type="button" aria-label="Close" style="width:32px; height:32px; border-radius:999px;">
-               <i class="fa-solid fa-xmark"></i>
+               <span class="material-symbols-rounded">close</span>
              </button>
            </header>
            <div class="modal-body" style="display:flex; flex-direction:column; gap:16px; padding:0;">
@@ -157,12 +157,12 @@ export function renderOverlay() {
                <div>
                  <h2 class="modal-title" style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--text);">${isEdit ? 'Edit Display Name' : 'Welcome to Pawtify'}</h2>
                  <span style="font-size: 0.8125rem; color: var(--green); font-weight: 600; display: inline-flex; align-items: center; gap: 5px; margin-top: 2px;">
-                   <i class="fa-solid fa-sparkles" style="font-size: 0.75rem;"></i> Ad-Free &bull; Privacy-First &bull; AMOLED
+                   <span class="material-symbols-rounded" style="font-size: 0.75rem;">auto_awesome</span> Ad-Free &bull; Privacy-First &bull; AMOLED
                  </span>
                </div>
              </div>
              <button class="icon-btn" data-action="close-modal" type="button" aria-label="Close" style="width:32px; height:32px; border-radius:999px;">
-               <i class="fa-solid fa-xmark"></i>
+               <span class="material-symbols-rounded">close</span>
              </button>
            </header>
            <form id="save-name-form" class="modal-body" style="display: flex; flex-direction: column; gap: 16px; padding-top: 14px;">
@@ -225,9 +225,9 @@ export function renderOverlay() {
        <section class="overlay" data-action="dismiss-overlay">
          <article class="modal">
            <header class="modal-head">
-             <h2 class="modal-title"><i class="fa-solid fa-paw" style="margin-right:8px; color:var(--green);"></i>About Pawtify</h2>
+             <h2 class="modal-title"><span class="material-symbols-rounded" style="margin-right:8px; color:var(--green);">pets</span>About Pawtify</h2>
              <button class="icon-btn" data-action="close-modal" type="button" aria-label="Close" style="width:32px; height:32px; border-radius:999px;">
-               <i class="fa-solid fa-xmark"></i>
+               <span class="material-symbols-rounded">close</span>
              </button>
            </header>
            <div class="modal-body">
@@ -239,9 +239,9 @@ export function renderOverlay() {
                </div>
              </div>
              <div class="meta-list">
-               <p class="meta-item"><i class="fa-brands fa-github" style="margin-right:8px; color:var(--green);"></i><b>GitHub:</b> <a href="https://github.com/pawjects/Pawtify" target="_blank" rel="noopener" style="color:var(--green); text-decoration:underline;">github.com/pawjects/Pawtify</a></p>
-               <p class="meta-item"><i class="fa-solid fa-code" style="margin-right:8px; color:var(--green);"></i><b>Developer:</b> Pawjects ORG</p>
-               <p class="meta-item"><i class="fa-solid fa-heart" style="margin-right:8px; color:var(--danger);"></i><b>Made with love</b> for music lovers everywhere.</p>
+               <p class="meta-item"><span class="material-symbols-rounded" style="margin-right:8px; color:var(--green);">code</span><b>GitHub:</b> <a href="https://github.com/pawjects/Pawtify" target="_blank" rel="noopener" style="color:var(--green); text-decoration:underline;">github.com/pawjects/Pawtify</a></p>
+               <p class="meta-item"><span class="material-symbols-rounded" style="margin-right:8px; color:var(--green);">code</span><b>Developer:</b> Pawjects ORG</p>
+               <p class="meta-item"><span class="material-symbols-rounded" style="margin-right:8px; color:var(--danger);">favorite</span><b>Made with love</b> for music lovers everywhere.</p>
              </div>
            </div>
          </article>
@@ -265,24 +265,24 @@ export function renderOverlay() {
         <article class="modal you-settings-modal" style="max-width: 580px; width: 100%; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
           <header class="modal-head" style="padding: 16px 20px; border-bottom: 1px solid var(--md-sys-color-outline-variant); flex-shrink: 0;">
             <div style="display:flex; align-items:center; gap:10px;">
-              <div style="width:34px; height:34px; border-radius:var(--md-shape-sm); background:var(--md-sys-color-primary-container); display:grid; place-items:center; color:var(--green);"><i class="fa-solid fa-gear"></i></div>
+              <div style="width:34px; height:34px; border-radius:var(--md-shape-sm); background:var(--md-sys-color-primary-container); display:grid; place-items:center; color:var(--green);"><span class="material-symbols-rounded">settings</span></div>
               <div>
                 <h2 class="modal-title" style="font-size:1.15rem; margin:0;">Settings</h2>
                 <span style="font-size:0.75rem; color:var(--muted);">Preferences &bull; Local Storage &bull; Pawtify</span>
               </div>
             </div>
             <button class="icon-btn" data-action="close-modal" type="button" aria-label="Close" style="width:32px; height:32px; border-radius:999px;">
-              <i class="fa-solid fa-xmark"></i>
+              <span class="material-symbols-rounded">close</span>
             </button>
           </header>
 
           <!-- Settings Tab Chips -->
           <div class="you-settings-tabs-strip">
             <button class="you-settings-tab-btn ${currentTab === 'all' ? 'active' : ''}" data-action="set-settings-tab" data-tab="all" type="button">All</button>
-            <button class="you-settings-tab-btn ${currentTab === 'appearance' ? 'active' : ''}" data-action="set-settings-tab" data-tab="appearance" type="button"><i class="fa-solid fa-palette"></i> Appearance</button>
-            <button class="you-settings-tab-btn ${currentTab === 'playback' ? 'active' : ''}" data-action="set-settings-tab" data-tab="playback" type="button"><i class="fa-solid fa-music"></i> Playback</button>
-            <button class="you-settings-tab-btn ${currentTab === 'app' ? 'active' : ''}" data-action="set-settings-tab" data-tab="app" type="button"><i class="fa-solid fa-mobile-screen"></i> App</button>
-            <button class="you-settings-tab-btn ${currentTab === 'privacy' ? 'active' : ''}" data-action="set-settings-tab" data-tab="privacy" type="button"><i class="fa-solid fa-shield-halved"></i> Privacy</button>
+            <button class="you-settings-tab-btn ${currentTab === 'appearance' ? 'active' : ''}" data-action="set-settings-tab" data-tab="appearance" type="button"><span class="material-symbols-rounded">palette</span> Appearance</button>
+            <button class="you-settings-tab-btn ${currentTab === 'playback' ? 'active' : ''}" data-action="set-settings-tab" data-tab="playback" type="button"><span class="material-symbols-rounded">music_note</span> Playback</button>
+            <button class="you-settings-tab-btn ${currentTab === 'app' ? 'active' : ''}" data-action="set-settings-tab" data-tab="app" type="button"><span class="material-symbols-rounded">smartphone</span> App</button>
+            <button class="you-settings-tab-btn ${currentTab === 'privacy' ? 'active' : ''}" data-action="set-settings-tab" data-tab="privacy" type="button"><span class="material-symbols-rounded">security</span> Privacy</button>
           </div>
 
           <div class="modal-body you-settings-scroll-body" style="padding: 16px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 18px;">
@@ -291,7 +291,7 @@ export function renderOverlay() {
               currentTab === 'all' || currentTab === 'appearance'
                 ? `
               <div class="you-settings-group">
-                <div class="you-settings-group-title"><i class="fa-solid fa-palette"></i> Appearance</div>
+                <div class="you-settings-group-title"><span class="material-symbols-rounded">palette</span> Appearance</div>
                 <div class="you-settings-box">
                   <div class="you-setting-row">
                     <div class="you-setting-info">
@@ -300,10 +300,10 @@ export function renderOverlay() {
                     </div>
                     <div class="you-theme-selector" style="display:flex; gap:8px; flex-wrap:wrap;">
                       <button class="btn btn-soft you-theme-btn ${state.theme === 'amoled' || state.theme === 'dark' || !state.theme ? 'active' : ''}" data-action="set-theme" data-theme="amoled" type="button">
-                        <i class="fa-solid fa-circle" style="color:#000; -webkit-text-stroke: 1px #888;"></i> AMOLED Dark
+                        <span class="material-symbols-rounded" style="color:#000; -webkit-text-stroke: 1px #888;">circle</span> AMOLED Dark
                       </button>
                       <button class="btn btn-soft you-theme-btn ${state.theme === 'light' ? 'active' : ''}" data-action="set-theme" data-theme="light" type="button">
-                        <i class="fa-solid fa-sun" style="color:#eab308;"></i> Light
+                        <span class="material-symbols-rounded" style="color:#eab308;">light_mode</span> Light
                       </button>
                     </div>
                   </div>
@@ -316,7 +316,7 @@ export function renderOverlay() {
                       <div class="you-setting-desc">Show video feed window while music is streaming.</div>
                     </div>
                     <button class="btn btn-soft you-setting-btn" data-action="toggle-video" type="button">
-                      ${state.videoVisible ? '<i class="fa-solid fa-eye-slash"></i> Hide Video' : '<i class="fa-solid fa-tv"></i> Show Video'}
+                      ${state.videoVisible ? '<span class="material-symbols-rounded">visibility_off</span> Hide Video' : '<span class="material-symbols-rounded">tv</span> Show Video'}
                     </button>
                   </div>
                 </div>
@@ -330,7 +330,7 @@ export function renderOverlay() {
               currentTab === 'all' || currentTab === 'playback'
                 ? `
               <div class="you-settings-group">
-                <div class="you-settings-group-title"><i class="fa-solid fa-music"></i> Playback</div>
+                <div class="you-settings-group-title"><span class="material-symbols-rounded">music_note</span> Playback</div>
                 <div class="you-settings-box">
                   <div class="you-setting-row">
                     <div class="you-setting-info">
@@ -338,7 +338,7 @@ export function renderOverlay() {
                       <div class="you-setting-desc">Automatically play next queued track when song finishes.</div>
                     </div>
                     <button class="btn ${state.autoplay !== false ? 'btn-primary' : 'btn-soft'} you-setting-btn" data-action="toggle-autoplay" type="button">
-                      ${state.autoplay !== false ? '<i class="fa-solid fa-check"></i> Enabled' : 'Disabled'}
+                      ${state.autoplay !== false ? '<span class="material-symbols-rounded">check</span> Enabled' : 'Disabled'}
                     </button>
                   </div>
 
@@ -374,7 +374,7 @@ export function renderOverlay() {
                       <div class="you-setting-desc">Randomize track playback order.</div>
                     </div>
                     <button class="btn ${state.shuffleMode ? 'btn-primary' : 'btn-soft'} you-setting-btn" data-action="toggle-shuffle" type="button">
-                      ${state.shuffleMode ? '<i class="fa-solid fa-shuffle"></i> On' : 'Off'}
+                      ${state.shuffleMode ? '<span class="material-symbols-rounded">shuffle</span> On' : 'Off'}
                     </button>
                   </div>
                 </div>
@@ -388,7 +388,7 @@ export function renderOverlay() {
               currentTab === 'all' || currentTab === 'app'
                 ? `
               <div class="you-settings-group">
-                <div class="you-settings-group-title"><i class="fa-solid fa-mobile-screen"></i> App &amp; Storage</div>
+                <div class="you-settings-group-title"><span class="material-symbols-rounded">smartphone</span> App &amp; Storage</div>
                 <div class="you-settings-box">
                   <div class="you-setting-row">
                     <div class="you-setting-info">
@@ -401,11 +401,11 @@ export function renderOverlay() {
                       canInstall
                         ? `
                       <button class="btn btn-primary you-setting-btn" data-action="install-pwa" type="button">
-                        <i class="fa-solid fa-download"></i> Install App
+                        <span class="material-symbols-rounded">download</span> Install App
                       </button>
                     `
                         : `
-                      <span class="you-badge-soft">${isStandalone ? '<i class="fa-solid fa-check"></i> Installed' : 'Browser Mode'}</span>
+                      <span class="you-badge-soft">${isStandalone ? '<span class="material-symbols-rounded">check</span> Installed' : 'Browser Mode'}</span>
                     `
                     }
                   </div>
@@ -418,7 +418,7 @@ export function renderOverlay() {
                       <div class="you-setting-desc">IndexedDB stores your local playlists, history, and search index.</div>
                     </div>
                     <button class="btn btn-soft you-setting-btn" data-action="clear-cache" type="button">
-                      <i class="fa-solid fa-broom"></i> Clear Cache
+                      <span class="material-symbols-rounded">cleaning_services</span> Clear Cache
                     </button>
                   </div>
 
@@ -430,7 +430,7 @@ export function renderOverlay() {
                       <div class="you-setting-desc">Version 1.0.0 &bull; Open-source &bull; MIT License &bull; PawDevs</div>
                     </div>
                     <button class="btn btn-soft you-setting-btn" data-action="open-app-info" type="button">
-                      <i class="fa-solid fa-circle-info"></i> Details
+                      <span class="material-symbols-rounded">info</span> Details
                     </button>
                   </div>
                 </div>
@@ -444,7 +444,7 @@ export function renderOverlay() {
               currentTab === 'all' || currentTab === 'privacy'
                 ? `
               <div class="you-settings-group">
-                <div class="you-settings-group-title"><i class="fa-solid fa-shield-halved"></i> Privacy &amp; Data</div>
+                <div class="you-settings-group-title"><span class="material-symbols-rounded">security</span> Privacy &amp; Data</div>
                 <div class="you-settings-box">
                   <div class="you-setting-row">
                     <div class="you-setting-info">
@@ -452,7 +452,7 @@ export function renderOverlay() {
                       <div class="you-setting-desc">${historyCount} track${historyCount === 1 ? '' : 's'} recorded locally on this device.</div>
                     </div>
                     <button class="btn btn-soft you-setting-btn you-btn-danger" data-action="clear-history" type="button" ${historyCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>
-                      <i class="fa-solid fa-trash"></i> Clear History
+                      <span class="material-symbols-rounded">delete</span> Clear History
                     </button>
                   </div>
 
@@ -464,7 +464,7 @@ export function renderOverlay() {
                       <div class="you-setting-desc">Recently searched queries and cached search items.</div>
                     </div>
                     <button class="btn btn-soft you-setting-btn you-btn-danger" data-action="clear-search-history" type="button">
-                      <i class="fa-solid fa-trash"></i> Clear Search
+                      <span class="material-symbols-rounded">delete</span> Clear Search
                     </button>
                   </div>
 
@@ -476,7 +476,7 @@ export function renderOverlay() {
                       <div class="you-setting-desc">${queueCount} track${queueCount === 1 ? '' : 's'} in queue.</div>
                     </div>
                     <button class="btn btn-soft you-setting-btn you-btn-danger" data-action="clear-queue" type="button" ${queueCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>
-                      <i class="fa-solid fa-trash"></i> Clear Queue
+                      <span class="material-symbols-rounded">delete</span> Clear Queue
                     </button>
                   </div>
 
@@ -489,10 +489,10 @@ export function renderOverlay() {
                     </div>
                     <div style="display:flex; gap:8px;">
                       <button class="btn btn-soft you-setting-btn" data-action="export-library" type="button">
-                        <i class="fa-solid fa-file-export"></i> Export
+                        <span class="material-symbols-rounded">upload</span> Export
                       </button>
                       <button class="btn btn-soft you-setting-btn" data-action="import-library" type="button">
-                        <i class="fa-solid fa-file-import"></i> Import
+                        <span class="material-symbols-rounded">download</span> Import
                       </button>
                     </div>
                   </div>

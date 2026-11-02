@@ -72,26 +72,26 @@ export function renderArtistProfile() {
   artistProfile.innerHTML = `
      <div class="artist-hero">
        <button class="artist-hero-back" data-action="close-artist-profile" type="button" aria-label="Back">
-         <i class="fa-solid fa-chevron-down"></i>
+         <span class="material-symbols-rounded">keyboard_arrow_down</span>
        </button>
        <img class="artist-hero-img" src="${escapeHTML(artist.imageUrl || LOGO_URL)}" alt="${escapeHTML(artist.name)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
        <div class="artist-hero-name">${escapeHTML(artist.name)}</div>
        <div class="artist-hero-meta">${escapeHTML(artist.type || 'Artist')} \u2022 ${artist.songs?.length || 0} songs</div>
        <div class="artist-hero-actions">
          <button class="btn-play" data-action="play-song" data-song-id="${escapeHTML(artist.songs?.[0]?.id || '')}" data-source="artist" type="button" aria-label="Play ${escapeHTML(artist.name)}">
-           <i class="fa-solid fa-play"></i>
+           <span class="material-symbols-rounded">play_arrow</span>
          </button>
          <button class="btn-follow ${isFollowed ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(artist.imageUrl || '')}" type="button" aria-label="${isFollowed ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
-           <i class="fa-solid ${isFollowed ? 'fa-check' : 'fa-plus'}"></i>
+           <span class="material-symbols-rounded">${isFollowed ? 'check' : 'add'}</span>
            <span>${isFollowed ? 'Following' : 'Follow'}</span>
          </button>
          <button class="btn-icon" data-action="shuffle-playlist" data-playlist-id="artist-${escapeHTML(artist.name)}" type="button" aria-label="Shuffle ${escapeHTML(artist.name)}">
-           <i class="fa-solid fa-shuffle"></i>
+           <span class="material-symbols-rounded">shuffle</span>
          </button>
        </div>
      </div>
      <div class="artist-section">
-       <h3><i class="fa-solid fa-music" style="margin-right:8px; color:var(--green);"></i>Popular</h3>
+       <h3><span class="material-symbols-rounded" style="margin-right:8px; color:var(--green);">music_note</span>Popular</h3>
        <div class="song-table">
          ${
            artist.loading
@@ -108,7 +108,7 @@ export function renderArtistProfile() {
                ? artist.songs
                    .map((s, i) => renderSongRow(s, i + 1, 'artist'))
                    .join('')
-               : '<div class="empty-state"><i class="fa-solid fa-music"></i><h2>No songs found</h2></div>'
+               : '<div class="empty-state"><span class="material-symbols-rounded">music_note</span><h2>No songs found</h2></div>'
          }
        </div>
      </div>

@@ -79,11 +79,11 @@ export function showToast(msg, duration = 3200) {
   }
   const str = String(msg || '');
   const isErr = /error|fail|restrict|invalid|could not/i.test(str);
-  const iconClass = isErr ? 'fa-circle-exclamation' : 'fa-circle-info';
+  const iconName = isErr ? 'error' : 'info';
   const iconColor = isErr ? 'var(--danger, #ef4444)' : 'var(--green, #1db954)';
   
   toast.innerHTML = `
-    <i class="fa-solid ${iconClass}" style="color:${iconColor}; flex-shrink:0; font-size:1rem;"></i>
+    <span class="material-symbols-rounded" style="color:${iconColor}; flex-shrink:0; font-size:1.25rem;">${iconName}</span>
     <span class="toast-text">${str.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
   `;
   toast.classList.add('show');

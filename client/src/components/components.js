@@ -67,7 +67,7 @@ export function renderHomeGridCard(song, source, playlistId = '', titleOverride 
       </div>
       <span class="home-grid-title">${escapeHTML(displayTitle)}</span>
       <button class="home-grid-play-btn" type="button" aria-label="Play" tabindex="-1">
-        <i class="fa-solid fa-play"></i>
+        <span class="material-symbols-rounded">play_arrow</span>
       </button>
     </article>
   `;
@@ -81,7 +81,7 @@ export function renderHomeScrollCard(song, index, source, playlistId = '') {
       <div class="scroll-cover-wrap">
         <img src="${escapeHTML(cover)}" alt="${escapeHTML(song.title)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
         <button class="scroll-play-btn" type="button" aria-label="Play" tabindex="-1">
-          <i class="fa-solid fa-play"></i>
+          <span class="material-symbols-rounded">play_arrow</span>
         </button>
       </div>
       <div class="scroll-card-meta">
@@ -140,7 +140,7 @@ export function renderSearchResults() {
 
   const noResultsHTML = `
     <div class="search-empty-state">
-      <div class="search-empty-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+      <div class="search-empty-icon"><span class="material-symbols-rounded">search</span></div>
       <h2 class="search-empty-title">No results found for "${escapeHTML(state.searchQuery)}"</h2>
       <p class="search-empty-sub">Please check your spelling, try fewer keywords, or tap one of these trending suggestions:</p>
       <div class="search-empty-chips">
@@ -188,7 +188,7 @@ export function renderSearchResults() {
             <p class="search-top-artist">${escapeHTML(topSong.artist)}</p>
           </div>
           <button class="search-top-play-btn" data-action="play-song" data-song-id="${escapeHTML(topSong.id)}" data-source="search" type="button" aria-label="Play ${escapeHTML(topSong.title)}">
-            <i class="fa-solid fa-play"></i>
+            <span class="material-symbols-rounded">play_arrow</span>
           </button>
         </div>
       `;
@@ -305,7 +305,7 @@ export function renderSearchDynamicUI() {
   if (hasQuery) {
     html += `
       <button class="clear-search search-clear-btn" data-action="clear-search-input" type="button" aria-label="Clear Search Input" title="Clear">
-        <i class="fa-solid fa-xmark"></i>
+        <span class="material-symbols-rounded">close</span>
       </button>
     `;
   }
@@ -355,12 +355,12 @@ export function renderSearchDynamicUI() {
         return `
           <div class="search-suggestion-item recent-query-item" role="option">
             <button class="recent-query-click" data-action="use-recent-search" data-query="${escapeHTML(item.query)}" type="button">
-              <i class="fa-solid fa-clock-rotate-left search-suggestion-icon" aria-hidden="true"></i>
+              <span class="material-symbols-rounded search-suggestion-icon" aria-hidden="true">history</span>
               <span class="search-suggestion-text">${highlighted}</span>
               <span class="search-suggestion-badge">Recent</span>
             </button>
             <button class="recent-query-remove" data-action="remove-recent-search" data-type="query" data-id="${escapeHTML(item.query)}" type="button" title="Remove search" aria-label="Remove search">
-              <i class="fa-solid fa-xmark"></i>
+              <span class="material-symbols-rounded">close</span>
             </button>
           </div>
         `;
@@ -378,7 +378,7 @@ export function renderSearchDynamicUI() {
         }
         return `
           <button class="search-suggestion-item" data-action="use-suggestion" data-query="${escapeHTML(s)}" type="button" role="option">
-            <i class="fa-solid fa-magnifying-glass search-suggestion-icon" aria-hidden="true"></i>
+            <span class="material-symbols-rounded search-suggestion-icon" aria-hidden="true">search</span>
             <span class="search-suggestion-text">${highlighted}</span>
             <span class="search-suggestion-badge">Search</span>
           </button>
@@ -419,13 +419,13 @@ export function renderSearchPage() {
         </button>
         <h1 class="search-title-spotify">Search</h1>
         <button class="search-camera-btn" type="button" aria-label="Camera search" title="Scan">
-          <i class="fa-solid fa-camera"></i>
+          <span class="material-symbols-rounded">photo_camera</span>
         </button>
       </header>
 
       <!-- Prominent Pill-Shaped Search Input Bar -->
       <div class="search-pill-container" id="search-bar-wrap">
-        <i class="fa-solid fa-magnifying-glass search-pill-icon" aria-hidden="true"></i>
+        <span class="material-symbols-rounded search-pill-icon" aria-hidden="true">search</span>
         <input
           type="text"
           id="search-input"
@@ -478,11 +478,11 @@ export function renderLibraryPage() {
     const likedSongsRow = `
       <article class="library-list-item" data-action="navigate" data-path="/playlist/liked" role="button" tabindex="0">
         <div class="library-item-thumb-gradient">
-          <i class="fa-solid fa-heart" style="color: #fff; font-size: 1.4rem;"></i>
+          <span class="material-symbols-rounded" style="color: #fff; font-size: 1.4rem;">favorite</span>
         </div>
         <div class="library-item-info">
           <h3 class="library-item-title">Liked Songs</h3>
-          <p class="library-item-sub"><i class="fa-solid fa-thumbtack pinned-icon"></i> Playlist &bull; ${favCount} song${favCount === 1 ? '' : 's'}</p>
+          <p class="library-item-sub"><span class="material-symbols-rounded pinned-icon">push_pin</span> Playlist &bull; ${favCount} song${favCount === 1 ? '' : 's'}</p>
         </div>
       </article>
     `;
@@ -508,11 +508,11 @@ export function renderLibraryPage() {
         ${playlistsList}
         ${allPlaylists.length === 0 ? `
           <div class="empty-state" style="padding: 32px 16px;">
-            <i class="fa-solid fa-list-ul"></i>
+            <span class="material-symbols-rounded">queue_music</span>
             <h2>No playlists yet</h2>
             <p>Create a playlist to build your collection.</p>
             <button class="btn btn-primary" data-action="open-create-playlist" type="button" style="margin-top: 14px; background: #1ed760; color: #121212; font-weight: 700; border-radius: 999px;">
-              <i class="fa-solid fa-plus"></i> New Playlist
+              <span class="material-symbols-rounded">add</span> New Playlist
             </button>
           </div>
         ` : ''}
@@ -527,15 +527,15 @@ export function renderLibraryPage() {
             <img class="library-item-thumb" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" alt="${escapeHTML(song.title)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
             <div class="library-item-info">
               <h3 class="library-item-title">${escapeHTML(song.title)}</h3>
-              <p class="library-item-sub"><i class="fa-solid fa-heart" style="color:var(--green); font-size:0.75rem;"></i> ${escapeHTML(song.artist)}</p>
+              <p class="library-item-sub"><span class="material-symbols-rounded" style="color:var(--green); font-size:0.75rem;">favorite</span> ${escapeHTML(song.artist)}</p>
             </div>
             <button class="icon-btn small song-menu-trigger" data-action="open-track-menu" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Options">
-              <i class="fa-solid fa-ellipsis-vertical"></i>
+              <span class="material-symbols-rounded">more_vert</span>
             </button>
           </article>
         `).join('') : `
           <div class="empty-state" style="padding: 48px 16px;">
-            <i class="fa-solid fa-heart"></i>
+            <span class="material-symbols-rounded">favorite</span>
             <h2>No liked songs</h2>
             <p>Tap the heart icon on any playing track to save it here.</p>
           </div>
@@ -547,7 +547,7 @@ export function renderLibraryPage() {
       <div class="library-list-container">
         <article class="library-list-item" data-action="install-pwa" role="button" tabindex="0">
           <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
-            <i class="fa-solid fa-download" style="color: #1db954; font-size: 1.3rem;"></i>
+            <span class="material-symbols-rounded" style="color: #1db954; font-size: 1.3rem;">download</span>
           </div>
           <div class="library-item-info">
             <h3 class="library-item-title">Offline Cache &amp; PWA</h3>
@@ -559,7 +559,7 @@ export function renderLibraryPage() {
         </article>
         <article class="library-list-item" data-action="export-library" role="button" tabindex="0">
           <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
-            <i class="fa-solid fa-file-export" style="color: #1db954; font-size: 1.3rem;"></i>
+            <span class="material-symbols-rounded" style="color: #1db954; font-size: 1.3rem;">upload</span>
           </div>
           <div class="library-item-info">
             <h3 class="library-item-title">Export Library Backup</h3>
@@ -616,7 +616,7 @@ export function renderLibraryPage() {
           `;
         }).join('') : `
           <div class="empty-state" style="padding: 48px 16px;">
-            <i class="fa-solid fa-compact-disc"></i>
+            <span class="material-symbols-rounded">album</span>
             <h2>No saved albums</h2>
             <p>Save albums to organize your collection here.</p>
           </div>
@@ -657,9 +657,9 @@ export function renderLibraryPage() {
             <div class="library-item-thumb-round">
               ${artist.imageUrl ? `
                 <img src="${escapeHTML(getOptimizedArtwork(artist.imageUrl, 160))}" alt="${escapeHTML(artist.name)}" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';" />
-                <div class="library-item-thumb-fallback" style="display:none;"><i class="fa-solid fa-user"></i></div>
+                <div class="library-item-thumb-fallback" style="display:none;"><span class="material-symbols-rounded">person</span></div>
               ` : `
-                <div class="library-item-thumb-fallback"><i class="fa-solid fa-user"></i></div>
+                <div class="library-item-thumb-fallback"><span class="material-symbols-rounded">person</span></div>
               `}
             </div>
             <div class="library-item-info">
@@ -669,7 +669,7 @@ export function renderLibraryPage() {
           </article>
         `).join('') : `
           <div class="empty-state" style="padding: 48px 16px;">
-            <i class="fa-solid fa-user"></i>
+            <span class="material-symbols-rounded">person</span>
             <h2>No followed artists</h2>
             <p>Follow artists to view them here.</p>
           </div>
@@ -691,10 +691,10 @@ export function renderLibraryPage() {
           </div>
           <div class="library-actions">
             <button class="library-icon-btn" data-action="navigate" data-path="/search" type="button" aria-label="Search in library" title="Search">
-              <i class="fa-solid fa-magnifying-glass"></i>
+              <span class="material-symbols-rounded">search</span>
             </button>
             <button class="library-icon-btn" data-action="open-create-playlist" type="button" aria-label="New playlist" title="Create Playlist">
-              <i class="fa-solid fa-plus"></i>
+              <span class="material-symbols-rounded">add</span>
             </button>
           </div>
         </div>
@@ -711,11 +711,11 @@ export function renderLibraryPage() {
         <!-- Sort Bar: Recents -->
         <div class="library-sort-bar">
           <button class="library-sort-btn" type="button">
-            <i class="fa-solid fa-arrow-down-up-across-line"></i>
+            <span class="material-symbols-rounded">sort</span>
             <span>Recents</span>
           </button>
           <button class="library-view-btn" type="button" aria-label="View toggle">
-            <i class="fa-solid fa-bars"></i>
+            <span class="material-symbols-rounded">menu</span>
           </button>
         </div>
       </header>
@@ -807,11 +807,11 @@ export function renderPlaylistPage(playlistId) {
       <section class="page playlist-page-spotify">
         <header class="playlist-nav-bar">
           <button class="playlist-nav-btn" data-action="go-back" type="button" aria-label="Back">
-            <i class="fa-solid fa-arrow-left"></i>
+            <span class="material-symbols-rounded">arrow_back</span>
           </button>
           <div style="flex:1;"></div>
           <button class="playlist-nav-btn" type="button" aria-label="More">
-            <i class="fa-solid fa-ellipsis-vertical"></i>
+            <span class="material-symbols-rounded">more_vert</span>
           </button>
         </header>
         <div class="playlist-hero-centered">
@@ -833,11 +833,11 @@ export function renderPlaylistPage(playlistId) {
       <!-- Spotify Top Nav: Back Arrow & 3-Dot Kebab Menu -->
       <header class="playlist-nav-bar">
         <button class="playlist-nav-btn" data-action="go-back" type="button" aria-label="Back">
-          <i class="fa-solid fa-arrow-left"></i>
+          <span class="material-symbols-rounded">arrow_back</span>
         </button>
         <div class="playlist-nav-title">${escapeHTML(playlist.name)}</div>
         <button class="playlist-nav-btn" data-action="share-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="More options">
-          <i class="fa-solid fa-ellipsis-vertical"></i>
+          <span class="material-symbols-rounded">more_vert</span>
         </button>
       </header>
 
@@ -860,18 +860,18 @@ export function renderPlaylistPage(playlistId) {
       <div class="playlist-action-bar">
         <div class="playlist-left-actions">
           <button class="playlist-action-circle" data-action="download-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Download playlist">
-            <i class="fa-solid fa-circle-down"></i>
+            <span class="material-symbols-rounded">download</span>
           </button>
           <button class="playlist-action-circle" data-action="share-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Share playlist">
-            <i class="fa-solid fa-share-nodes"></i>
+            <span class="material-symbols-rounded">share</span>
           </button>
           <button class="playlist-action-circle" data-action="shuffle-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Shuffle playlist">
-            <i class="fa-solid fa-shuffle"></i>
+            <span class="material-symbols-rounded">shuffle</span>
           </button>
         </div>
 
         <button class="playlist-fab-play" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="${isPlayingThis ? 'Pause' : 'Play'}">
-          <i class="fa-solid ${isPlayingThis ? 'fa-pause' : 'fa-play'}"></i>
+          <span class="material-symbols-rounded">${isPlayingThis ? 'pause' : 'play_arrow'}</span>
         </button>
       </div>
 
@@ -892,7 +892,7 @@ export function renderSongRow(song, index, source, playlistId = '') {
   return `
      <div class="song-row ${active ? 'active' : ''}" data-action="play-song" data-song-id="${escapeHTML(song.id)}" data-source="${escapeHTML(source)}" data-playlist-id="${escapeHTML(playlistId)}" type="button">
        <div class="song-index">
-         ${active && state.isPlaying ? '<i class="fa-solid fa-volume-high" style="font-size:0.75rem;"></i>' : `<span>${index}</span>`}
+         ${active && state.isPlaying ? '<span class="material-symbols-rounded" style="font-size:0.75rem;">volume_up</span>' : `<span>${index}</span>`}
        </div>
        <img class="song-cover-sm" src="${escapeHTML(cover)}" alt="" draggable="false" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
        <div class="song-info">
@@ -902,7 +902,7 @@ export function renderSongRow(song, index, source, playlistId = '') {
        <div class="song-duration">${escapeHTML(song.duration || '0:00')}</div>
        <div class="song-actions">
          <button class="song-action-btn song-menu-trigger" data-action="open-track-menu" data-song-id="${escapeHTML(song.id)}" data-playlist-id="${escapeHTML(playlistId)}" type="button" aria-label="More options for ${escapeHTML(song.title)}" title="More options">
-           <i class="fa-solid fa-ellipsis-vertical"></i>
+           <span class="material-symbols-rounded">more_vert</span>
          </button>
        </div>
      </div>
@@ -923,13 +923,13 @@ export function renderPlaylistCard(playlist, index) {
       <div class="card-img-wrap">
         <img src="${escapeHTML(coverUrl)}" alt="${escapeHTML(playlist.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
         <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Play ${escapeHTML(playlist.name)}">
-          <i class="fa-solid fa-play"></i>
+          <span class="material-symbols-rounded">play_arrow</span>
         </button>
         ${
           !playlist.isSystem && !isCustomUserPlaylist
             ? `
           <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-playlist" data-playlist-id="${escapeHTML(playlist.id)}" data-playlist-name="${escapeHTML(playlist.name)}" data-playlist-uploader="${escapeHTML(playlist.uploaderName || '')}" data-playlist-cover="${escapeHTML(rawCover)}" type="button" aria-label="${isSaved ? 'Unsave playlist' : 'Save playlist'}" title="${isSaved ? 'Unsave Playlist' : 'Save Playlist'}">
-            <i class="fa-solid ${isSaved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
+            <span class="material-symbols-rounded ${isSaved ? 'filled' : ''}">${isSaved ? 'bookmark' : 'bookmark_border'}</span>
           </button>
         `
             : ''
@@ -953,10 +953,10 @@ export function renderPlaylistSearchCard(playlist, index) {
       <div class="card-img-wrap">
         <img class="card-cover" src="${escapeHTML(coverUrl)}" alt="${escapeHTML(playlist.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
         <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Play ${escapeHTML(playlist.name)}">
-          <i class="fa-solid fa-play"></i>
+          <span class="material-symbols-rounded">play_arrow</span>
         </button>
         <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-playlist" data-playlist-id="${escapeHTML(playlist.id)}" data-playlist-name="${escapeHTML(playlist.name)}" data-playlist-uploader="${escapeHTML(playlist.uploaderName || '')}" data-playlist-cover="${escapeHTML(rawCover)}" type="button" aria-label="${isSaved ? 'Unsave playlist' : 'Save playlist'}" title="${isSaved ? 'Unsave Playlist' : 'Save Playlist'}">
-          <i class="fa-solid ${isSaved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
+          <span class="material-symbols-rounded ${isSaved ? 'filled' : ''}">${isSaved ? 'bookmark' : 'bookmark_border'}</span>
         </button>
       </div>
       <div class="card-title">${escapeHTML(playlist.name)}</div>
@@ -975,10 +975,10 @@ export function renderAlbumSearchCard(album, index) {
       <div class="card-img-wrap">
         <img class="card-cover" src="${escapeHTML(coverUrl)}" alt="${escapeHTML(album.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
         <button class="card-play-btn" data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}" type="button" aria-label="Play ${escapeHTML(album.name)}">
-          <i class="fa-solid fa-play"></i>
+          <span class="material-symbols-rounded">play_arrow</span>
         </button>
         <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" data-action="toggle-save-album" data-album-id="${escapeHTML(album.id)}" data-album-name="${escapeHTML(album.name)}" data-album-artist="${escapeHTML(album.artist || '')}" data-album-cover="${escapeHTML(rawCover)}" data-album-year="${escapeHTML(album.year || '')}" type="button" aria-label="${isSaved ? 'Unsave album' : 'Save album'}" title="${isSaved ? 'Unsave Album' : 'Save Album'}">
-          <i class="fa-solid ${isSaved ? 'fa-bookmark' : 'fa-bookmark-slash'}"></i>
+          <span class="material-symbols-rounded ${isSaved ? 'filled' : ''}">${isSaved ? 'bookmark' : 'bookmark_border'}</span>
         </button>
       </div>
       <div class="card-title">${escapeHTML(album.name)}</div>
@@ -1003,7 +1003,7 @@ export function renderArtistSearchCard(artist, index) {
       <div class="card-meta" style="text-align: center; margin-bottom: 8px;">Artist</div>
       <div style="display: flex; justify-content: center; margin-top: auto;">
         <button class="btn-card-follow ${isFollowed ? 'following' : ''}" data-action="toggle-follow-artist" data-artist="${escapeHTML(artist.name)}" data-image="${escapeHTML(rawCover)}" type="button" aria-label="${isFollowed ? 'Following' : 'Follow'} ${escapeHTML(artist.name)}">
-          <i class="fa-solid ${isFollowed ? 'fa-check' : 'fa-plus'}"></i>
+          <span class="material-symbols-rounded">${isFollowed ? 'check' : 'add'}</span>
           <span>${isFollowed ? 'Following' : 'Follow'}</span>
         </button>
       </div>
@@ -1013,13 +1013,13 @@ export function renderArtistSearchCard(artist, index) {
 
 
 const TRENDING_SEARCH_SHORTCUTS = [
-  { label: 'Prateek Kuhad', icon: 'fa-guitar' },
-  { label: 'Arijit Singh', icon: 'fa-microphone' },
-  { label: 'Lo-Fi Chill', icon: 'fa-headphones' },
-  { label: 'Anuv Jain', icon: 'fa-heart' },
-  { label: 'Desi Hip Hop', icon: 'fa-fire' },
-  { label: 'Indie Rock', icon: 'fa-bolt' },
-  { label: 'Late Night', icon: 'fa-moon' },
+  { label: 'Prateek Kuhad', icon: 'music_note' },
+  { label: 'Arijit Singh', icon: 'mic' },
+  { label: 'Lo-Fi Chill', icon: 'headphones' },
+  { label: 'Anuv Jain', icon: 'favorite' },
+  { label: 'Desi Hip Hop', icon: 'local_fire_department' },
+  { label: 'Indie Rock', icon: 'bolt' },
+  { label: 'Late Night', icon: 'bedtime' },
 ];
 
 const DISCOVER_ITEMS = [
@@ -1132,11 +1132,11 @@ export function renderSearchCategories() {
             ${recentQueries.map(item => `
               <div class="recent-search-pill" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);">
                 <button class="recent-search-text-btn" data-action="use-recent-search" data-query="${escapeHTML(item.query)}" type="button" style="background: none; border: none; padding: 0; color: var(--text); font-size: 0.8125rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                  <i class="fa-solid fa-clock-rotate-left" style="font-size: 0.75rem; color: var(--muted);"></i>
+                  <span class="material-symbols-rounded" style="font-size: 0.75rem; color: var(--muted);">history</span>
                   <span>${escapeHTML(item.query)}</span>
                 </button>
                 <button class="recent-search-del-btn" data-action="remove-recent-search" data-type="query" data-id="${escapeHTML(item.query)}" type="button" aria-label="Remove search" style="background: none; border: none; padding: 0; color: var(--muted); cursor: pointer; font-size: 0.75rem; display: flex; align-items: center;" title="Remove">
-                  <i class="fa-solid fa-xmark"></i>
+                  <span class="material-symbols-rounded">close</span>
                 </button>
               </div>
             `).join('')}
@@ -1181,7 +1181,7 @@ export function renderSearchCategories() {
           ${RECOMMENDED_STATIONS.map((st) => `
             <article class="station-card" style="background-color: ${st.bgColor}; color: ${st.textColor};" data-action="search-artist-station" data-artist="${escapeHTML(st.artist)}" role="button" tabindex="0">
               <div class="station-header">
-                <i class="fa-brands fa-spotify station-logo" style="font-size: 1.15rem;"></i>
+                <span class="material-symbols-rounded station-logo" style="font-size: 1.15rem;">music_note</span>
                 <span class="station-badge">RADIO</span>
               </div>
               <div class="station-art-wrap">

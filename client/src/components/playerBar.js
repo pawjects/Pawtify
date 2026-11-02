@@ -37,20 +37,20 @@ export function renderPlayerBar(force = false) {
          <div class="player-bar-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
        </div>
        <button class="player-bar-like ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Favorite">
-         <i class="${isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}"></i>
+         <span class="material-symbols-rounded ${isFav ? 'filled' : ''}">favorite</span>
        </button>
      </div>
 
      <div class="player-bar-center">
        <div class="player-controls">
-         <button class="control-btn ${state.shuffleMode ? 'shuffle-active' : ''}" data-action="toggle-shuffle" type="button" aria-label="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
-         <button class="control-btn" data-action="prev-track" type="button" aria-label="Previous"><i class="fa-solid fa-backward-step"></i></button>
+         <button class="control-btn ${state.shuffleMode ? 'shuffle-active' : ''}" data-action="toggle-shuffle" type="button" aria-label="Shuffle"><span class="material-symbols-rounded">shuffle</span></button>
+         <button class="control-btn" data-action="prev-track" type="button" aria-label="Previous"><span class="material-symbols-rounded">skip_previous</span></button>
          <button class="control-btn main" data-action="toggle-play" type="button" aria-label="Play/Pause">
-           ${state.isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>'}
+           ${state.isPlaying ? '<span class="material-symbols-rounded">pause</span>' : '<span class="material-symbols-rounded">play_arrow</span>'}
          </button>
-         <button class="control-btn" data-action="next-track" type="button" aria-label="Next"><i class="fa-solid fa-forward-step"></i></button>
+         <button class="control-btn" data-action="next-track" type="button" aria-label="Next"><span class="material-symbols-rounded">skip_next</span></button>
          <button class="control-btn ${state.repeatMode !== 'none' ? 'repeat-active' : ''}" data-action="toggle-repeat" type="button" aria-label="Repeat">
-           <i class="${state.repeatMode === 'one' ? 'fa-solid fa-1' : 'fa-solid fa-repeat'}"></i>
+           <span class="material-symbols-rounded">${state.repeatMode === 'one' ? 'repeat_one' : 'repeat'}</span>
          </button>
        </div>
        <div class="progress-row">
@@ -61,11 +61,11 @@ export function renderPlayerBar(force = false) {
      </div>
 
      <div class="player-bar-right">
-       <button class="control-btn ${state.videoVisible ? 'active' : ''}" data-action="toggle-video" type="button" aria-label="Toggle Video Mode" title="Watch Video"><i class="fa-solid fa-tv"></i></button>
-       <button class="control-btn" data-action="open-queue" type="button" aria-label="Queue"><i class="fa-solid fa-list-ul"></i></button>
-       <button class="control-btn" data-action="open-playlist-picker" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Add to playlist"><i class="fa-solid fa-plus"></i></button>
-       <button class="control-btn" data-action="open-song-details" type="button" aria-label="Details"><i class="fa-solid fa-circle-info"></i></button>
-       <i class="fa-solid fa-volume-high" style="color:var(--muted); font-size:0.875rem;"></i>
+       <button class="control-btn ${state.videoVisible ? 'active' : ''}" data-action="toggle-video" type="button" aria-label="Toggle Video Mode" title="Watch Video"><span class="material-symbols-rounded">tv</span></button>
+       <button class="control-btn" data-action="open-queue" type="button" aria-label="Queue"><span class="material-symbols-rounded">queue_music</span></button>
+       <button class="control-btn" data-action="open-playlist-picker" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Add to playlist"><span class="material-symbols-rounded">add</span></button>
+       <button class="control-btn" data-action="open-song-details" type="button" aria-label="Details"><span class="material-symbols-rounded">info</span></button>
+       <span class="material-symbols-rounded" style="color:var(--muted); font-size:1.15rem;">volume_up</span>
        <input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(state.volume * 100)}" />
      </div>
    `;
@@ -103,10 +103,10 @@ export function renderMiniPlayer(force = false) {
        </div>
        <div class="mini-player-btns">
          <button class="mini-player-btn mini-player-play-btn" data-action="toggle-play" type="button" aria-label="${state.isPlaying ? 'Pause' : 'Play'}">
-           ${state.isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>'}
+           ${state.isPlaying ? '<span class="material-symbols-rounded">pause</span>' : '<span class="material-symbols-rounded">play_arrow</span>'}
          </button>
          <button class="mini-player-btn mini-player-dismiss-btn" data-action="dismiss-player" type="button" aria-label="Close player">
-           <i class="fa-solid fa-xmark"></i>
+           <span class="material-symbols-rounded">close</span>
          </button>
        </div>
      </div>
@@ -126,7 +126,7 @@ export function renderSidebarPlaylists() {
        ${
          historyCover
            ? `<img class="sidebar-playlist-thumb" src="${escapeHTML(getOptimizedArtwork(historyCover, 80))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />`
-           : `<div class="sidebar-playlist-thumb empty"><i class="fa-solid fa-clock-rotate-left"></i></div>`
+           : `<div class="sidebar-playlist-thumb empty"><span class="material-symbols-rounded">history</span></div>`
        }
        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Listening History</span>
      </button>
@@ -148,7 +148,7 @@ export function renderSidebarPlaylists() {
          ${
            cover
              ? `<img class="sidebar-playlist-thumb" src="${escapeHTML(getOptimizedArtwork(cover, 80))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />`
-             : `<div class="sidebar-playlist-thumb empty"><i class="fa-solid fa-music"></i></div>`
+             : `<div class="sidebar-playlist-thumb empty"><span class="material-symbols-rounded">music_note</span></div>`
          }
          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(playlist.name)}</span>
        </button>
@@ -338,8 +338,8 @@ export function refreshPlaybackUI() {
         playToggle.innerHTML = '<span class="play-loading-shimmer" aria-label="Loading audio"></span>';
       } else {
         playToggle.innerHTML = state.isPlaying
-          ? '<i class="fa-solid fa-pause"></i>'
-          : '<i class="fa-solid fa-play"></i>';
+          ? '<span class="material-symbols-rounded">pause</span>'
+          : '<span class="material-symbols-rounded">play_arrow</span>';
       }
     }
   });
@@ -361,12 +361,15 @@ export function refreshPlaybackUI() {
   document.body.classList.toggle('has-active-track', !!state.currentSong);
 
   // Sync repeat & shuffle icons across controls
-  const repeatIconClass = state.repeatMode === 'one' ? 'fa-solid fa-1' : 'fa-solid fa-repeat';
+  const repeatIconName = state.repeatMode === 'one' ? 'repeat_one' : 'repeat';
   document.querySelectorAll('[data-action="toggle-repeat"]').forEach((btn) => {
     btn.classList.toggle('repeat-active', state.repeatMode !== 'none');
     btn.classList.toggle('active', state.repeatMode !== 'none');
-    const icon = btn.querySelector('i');
-    if (icon) icon.className = repeatIconClass;
+    const icon = btn.querySelector('.material-symbols-rounded, i');
+    if (icon) {
+      icon.className = 'material-symbols-rounded';
+      icon.textContent = repeatIconName;
+    }
   });
 
   document.querySelectorAll('[data-action="toggle-shuffle"]').forEach((btn) => {
@@ -378,9 +381,10 @@ export function refreshPlaybackUI() {
   const isFav = state.favorites.some((item) => item.id === state.currentSong?.id);
   document.querySelectorAll('[data-action="toggle-favorite"]').forEach((btn) => {
     btn.classList.toggle('active', isFav);
-    const icon = btn.querySelector('i');
+    const icon = btn.querySelector('.material-symbols-rounded, i');
     if (icon) {
-      icon.className = isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+      icon.className = `material-symbols-rounded ${isFav ? 'filled' : ''}`;
+      icon.textContent = 'favorite';
     }
   });
 

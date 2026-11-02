@@ -56,17 +56,17 @@ export function renderQueuePanel() {
        </div>
        <div class="queue-header-actions">
          <button class="queue-shuffle-pill-btn" data-action="shuffle-queue" type="button" aria-label="Shuffle list">
-           <i class="fa-solid fa-shuffle"></i>
+           <span class="material-symbols-rounded">shuffle</span>
            <span>Shuffle List</span>
          </button>
          <button class="queue-close-btn" data-action="close-queue" type="button" aria-label="Close queue">
-           <i class="fa-solid fa-xmark"></i>
+           <span class="material-symbols-rounded">close</span>
          </button>
        </div>
      </div>
 
      <div class="queue-list" id="queue-list-container">
-       ${!queue.length ? '<div class="empty-state"><i class="fa-solid fa-list-ul"></i><h2>Queue is empty</h2><p>Add songs to start listening.</p></div>' : ''}
+       ${!queue.length ? '<div class="empty-state"><span class="material-symbols-rounded">queue_music</span><h2>Queue is empty</h2><p>Add songs to start listening.</p></div>' : ''}
 
        <div class="queue-vertical-list" id="queue-reorderable-list">
          ${queue
@@ -101,7 +101,7 @@ export function renderQueuePanel() {
                    `
                    }
                    <button class="song-action-btn song-menu-trigger queue-menu-btn" data-action="open-track-menu" data-song-id="${escapeHTML(s?.id || '')}" type="button" aria-label="More options" title="More options">
-                     <i class="fa-solid fa-ellipsis-vertical"></i>
+                     <span class="material-symbols-rounded">more_vert</span>
                    </button>
                  </div>
                </div>

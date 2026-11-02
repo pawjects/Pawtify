@@ -169,13 +169,13 @@ export function renderCurrentRoute() {
       console.error(`[Mount Crash: Route "${state.route?.name}"]`, routeMountErr);
       main.innerHTML = `
         <div class="empty-state" style="padding: 40px 20px; text-align: center;">
-          <i class="fa-solid fa-triangle-exclamation" style="font-size: 2.5rem; color: var(--danger, #ef4444); margin-bottom: 16px;"></i>
+          <span class="material-symbols-rounded" style="font-size: 2.5rem; color: var(--danger, #ef4444); margin-bottom: 16px;">warning</span>
           <h2 style="font-size: 1.4rem; margin-bottom: 8px;">View Render Error</h2>
           <p style="color: var(--muted); font-size: 0.9rem; max-width: 420px; margin: 0 auto 16px;">
             An error occurred while mounting the "${state.route?.name || 'current'}" screen.
           </p>
           <button class="btn btn-primary" onclick="window.location.hash='#/'; window.location.reload();" type="button" style="padding: 8px 20px;">
-            <i class="fa-solid fa-rotate-right"></i> Reload App
+            <span class="material-symbols-rounded">refresh</span> Reload App
           </button>
         </div>
       `;

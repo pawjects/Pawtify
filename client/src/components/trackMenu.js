@@ -208,27 +208,27 @@ export function openTrackMenu(songId, playlistId, triggerBtn) {
     <div class="track-menu-divider"></div>
     <div class="track-menu-list">
       <button class="track-menu-item" data-action="track-menu-fav" data-song-id="${escapeHTML(song.id)}" type="button" role="menuitem">
-        <i class="${isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}" style="${isFav ? 'color:var(--md-sys-color-primary);' : ''}"></i>
+        <span class="material-symbols-rounded ${isFav ? 'filled' : ''}" style="${isFav ? 'color:var(--md-sys-color-primary);' : ''}">favorite</span>
         <span>${isFav ? 'Remove from Liked' : 'Save to Liked Songs'}</span>
       </button>
       <button class="track-menu-item" data-action="track-menu-play-next" data-song-id="${escapeHTML(song.id)}" type="button" role="menuitem">
-        <i class="fa-solid fa-forward-step"></i>
+        <span class="material-symbols-rounded">skip_next</span>
         <span>Play Next</span>
       </button>
       <button class="track-menu-item" data-action="track-menu-add-queue" data-song-id="${escapeHTML(song.id)}" type="button" role="menuitem">
-        <i class="fa-solid fa-list-ul"></i>
+        <span class="material-symbols-rounded">queue_music</span>
         <span>Add to Queue</span>
       </button>
       <button class="track-menu-item" data-action="track-menu-add-playlist" data-song-id="${escapeHTML(song.id)}" type="button" role="menuitem">
-        <i class="fa-solid fa-plus"></i>
+        <span class="material-symbols-rounded">add</span>
         <span>Add to Playlist</span>
       </button>
       <button class="track-menu-item" data-action="track-menu-view-artist" data-artist="${escapeHTML(song.artist)}" type="button" role="menuitem">
-        <i class="fa-solid fa-user"></i>
+        <span class="material-symbols-rounded">person</span>
         <span>View Artist</span>
       </button>
       <button class="track-menu-item" data-action="track-menu-share" data-song-id="${escapeHTML(song.id)}" type="button" role="menuitem">
-        <i class="fa-solid fa-share-nodes"></i>
+        <span class="material-symbols-rounded">share</span>
         <span>Share Track</span>
       </button>
       ${
@@ -236,7 +236,7 @@ export function openTrackMenu(songId, playlistId, triggerBtn) {
           ? `
         <div class="track-menu-divider"></div>
         <button class="track-menu-item track-menu-item-danger" data-action="track-menu-remove-from-playlist" data-song-id="${escapeHTML(song.id)}" data-playlist-id="${escapeHTML(playlistId)}" type="button" role="menuitem">
-          <i class="fa-solid fa-trash"></i>
+          <span class="material-symbols-rounded">delete</span>
           <span>Remove from Playlist</span>
         </button>
       `

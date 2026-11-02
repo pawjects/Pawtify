@@ -183,8 +183,8 @@ export function renderFullscreenPlayer(force = false) {
 
   const repeatIcon =
     state.repeatMode === 'one'
-      ? 'fa-solid fa-1'
-      : 'fa-solid fa-repeat';
+      ? 'repeat_one'
+      : 'repeat';
   const repeatActive = state.repeatMode !== 'none' ? 'active' : '';
   const shuffleActive = state.shuffleMode ? 'active' : '';
 
@@ -192,10 +192,10 @@ export function renderFullscreenPlayer(force = false) {
      <div class="fs-content">
        <div class="fs-header">
          <button class="fs-close-btn" data-action="close-fullscreen-player" type="button" aria-label="Collapse player" title="Collapse">
-           <i class="fa-solid fa-chevron-down"></i>
+           <span class="material-symbols-rounded">keyboard_arrow_down</span>
          </button>
          <button class="fs-extra-btn fs-kebab-btn" data-action="open-player-more-sheet" type="button" aria-label="More options" title="More options">
-           <i class="fa-solid fa-ellipsis-vertical"></i>
+           <span class="material-symbols-rounded">more_vert</span>
          </button>
        </div>
 
@@ -210,7 +210,7 @@ export function renderFullscreenPlayer(force = false) {
              <div class="fs-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
            </div>
            <button class="fs-heart ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Favorite">
-             <i class="${isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}"></i>
+             <span class="material-symbols-rounded ${isFav ? 'filled' : ''}">${isFav ? 'favorite' : 'favorite'}</span>
            </button>
          </div>
 
@@ -228,34 +228,34 @@ export function renderFullscreenPlayer(force = false) {
          <!-- Redesigned Spotify Player Controls -->
          <div class="fs-controls-spotify">
            <button class="fs-extra-btn ${shuffleActive}" data-action="toggle-shuffle" type="button" aria-label="Shuffle">
-             <i class="fa-solid fa-shuffle"></i>
+             <span class="material-symbols-rounded">shuffle</span>
            </button>
            <button class="fs-nav-circle-btn" data-action="prev-track" type="button" aria-label="Previous">
-             <i class="fa-solid fa-backward-step"></i>
+             <span class="material-symbols-rounded">skip_previous</span>
            </button>
            <button class="fs-play-btn-accent fs-play-btn-cyan" data-action="toggle-play" type="button" aria-label="Play/Pause">
-             ${state.isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>'}
+             ${state.isPlaying ? '<span class="material-symbols-rounded">pause</span>' : '<span class="material-symbols-rounded">play_arrow</span>'}
            </button>
            <button class="fs-nav-circle-btn" data-action="next-track" type="button" aria-label="Next">
-             <i class="fa-solid fa-forward-step"></i>
+             <span class="material-symbols-rounded">skip_next</span>
            </button>
            <button class="fs-extra-btn ${repeatActive}" data-action="toggle-repeat" type="button" aria-label="Repeat">
-             <i class="${repeatIcon}"></i>
+             <span class="material-symbols-rounded">${repeatIcon}</span>
            </button>
          </div>
 
          <!-- Pill-shaped Toggle Row: Speed, Lyrics, Queue -->
          <div class="fs-pills-row">
            <button class="fs-pill-btn" data-action="toggle-speed" type="button" aria-label="Playback speed">
-             <i class="fa-solid fa-gauge-high"></i>
+             <span class="material-symbols-rounded">speed</span>
              <span id="fs-speed-label">${speedLabel}</span>
            </button>
            <button class="fs-pill-btn ${state.lyricsPanel ? 'active' : ''}" data-action="open-lyrics" type="button" aria-label="Lyrics">
-             <i class="fa-solid fa-bars-staggered"></i>
+             <span class="material-symbols-rounded">lyrics</span>
              <span>Lyrics</span>
            </button>
            <button class="fs-pill-btn ${state.queuePanel ? 'active' : ''}" data-action="open-queue" type="button" aria-label="Queue">
-             <i class="fa-solid fa-list"></i>
+             <span class="material-symbols-rounded">queue_music</span>
              <span>Queue</span>
            </button>
          </div>
@@ -300,10 +300,10 @@ export function openPlayerMoreSheet() {
         </div>
         <div class="player-more-header-actions">
           <button class="player-more-icon-btn ${isSaved ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Save song">
-            <i class="${isSaved ? 'fa-solid fa-bookmark' : 'fa-regular fa-bookmark'}"></i>
+            <span class="material-symbols-rounded ${isSaved ? 'filled' : ''}">${isSaved ? 'bookmark' : 'bookmark_border'}</span>
           </button>
           <button class="player-more-icon-btn" data-action="share-song" type="button" aria-label="Share song">
-            <i class="fa-solid fa-link"></i>
+            <span class="material-symbols-rounded">link</span>
           </button>
         </div>
       </div>
@@ -311,15 +311,15 @@ export function openPlayerMoreSheet() {
       <!-- Top 3 Square/Pill Cards -->
       <div class="player-more-top-cards">
         <button class="player-more-card" data-action="start-song-radio" type="button">
-          <div class="player-more-card-icon"><i class="fa-solid fa-radio"></i></div>
+          <div class="player-more-card-icon"><span class="material-symbols-rounded">radio</span></div>
           <span>Start radio</span>
         </button>
         <button class="player-more-card" data-action="open-song-details" type="button">
-          <div class="player-more-card-icon"><i class="fa-solid fa-sliders"></i></div>
+          <div class="player-more-card-icon"><span class="material-symbols-rounded">tune</span></div>
           <span>Source</span>
         </button>
         <button class="player-more-card" data-action="open-sleep-timer-menu" type="button">
-          <div class="player-more-card-icon"><i class="fa-solid fa-moon"></i></div>
+          <div class="player-more-card-icon"><span class="material-symbols-rounded">bedtime</span></div>
           <span>AOD Mode</span>
         </button>
       </div>
@@ -327,14 +327,14 @@ export function openPlayerMoreSheet() {
       <!-- 2-Column Grid of Styled Rounded Pill/Tile Action Buttons -->
       <div class="player-more-grid">
         <button class="player-more-grid-btn" data-action="open-playlist-picker" data-song-id="${escapeHTML(song.id)}" type="button">
-          <div class="player-more-grid-icon"><i class="fa-solid fa-list-check"></i></div>
+          <div class="player-more-grid-icon"><span class="material-symbols-rounded">playlist_add_check</span></div>
           <div class="player-more-grid-text">
             <span class="player-more-grid-title">Add to playlist</span>
           </div>
         </button>
 
         <button class="player-more-grid-btn" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}" type="button">
-          <div class="player-more-grid-icon"><i class="fa-solid fa-user"></i></div>
+          <div class="player-more-grid-icon"><span class="material-symbols-rounded">person</span></div>
           <div class="player-more-grid-text">
             <span class="player-more-grid-title">View artist</span>
             <span class="player-more-grid-sub">${escapeHTML(song.artist)}</span>
@@ -342,14 +342,14 @@ export function openPlayerMoreSheet() {
         </button>
 
         <button class="player-more-grid-btn" data-action="download-song" type="button">
-          <div class="player-more-grid-icon"><i class="fa-solid fa-download"></i></div>
+          <div class="player-more-grid-icon"><span class="material-symbols-rounded">download</span></div>
           <div class="player-more-grid-text">
             <span class="player-more-grid-title">Download</span>
           </div>
         </button>
 
         <button class="player-more-grid-btn" data-action="open-equalizer" type="button">
-          <div class="player-more-grid-icon"><i class="fa-solid fa-chart-simple"></i></div>
+          <div class="player-more-grid-icon"><span class="material-symbols-rounded">equalizer</span></div>
           <div class="player-more-grid-text">
             <span class="player-more-grid-title">Equalizer</span>
           </div>
@@ -394,7 +394,7 @@ export function openSleepTimerMenu() {
     <div class="player-more-handle"></div>
     <div class="player-more-header" style="justify-content: space-between;">
       <button class="player-more-back-btn" data-action="open-player-more-sheet" type="button" aria-label="Back" style="background:none;border:none;color:#fff;font-size:1.1rem;cursor:pointer;padding:6px 8px;">
-        <i class="fa-solid fa-arrow-left"></i>
+        <span class="material-symbols-rounded">arrow_back</span>
       </button>
       <div style="font-weight:700;font-size:0.95rem;color:#fff;">Sleep Timer (AOD)</div>
       <div style="width:28px;"></div>
@@ -402,32 +402,32 @@ export function openSleepTimerMenu() {
 
     <div class="player-more-options-list">
       <button class="player-more-item ${!state.sleepTimer ? 'active' : ''}" data-action="set-sleep-timer" data-minutes="0" type="button">
-        <i class="fa-solid fa-ban"></i>
+        <span class="material-symbols-rounded">block</span>
         <span>Turn off timer</span>
       </button>
 
       <button class="player-more-item ${state.sleepTimerMinutes === 15 ? 'active' : ''}" data-action="set-sleep-timer" data-minutes="15" type="button">
-        <i class="fa-solid fa-clock"></i>
+        <span class="material-symbols-rounded">schedule</span>
         <span>15 minutes</span>
       </button>
 
       <button class="player-more-item ${state.sleepTimerMinutes === 30 ? 'active' : ''}" data-action="set-sleep-timer" data-minutes="30" type="button">
-        <i class="fa-solid fa-clock"></i>
+        <span class="material-symbols-rounded">schedule</span>
         <span>30 minutes</span>
       </button>
 
       <button class="player-more-item ${state.sleepTimerMinutes === 45 ? 'active' : ''}" data-action="set-sleep-timer" data-minutes="45" type="button">
-        <i class="fa-solid fa-clock"></i>
+        <span class="material-symbols-rounded">schedule</span>
         <span>45 minutes</span>
       </button>
 
       <button class="player-more-item ${state.sleepTimerMinutes === 60 ? 'active' : ''}" data-action="set-sleep-timer" data-minutes="60" type="button">
-        <i class="fa-solid fa-clock"></i>
+        <span class="material-symbols-rounded">schedule</span>
         <span>1 hour</span>
       </button>
 
       <button class="player-more-item ${state.sleepAtEndOfTrack ? 'active' : ''}" data-action="set-sleep-timer" data-minutes="end-of-track" type="button">
-        <i class="fa-solid fa-forward-step"></i>
+        <span class="material-symbols-rounded">skip_next</span>
         <span>End of current track</span>
       </button>
     </div>
