@@ -42,14 +42,14 @@ export function renderYouPage() {
   const likedRow = `
     <article class="library-list-item" data-action="navigate" data-path="/playlist/liked" role="button" tabindex="0">
       <div class="library-item-thumb-gradient">
-        <i class="fa-solid fa-heart" style="color: #ffffff; font-size: 1.35rem;"></i>
+        <span class="material-symbols-rounded" style="color: #ffffff; font-size: 1.35rem;">favorite</span>
       </div>
       <div class="library-item-info">
         <h3 class="library-item-title">Liked Songs</h3>
-        <p class="library-item-sub"><i class="fa-solid fa-thumbtack pinned-icon" style="color:var(--green); font-size:0.75rem;"></i> Pinned &bull; ${favoritesCount} song${favoritesCount === 1 ? '' : 's'}</p>
+        <p class="library-item-sub"><span class="material-symbols-rounded pinned-icon" style="color:var(--green); font-size:0.75rem;">push_pin</span> Pinned &bull; ${favoritesCount} song${favoritesCount === 1 ? '' : 's'}</p>
       </div>
       <button class="icon-btn small" data-action="play-favorites" type="button" aria-label="Play Liked Songs">
-        <i class="fa-solid fa-play"></i>
+        <span class="material-symbols-rounded">play_arrow</span>
       </button>
     </article>
   `;
@@ -76,7 +76,7 @@ export function renderYouPage() {
           <p class="library-item-sub">Playlist &bull; ${escapeHTML(uploader)}${count ? ` &bull; ${count} songs` : ''}</p>
         </div>
         <button class="icon-btn small" data-action="play-all-playlist" data-playlist-id="${escapeHTML(p.id)}" type="button" aria-label="Play playlist">
-          <i class="fa-solid fa-play"></i>
+          <span class="material-symbols-rounded">play_arrow</span>
         </button>
       </article>
     `;
@@ -107,7 +107,7 @@ export function renderYouPage() {
           <p class="library-item-sub">Album &bull; ${escapeHTML(album.artist)} &bull; ${album.songCount} track${album.songCount === 1 ? '' : 's'}</p>
         </div>
         <button class="icon-btn small" ${isRemote ? `data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} type="button" aria-label="Play Album">
-          <i class="fa-solid fa-play"></i>
+          <span class="material-symbols-rounded">play_arrow</span>
         </button>
       </article>
     `;
@@ -131,8 +131,8 @@ export function renderYouPage() {
         <div style="width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: var(--hover); flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
           ${
             artist.imageUrl
-              ? `<img src="${escapeHTML(getOptimizedArtwork(artist.imageUrl, 160))}" alt="${escapeHTML(artist.name)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><i class="fa-solid fa-user" style="display:none; font-size: 1.5rem; color: var(--muted);"></i>`
-              : `<i class="fa-solid fa-user" style="font-size: 1.5rem; color: var(--muted);"></i>`
+              ? `<img src="${escapeHTML(getOptimizedArtwork(artist.imageUrl, 160))}" alt="${escapeHTML(artist.name)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><span class="material-symbols-rounded" style="display:none; font-size: 1.5rem; color: var(--muted);">person</span>`
+              : `<span class="material-symbols-rounded" style="font-size: 1.5rem; color: var(--muted);">person</span>`
           }
         </div>
         <div class="library-item-info">
@@ -140,7 +140,7 @@ export function renderYouPage() {
           <p class="library-item-sub">Artist &bull; Following</p>
         </div>
         <button class="icon-btn small" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" type="button" aria-label="View artist">
-          <i class="fa-solid fa-chevron-right"></i>
+          <span class="material-symbols-rounded">chevron_right</span>
         </button>
       </article>
     `;
@@ -150,7 +150,7 @@ export function renderYouPage() {
   const downloadsItems = `
     <article class="library-list-item" data-action="install-pwa" role="button" tabindex="0">
       <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
-        <i class="fa-solid fa-download" style="color: #1db954; font-size: 1.3rem;"></i>
+        <span class="material-symbols-rounded" style="color: #1db954; font-size: 1.3rem;">download</span>
       </div>
       <div class="library-item-info">
         <h3 class="library-item-title">Offline Cache &amp; PWA</h3>
@@ -162,7 +162,7 @@ export function renderYouPage() {
     </article>
     <article class="library-list-item" data-action="export-library" role="button" tabindex="0">
       <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
-        <i class="fa-solid fa-file-export" style="color: #1db954; font-size: 1.3rem;"></i>
+        <span class="material-symbols-rounded" style="color: #1db954; font-size: 1.3rem;">upload</span>
       </div>
       <div class="library-item-info">
         <h3 class="library-item-title">Export Library Backup</h3>
@@ -180,7 +180,7 @@ export function renderYouPage() {
     listItemsHTML = `
       <div style="padding: 4px 10px 10px;">
         <button class="btn btn-primary btn-sm" data-action="open-create-playlist" type="button" style="border-radius: 9999px; width: 100%;">
-          <i class="fa-solid fa-plus"></i> New Playlist
+          <span class="material-symbols-rounded">add</span> New Playlist
         </button>
       </div>
       ${playlistsItems || '<div class="empty-state"><p>No custom playlists saved yet.</p></div>'}
@@ -193,10 +193,10 @@ export function renderYouPage() {
           <img class="library-item-thumb" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" alt="${escapeHTML(song.title)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
           <div class="library-item-info">
             <h3 class="library-item-title">${escapeHTML(song.title)}</h3>
-            <p class="library-item-sub"><i class="fa-solid fa-heart" style="color:var(--green); font-size:0.75rem;"></i> ${escapeHTML(song.artist)}</p>
+            <p class="library-item-sub"><span class="material-symbols-rounded" style="color:var(--green); font-size:0.75rem;">favorite</span> ${escapeHTML(song.artist)}</p>
           </div>
           <button class="icon-btn small song-menu-trigger" data-action="open-track-menu" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="More options">
-            <i class="fa-solid fa-ellipsis-vertical"></i>
+            <span class="material-symbols-rounded">more_vert</span>
           </button>
         </article>
       `).join('')
@@ -222,10 +222,10 @@ export function renderYouPage() {
           </div>
           <div class="library-actions">
             <button class="library-icon-btn" data-action="open-create-playlist" type="button" aria-label="New Playlist" title="Create Playlist">
-              <i class="fa-solid fa-plus"></i>
+              <span class="material-symbols-rounded">add</span>
             </button>
             <button class="library-icon-btn" data-action="open-settings" type="button" aria-label="Settings" title="Settings">
-              <i class="fa-solid fa-gear"></i>
+              <span class="material-symbols-rounded">settings</span>
             </button>
           </div>
         </div>
@@ -257,7 +257,7 @@ export function renderSettingsSections() {
     <div class="settings-flat-container">
       <!-- 1. Playback & Engine -->
       <div class="settings-flat-header">
-        <i class="fa-solid fa-play"></i> Playback
+        <span class="material-symbols-rounded">play_arrow</span> Playback
       </div>
       <div class="settings-flat-group">
         <div class="settings-flat-row">
@@ -291,7 +291,7 @@ export function renderSettingsSections() {
 
       <!-- 2. Appearance & Dynamic AMOLED Theme -->
       <div class="settings-flat-header">
-        <i class="fa-solid fa-palette"></i> Appearance &amp; Theming
+        <span class="material-symbols-rounded">palette</span> Appearance &amp; Theming
       </div>
       <div class="settings-flat-group">
         <div class="settings-flat-row">
@@ -301,10 +301,10 @@ export function renderSettingsSections() {
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn btn-soft btn-sm ${activeTheme === 'amoled' || activeTheme === 'dark' ? 'active' : ''}" data-action="set-theme" data-theme="amoled" type="button" style="border-radius:9999px;">
-              <i class="fa-solid fa-circle" style="color:#000000; margin-right:4px;"></i> AMOLED
+              <span class="material-symbols-rounded" style="color:#000000; margin-right:4px;">circle</span> AMOLED
             </button>
             <button class="btn btn-soft btn-sm ${activeTheme === 'light' ? 'active' : ''}" data-action="set-theme" data-theme="light" type="button" style="border-radius:9999px;">
-              <i class="fa-solid fa-sun" style="color:#f59e0b; margin-right:4px;"></i> Light
+              <span class="material-symbols-rounded" style="color:#f59e0b; margin-right:4px;">light_mode</span> Light
             </button>
           </div>
         </div>
@@ -320,7 +320,7 @@ export function renderSettingsSections() {
 
       <!-- 3. Storage & Offline -->
       <div class="settings-flat-header">
-        <i class="fa-solid fa-database"></i> Storage &amp; Offline
+        <span class="material-symbols-rounded">database</span> Storage &amp; Offline
       </div>
       <div class="settings-flat-group">
         <div class="settings-flat-row">
@@ -329,7 +329,7 @@ export function renderSettingsSections() {
             <div class="settings-flat-desc">Install to home screen for offline playback</div>
           </div>
           <button class="btn btn-soft btn-sm" data-action="install-pwa" type="button" style="border-radius:9999px;">
-            <i class="fa-solid fa-download"></i> Install
+            <span class="material-symbols-rounded">download</span> Install
           </button>
         </div>
 
@@ -339,7 +339,7 @@ export function renderSettingsSections() {
             <div class="settings-flat-desc">Flush temporary image/audio cache (preserves playlists)</div>
           </div>
           <button class="btn btn-soft btn-sm" data-action="clear-cache" type="button" style="border-radius:9999px; color:var(--danger);">
-            <i class="fa-solid fa-trash-can"></i> Clear
+            <span class="material-symbols-rounded">delete</span> Clear
           </button>
         </div>
 
@@ -350,10 +350,10 @@ export function renderSettingsSections() {
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn btn-soft btn-sm" data-action="export-library" type="button" style="border-radius:9999px;">
-              <i class="fa-solid fa-file-export"></i> Export
+              <span class="material-symbols-rounded">upload</span> Export
             </button>
             <button class="btn btn-soft btn-sm" data-action="import-library" type="button" style="border-radius:9999px;">
-              <i class="fa-solid fa-file-import"></i> Import
+              <span class="material-symbols-rounded">download</span> Import
             </button>
           </div>
         </div>
@@ -361,7 +361,7 @@ export function renderSettingsSections() {
 
       <!-- 4. Privacy & About -->
       <div class="settings-flat-header">
-        <i class="fa-solid fa-shield-halved"></i> Privacy &amp; About
+        <span class="material-symbols-rounded">security</span> Privacy &amp; About
       </div>
       <div class="settings-flat-group">
         <div class="settings-flat-row">
@@ -370,7 +370,7 @@ export function renderSettingsSections() {
             <div class="settings-flat-desc">${historyCount} tracks recorded locally</div>
           </div>
           <button class="btn btn-soft btn-sm" data-action="clear-history" type="button" style="border-radius:9999px; color:var(--danger);" ${historyCount === 0 ? 'disabled' : ''}>
-            <i class="fa-solid fa-clock-rotate-left"></i> Wipe
+            <span class="material-symbols-rounded">history</span> Wipe
           </button>
         </div>
 
@@ -380,7 +380,7 @@ export function renderSettingsSections() {
             <div class="settings-flat-desc">v1.0.0 &bull; 100% Client-Side &bull; Zero Telemetry</div>
           </div>
           <a href="https://github.com/pawjects/Pawtify" target="_blank" rel="noopener noreferrer" class="btn btn-soft btn-sm" style="border-radius:9999px;">
-            <i class="fa-brands fa-github"></i> GitHub
+            <span class="material-symbols-rounded">code</span> GitHub
           </a>
         </div>
       </div>
@@ -396,7 +396,7 @@ export function renderSettingsPage() {
     <section class="page settings-page">
       <div class="settings-header-sticky" style="padding: 16px 16px 12px; display: flex; align-items: center; gap: 14px;">
         <button class="settings-back-btn" data-action="go-back" data-fallback="/you" type="button" aria-label="Back" title="Back">
-          <i class="fa-solid fa-arrow-left"></i>
+          <span class="material-symbols-rounded">arrow_back</span>
         </button>
         <div>
           <h1 class="settings-page-title" style="font-size: 1.35rem; font-weight: 700;">Settings</h1>

@@ -13,6 +13,32 @@
   padding: 0;
 }
 
+/* ============ MATERIAL SYMBOLS ROUNDED ============ */
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded' !important;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
+  vertical-align: middle;
+}
+
+.active .material-symbols-rounded,
+.material-symbols-rounded.active,
+.material-symbols-rounded.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
+}
+
 :root {
   /* ============ MATERIAL 3 TONAL PALETTE (AMOLED DARK BASE SEEDED FROM #1DB954) ============ */
   --md-sys-color-background: #000000;
@@ -124,7 +150,7 @@
   --md-elevation-3: var(--elevation-3);
 
   /* Typography */
-  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-base: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-display: var(--font-family-base);
 }
 
@@ -290,8 +316,8 @@ button:active,
 .interactive-item:active,
 .player-more-card:active,
 .player-more-grid-btn:active {
-  transform: scale(0.98) !important;
-  opacity: 0.8 !important;
+  transform: scale(0.96) !important;
+  opacity: 0.85 !important;
   background-color: rgba(255, 255, 255, 0.09);
 }
 
@@ -1104,10 +1130,10 @@ img {
 .song-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   padding: 8px 10px;
   border-radius: var(--md-shape-sm);
-  transition: background-color 0.12s ease;
+  transition: background-color 0.12s ease, transform 0.2s cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
   user-select: none;
 }
@@ -1117,6 +1143,7 @@ img {
 }
 
 .song-row:active {
+  transform: scale(0.96) !important;
   background-color: var(--md-sys-color-surface-container-highest);
 }
 
@@ -1144,11 +1171,11 @@ img {
 }
 
 .song-cover-sm {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
-  border-radius: var(--md-shape-xs);
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: 4px;
   object-fit: cover;
   background-color: var(--md-sys-color-surface-container-highest);
   flex-shrink: 0;
@@ -1708,6 +1735,8 @@ input[type="range"]:hover::-webkit-slider-thumb {
   margin: 0;
   z-index: 60;
   background-color: #121212 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: none;
   border-left: none;
@@ -1724,31 +1753,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
 }
 
 .mobile-nav-indicator {
-  position: absolute;
-  top: 50%;
-  bottom: auto;
-  left: 0;
-  width: calc(100% / 3);
-  height: 32px;
-  transform: translate3d(calc(var(--active-tab-index, 0) * 100%), -50%, 0);
-  transition: transform 0.28s cubic-bezier(0.2, 0, 0, 1);
-  pointer-events: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1;
-}
-
-/* Expressive MD3 Vibrant Pill Highlight (Monet Green Tonal Palette) */
-.mobile-nav-indicator::before {
-  content: '';
-  width: 64px;
-  height: 32px;
-  background-color: rgba(29, 185, 84, 0.24);
-  border: 1px solid rgba(29, 185, 84, 0.45);
-  border-radius: 16px;
-  transition: all 0.28s cubic-bezier(0.2, 0, 0, 1);
-  box-shadow: 0 0 16px rgba(29, 185, 84, 0.15);
+  display: none !important;
 }
 
 .mobile-nav-item {
@@ -1758,7 +1763,6 @@ input[type="range"]:hover::-webkit-slider-thumb {
   align-items: center;
   justify-content: center;
   color: var(--md-sys-color-on-surface-variant, rgba(255, 255, 255, 0.65));
-  font-size: 1.25rem;
   height: 52px;
   width: 100%;
   border-radius: 0;
@@ -1768,14 +1772,28 @@ input[type="range"]:hover::-webkit-slider-thumb {
   transition: color 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.15s ease;
 }
 
-.mobile-nav-item span {
+.mobile-nav-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24px;
+  padding: 4px 20px;
+  background-color: transparent;
+  transition: background-color 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.mobile-nav-item .nav-label,
+.mobile-nav-item .nav-text,
+.mobile-nav-item-label {
   display: none !important;
 }
 
-.mobile-nav-item i {
-  font-size: 1.25rem;
+.mobile-nav-item .material-symbols-rounded {
+  font-size: 24px;
   line-height: 1;
-  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), color 0.18s ease;
+  color: rgba(255, 255, 255, 0.65);
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), color 0.18s ease, font-variation-settings 0.18s ease;
 }
 
 .mobile-nav-item.active {
@@ -1783,13 +1801,17 @@ input[type="range"]:hover::-webkit-slider-thumb {
   background: transparent !important;
 }
 
-.mobile-nav-item.active i {
+.mobile-nav-item.active .mobile-nav-pill {
+  background-color: rgba(29, 185, 84, 0.22) !important;
+}
+
+.mobile-nav-item.active .material-symbols-rounded {
   color: var(--md-sys-color-primary, #1db954) !important;
-  transform: scale(1.15);
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
 }
 
 .mobile-nav-item:active {
-  transform: scale(0.92);
+  transform: scale(0.96);
 }
 
 /* ============ SEARCH EXPERIENCE (COMPACT MD3) ============ */
@@ -3647,15 +3669,19 @@ body.has-active-track #toast-container {
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--md-sys-color-surface-variant, #1e1e1e) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    var(--md-sys-color-surface-variant, #1e1e1e) 100%
-  );
-  background-size: 200% 100%;
+  background: linear-gradient(90deg, #121212 25%, #1e1e1e 50%, #121212 75%) !important;
+  background-size: 200% 100% !important;
   border-radius: var(--md-shape-xs, 8px);
-  animation: md3SkeletonShimmer 1.8s infinite cubic-bezier(0.2, 0, 0, 1);
+  animation: shimmer 1.5s infinite linear !important;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 @keyframes md3SkeletonShimmer {
@@ -4961,7 +4987,7 @@ body.has-active-track #toast-container {
 .playlist-song-list .song-row {
   display: flex !important;
   align-items: center !important;
-  gap: 12px !important;
+  gap: 16px !important;
   padding: 8px 10px !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -4970,7 +4996,7 @@ body.has-active-track #toast-container {
   background: transparent !important;
   cursor: pointer !important;
   user-select: none !important;
-  transition: background-color 0.15s ease, transform 0.15s cubic-bezier(0.2, 0, 0, 1) !important;
+  transition: background-color 0.15s ease, transform 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
 }
 
 .playlist-song-list .song-row:hover {
@@ -4978,7 +5004,7 @@ body.has-active-track #toast-container {
 }
 
 .playlist-song-list .song-row:active {
-  transform: scale(0.98) !important;
+  transform: scale(0.96) !important;
   background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -5689,14 +5715,9 @@ body.has-active-track #toast-container {
 .home-grid-card.skeleton-card-item,
 .home-scroll-card.skeleton-card-item,
 .library-item-skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--md-sys-color-surface-variant, #1e1e1e) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    var(--md-sys-color-surface-variant, #1e1e1e) 100%
-  ) !important;
+  background: linear-gradient(90deg, #121212 25%, #1e1e1e 50%, #121212 75%) !important;
   background-size: 200% 100% !important;
-  animation: md3SkeletonShimmer 1.8s infinite cubic-bezier(0.2, 0, 0, 1) !important;
+  animation: shimmer 1.5s infinite linear !important;
 }
 
 /* ==========================================================================
