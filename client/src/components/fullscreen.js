@@ -194,10 +194,6 @@ export function renderFullscreenPlayer(force = false) {
          <button class="fs-close-btn" data-action="close-fullscreen-player" type="button" aria-label="Collapse player" title="Collapse">
            <i class="fa-solid fa-chevron-down"></i>
          </button>
-         <div class="fs-header-title-wrap">
-           <span class="fs-header-subtitle">Playing from queue</span>
-           <span class="fs-header-title">Pawtify <i class="fa-solid fa-music fs-header-note"></i></span>
-         </div>
          <button class="fs-extra-btn fs-kebab-btn" data-action="open-player-more-sheet" type="button" aria-label="More options" title="More options">
            <i class="fa-solid fa-ellipsis-vertical"></i>
          </button>
