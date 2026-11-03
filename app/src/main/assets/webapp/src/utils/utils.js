@@ -38,9 +38,42 @@ export function saveJSON(key, value) {
 }
 
 export async function downloadCurrentSong() {
-  showToast(
-    'Downloading directly from YouTube embeds is restricted. We recommend adding this song to a playlist instead!'
-  );
+  const song = state.currentSong;
+  if (!song) {
+    showToast('No song is currently playing.');
+    return;
+  }
+
+  // Check if raw audio stream URL exists (e.g. .m4a, .webm, or direct media link)
+  const rawMediaUrl =
+    (typeof song.rawMediaUrl === 'string' && song.rawMediaUrl.trim()) ||
+    (typeof song.streamUrl === 'string' && song.streamUrl.trim()) ||
+    (typeof song.audioStreamUrl === 'string' && song.audioStreamUrl.trim()) ||
+    (typeof song.mediaUrl === 'string' && song.mediaUrl.trim()) ||
+    (typeof song.audioUrl === 'string' && (song.audioUrl.startsWith('http') || song.audioUrl.includes('.m4a') || song.audioUrl.includes('.webm') || song.audioUrl.includes('.mp3') || song.audioUrl.includes('.opus')) ? song.audioUrl : null) ||
+    (typeof state.rawMediaUrl === 'string' && state.rawMediaUrl.trim()) ||
+    (typeof state.currentAudioStreamUrl === 'string' && state.currentAudioStreamUrl.trim()) ||
+    null;
+
+  if (rawMediaUrl) {
+    showToast('Opening audio stream in new tab...');
+    window.open(rawMediaUrl, '_blank');
+    return;
+  }
+
+  // Direct media link fallback (e.g. YouTube video source or direct track URL)
+  const directLink =
+    (typeof song.sourceUrl === 'string' && song.sourceUrl) ||
+    (typeof song.url === 'string' && song.url.startsWith('http') ? song.url : null) ||
+    (song.id ? `https://www.youtube.com/watch?v=${encodeURIComponent(song.id)}` : null);
+
+  if (directLink) {
+    showToast('Opening audio source in new tab...');
+    window.open(directLink, '_blank');
+    return;
+  }
+
+  showToast('No audio source link found.');
 }
 
 export async function openLyrics() {

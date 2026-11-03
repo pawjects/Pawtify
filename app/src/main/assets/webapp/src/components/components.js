@@ -685,8 +685,8 @@ export function renderLibraryPage() {
       <header class="library-header-spotify">
         <div class="library-top-bar">
           <div class="library-user-title-wrap">
-            <button class="library-avatar-btn" data-route="/you" type="button" aria-label="Profile">
-              <img class="library-avatar-img" src="/assets/pawtify.png" alt="Profile" />
+            <button class="library-avatar-btn" data-route="/you" type="button" aria-label="Profile" title="Profile">
+              <span class="material-symbols-rounded" style="font-size: 1.5rem; color: #ffffff;">account_circle</span>
             </button>
             <h1 class="library-title-spotify">Your Library</h1>
           </div>

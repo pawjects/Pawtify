@@ -432,6 +432,8 @@ export function bindGlobalEvents() {
       if (action === 'toggle-video') {
         event.preventDefault();
         state.videoVisible = !state.videoVisible;
+        actionNode.classList.toggle('active', state.videoVisible);
+        actionNode.setAttribute('aria-checked', state.videoVisible ? 'true' : 'false');
         const container = document.getElementById('yt-player-container');
         if (container) {
           if (state.videoVisible) container.classList.add('video-visible');
@@ -454,6 +456,10 @@ export function bindGlobalEvents() {
       if (action === 'toggle-shuffle') {
         event.preventDefault();
         toggleShuffle();
+        actionNode.classList.toggle('active', !!state.shuffleMode);
+        actionNode.setAttribute('aria-checked', state.shuffleMode ? 'true' : 'false');
+        renderPlayerBar();
+        renderFullscreenPlayer();
         renderOverlay();
         if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
         return;
@@ -1118,17 +1124,12 @@ export function bindGlobalEvents() {
 
       if (action === 'set-theme') {
         event.preventDefault();
-        const newTheme = actionNode.dataset.theme === 'light' ? 'light' : 'amoled';
-        state.theme = newTheme;
-        saveJSON(STORAGE.THEME, newTheme);
-        applyTheme(newTheme);
+        state.theme = 'amoled';
+        saveJSON(STORAGE.THEME, 'amoled');
+        applyTheme();
         renderOverlay();
         if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
-        const labels = {
-          amoled: 'AMOLED Dark',
-          light: 'Light',
-        };
-        showToast(`Theme set to ${labels[newTheme]}`);
+        showToast('AMOLED Black theme is permanently active.');
         return;
       }
 
@@ -1151,6 +1152,8 @@ export function bindGlobalEvents() {
         event.preventDefault();
         state.autoplay = state.autoplay === false;
         saveJSON(STORAGE.AUTOPLAY, state.autoplay);
+        actionNode.classList.toggle('active', state.autoplay);
+        actionNode.setAttribute('aria-checked', state.autoplay ? 'true' : 'false');
         renderOverlay();
         if (state.route.name === 'you' || state.route.name === 'settings') renderCurrentRoute();
         showToast(
