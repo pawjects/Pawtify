@@ -10,8 +10,9 @@ import { getSongById } from '../core/details.js';
 import { isArtistFollowed, isPlaylistSaved, isAlbumSaved } from './player.js';
 
 /**
- * High-Density Material Design 3 (MD3) You / Personal Library Page
- * Features compact list items, pill-shaped filter chips, and square artwork.
+ * High-Density Material Design 3 (MD3) You / Personal Profile & Hub Page
+ * Features a prominent profile section, neatly organized stats, quick hub tiles,
+ * and library collection access.
  */
 export function renderYouPage() {
   const activeFilter = state.youFilter || 'all';
@@ -226,32 +227,76 @@ export function renderYouPage() {
 
   return `
     <section class="page you-page-spotify">
-      <!-- Prominent Material Design 3 User Profile Header -->
+      <!-- Prominent Material Design 3 User Profile Header & About Section -->
       <header class="you-profile-section">
         <div class="you-profile-card">
-          <button class="you-avatar-btn" data-action="edit-user-name" type="button" aria-label="Profile Avatar" title="Edit Profile Name">
-            <div class="you-avatar-circle">
-              <span class="material-symbols-rounded you-avatar-icon">person</span>
+          <div class="you-profile-top-row">
+            <button class="you-avatar-btn" data-action="edit-user-name" type="button" aria-label="Profile Avatar" title="Edit Profile Name">
+              <div class="you-avatar-circle">
+                <span class="material-symbols-rounded you-avatar-icon">person</span>
+                <span class="you-avatar-badge-edit"><span class="material-symbols-rounded">edit</span></span>
+              </div>
+            </button>
+            <div class="you-profile-info">
+              <span class="you-profile-kicker">Listener Profile</span>
+              <div class="you-profile-name-row">
+                <h1 class="you-profile-name">${escapeHTML(state.userName || 'Music Lover')}</h1>
+                <button class="icon-btn small you-name-edit-icon" data-action="edit-user-name" type="button" aria-label="Edit Name" title="Edit Name">
+                  <span class="material-symbols-rounded" style="font-size: 1rem;">edit</span>
+                </button>
+              </div>
+              <div class="you-profile-meta-row">
+                <span class="you-badge-member">Pawtify Free &bull; AMOLED Edition</span>
+              </div>
             </div>
-          </button>
-          <div class="you-profile-info">
-            <div class="you-profile-name-row">
-              <h1 class="you-profile-name">${escapeHTML(state.userName || 'Listener')}</h1>
-              <button class="icon-btn small you-name-edit-icon" data-action="edit-user-name" type="button" aria-label="Edit Name" title="Edit Name">
-                <span class="material-symbols-rounded" style="font-size: 1rem;">edit</span>
+            <div class="you-profile-actions">
+              <button class="icon-btn" data-action="open-settings" type="button" aria-label="Settings" title="Settings">
+                <span class="material-symbols-rounded">settings</span>
               </button>
             </div>
-            <div class="you-profile-meta-row">
-              <span class="you-badge-member">Pawtify Free</span>
-              <span class="you-meta-stats">&bull; ${playlistsCount} playlists &bull; ${favoritesCount} liked songs</span>
+          </div>
+
+          <!-- Organized Stats Counters Grid -->
+          <div class="you-stats-grid">
+            <div class="you-stat-card" data-action="navigate" data-path="/playlist/liked" role="button" tabindex="0">
+              <span class="you-stat-num">${favoritesCount}</span>
+              <span class="you-stat-label">Liked Songs</span>
+            </div>
+            <div class="you-stat-card" data-action="navigate" data-path="/library" role="button" tabindex="0">
+              <span class="you-stat-num">${playlistsCount}</span>
+              <span class="you-stat-label">Playlists</span>
+            </div>
+            <div class="you-stat-card" data-action="navigate" data-path="/albums" role="button" tabindex="0">
+              <span class="you-stat-num">${albumsCount}</span>
+              <span class="you-stat-label">Albums</span>
+            </div>
+            <div class="you-stat-card" data-action="navigate" data-path="/artists" role="button" tabindex="0">
+              <span class="you-stat-num">${artistsCount}</span>
+              <span class="you-stat-label">Artists</span>
+            </div>
+            <div class="you-stat-card" data-action="navigate" data-path="/playlist/history" role="button" tabindex="0">
+              <span class="you-stat-num">${historyCount}</span>
+              <span class="you-stat-label">History</span>
             </div>
           </div>
-          <div class="you-profile-actions">
-            <button class="icon-btn" data-action="open-create-playlist" type="button" aria-label="New Playlist" title="Create Playlist">
-              <span class="material-symbols-rounded">add</span>
+
+          <!-- Quick Navigation Hub -->
+          <div class="you-quick-hub">
+            <button class="you-hub-tile" data-action="navigate" data-path="/library" type="button">
+              <span class="material-symbols-rounded you-hub-icon">library_music</span>
+              <span class="you-hub-title">Your Library</span>
             </button>
-            <button class="icon-btn" data-action="open-settings" type="button" aria-label="Settings" title="Settings">
-              <span class="material-symbols-rounded">settings</span>
+            <button class="you-hub-tile" data-action="navigate" data-path="/playlist/liked" type="button">
+              <span class="material-symbols-rounded you-hub-icon" style="color:var(--green);">favorite</span>
+              <span class="you-hub-title">Liked Songs</span>
+            </button>
+            <button class="you-hub-tile" data-action="navigate" data-path="/playlist/history" type="button">
+              <span class="material-symbols-rounded you-hub-icon">history</span>
+              <span class="you-hub-title">Recents</span>
+            </button>
+            <button class="you-hub-tile" data-action="open-settings" type="button">
+              <span class="material-symbols-rounded you-hub-icon">tune</span>
+              <span class="you-hub-title">Settings</span>
             </button>
           </div>
         </div>
@@ -270,13 +315,10 @@ export function renderYouPage() {
 
 /**
  * Clean, Flat Material Design 3 Settings Section
- * Stripped of bulky nested cards and replaced with flat list rows and native-looking MD3 switches.
+ * Strict AMOLED Pitch Black locked mode with right-aligned pill switches.
  */
 export function renderSettingsSections() {
-  const favoritesCount = state.favorites?.length || 0;
-  const playlistsCount = state.playlists?.length || 0;
   const historyCount = state.recentlyPlayed?.length || 0;
-  const activeTheme = state.theme || 'amoled';
   const quality = state.audioQuality || 'high';
 
   return `
@@ -291,7 +333,9 @@ export function renderSettingsSections() {
             <div class="settings-flat-label">Continuous Streaming (Autoplay)</div>
             <div class="settings-flat-desc">Play similar songs automatically when queue ends</div>
           </div>
-          <button class="md3-switch ${state.autoplay !== false ? 'active' : ''}" data-action="toggle-autoplay" type="button" role="switch" aria-checked="${state.autoplay !== false ? 'true' : 'false'}" aria-label="Toggle Continuous Autoplay"></button>
+          <button class="md3-switch ${state.autoplay !== false ? 'active' : ''}" data-action="toggle-autoplay" type="button" role="switch" aria-checked="${state.autoplay !== false ? 'true' : 'false'}" aria-label="Toggle Continuous Autoplay">
+            <span class="md3-switch-thumb"></span>
+          </button>
         </div>
 
         <div class="settings-flat-row">
@@ -299,7 +343,9 @@ export function renderSettingsSections() {
             <div class="settings-flat-label">Shuffle Playback</div>
             <div class="settings-flat-desc">Randomize the order of queued tracks</div>
           </div>
-          <button class="md3-switch ${state.shuffleMode ? 'active' : ''}" data-action="toggle-shuffle" type="button" role="switch" aria-checked="${state.shuffleMode ? 'true' : 'false'}" aria-label="Toggle Shuffle"></button>
+          <button class="md3-switch ${state.shuffleMode ? 'active' : ''}" data-action="toggle-shuffle" type="button" role="switch" aria-checked="${state.shuffleMode ? 'true' : 'false'}" aria-label="Toggle Shuffle">
+            <span class="md3-switch-thumb"></span>
+          </button>
         </div>
 
         <div class="settings-flat-row">
@@ -323,15 +369,11 @@ export function renderSettingsSections() {
         <div class="settings-flat-row">
           <div class="settings-flat-info">
             <div class="settings-flat-label">Theme Mode</div>
-            <div class="settings-flat-desc">AMOLED pitch-black optimizes OLED battery life</div>
+            <div class="settings-flat-desc">AMOLED pitch-black (#000000) locked for optimal OLED battery life</div>
           </div>
-          <div style="display:flex; gap:6px;">
-            <button class="btn btn-soft btn-sm ${activeTheme === 'amoled' || activeTheme === 'dark' ? 'active' : ''}" data-action="set-theme" data-theme="amoled" type="button" style="border-radius:9999px;">
-              <span class="material-symbols-rounded" style="color:#000000; margin-right:4px;">circle</span> AMOLED
-            </button>
-            <button class="btn btn-soft btn-sm ${activeTheme === 'light' ? 'active' : ''}" data-action="set-theme" data-theme="light" type="button" style="border-radius:9999px;">
-              <span class="material-symbols-rounded" style="color:#f59e0b; margin-right:4px;">light_mode</span> Light
-            </button>
+          <div class="settings-badge-locked">
+            <span class="material-symbols-rounded" style="color:var(--green); font-size:1rem; margin-right:4px;">dark_mode</span>
+            <span>AMOLED Black</span>
           </div>
         </div>
 
@@ -340,7 +382,9 @@ export function renderSettingsSections() {
             <div class="settings-flat-label">Floating Video Window</div>
             <div class="settings-flat-desc">Watch official music video alongside playback</div>
           </div>
-          <button class="md3-switch ${state.videoVisible ? 'active' : ''}" data-action="toggle-video" type="button" role="switch" aria-checked="${state.videoVisible ? 'true' : 'false'}" aria-label="Toggle Video Player"></button>
+          <button class="md3-switch ${state.videoVisible ? 'active' : ''}" data-action="toggle-video" type="button" role="switch" aria-checked="${state.videoVisible ? 'true' : 'false'}" aria-label="Toggle Video Player">
+            <span class="md3-switch-thumb"></span>
+          </button>
         </div>
       </div>
 

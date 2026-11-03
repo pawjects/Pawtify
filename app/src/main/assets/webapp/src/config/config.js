@@ -50,17 +50,16 @@ export const STORAGE = {
   AUDIO_QUALITY: 'pawtify-audio-quality',
 };
 
-export function applyTheme(themeName) {
-  const effective = themeName === 'light' ? 'light' : 'amoled';
-  document.documentElement.setAttribute('data-theme', effective);
+export function applyTheme() {
+  document.documentElement.setAttribute('data-theme', 'amoled');
   if (typeof document !== 'undefined') {
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) {
-      metaTheme.setAttribute('content', effective === 'light' ? '#f7faf7' : '#000000');
+      metaTheme.setAttribute('content', '#000000');
     }
     const metaScheme = document.querySelector('meta[name="color-scheme"]');
     if (metaScheme) {
-      metaScheme.setAttribute('content', effective === 'light' ? 'light' : 'dark');
+      metaScheme.setAttribute('content', 'dark');
     }
   }
 }
@@ -216,7 +215,7 @@ Object.assign(state, {
   feedCategories: [],
   userName: loadJSON(STORAGE.USER_NAME, '') || '',
   route: { name: 'home', playlistId: null },
-  theme: loadJSON(STORAGE.THEME, 'amoled') === 'light' ? 'light' : 'amoled',
+  theme: 'amoled',
   repeatMode: loadJSON(STORAGE.REPEAT, 'none'),
   shuffleMode: loadJSON(STORAGE.SHUFFLE, false),
   autoplay: loadJSON(STORAGE.AUTOPLAY, true),

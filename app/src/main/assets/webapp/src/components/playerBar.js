@@ -260,19 +260,19 @@ export function markActiveNav(targetRoute = null, skipTransition = false) {
     btn.classList.toggle('active', !!active);
   });
 
-  // 4. Update active classes on mobile nav items (3 Tabs: Home, Search, You)
+  // 4. Update active classes on mobile nav items (4 Tabs: Home, Search, Library, You)
   document.querySelectorAll('.mobile-nav-item').forEach((btn) => {
     const route = btn.dataset.route;
     const active =
       (route === '/' && routeName === 'home') ||
       (route === '/search' && routeName === 'search') ||
-      (route === '/you' &&
-        (routeName === 'you' ||
-          routeName === 'library' ||
+      (route === '/library' &&
+        (routeName === 'library' ||
           routeName === 'playlist' ||
           routeName === 'album' ||
-          routeName === 'artist' ||
-          routeName === 'settings'));
+          routeName === 'artist')) ||
+      (route === '/you' &&
+        (routeName === 'you' || routeName === 'settings'));
     btn.classList.toggle('active', !!active);
     btn.setAttribute('aria-selected', active ? 'true' : 'false');
     if (active) {

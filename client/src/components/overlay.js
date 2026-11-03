@@ -296,15 +296,11 @@ export function renderOverlay() {
                   <div class="you-setting-row">
                     <div class="you-setting-info">
                       <div class="you-setting-label">Theme Mode</div>
-                      <div class="you-setting-desc">Choose between pitch-black AMOLED Dark or clean Light mode.</div>
+                      <div class="you-setting-desc">AMOLED pitch-black (#000000) locked for optimal OLED efficiency & battery life.</div>
                     </div>
-                    <div class="you-theme-selector" style="display:flex; gap:8px; flex-wrap:wrap;">
-                      <button class="btn btn-soft you-theme-btn ${state.theme === 'amoled' || state.theme === 'dark' || !state.theme ? 'active' : ''}" data-action="set-theme" data-theme="amoled" type="button">
-                        <span class="material-symbols-rounded" style="color:#000; -webkit-text-stroke: 1px #888;">circle</span> AMOLED Dark
-                      </button>
-                      <button class="btn btn-soft you-theme-btn ${state.theme === 'light' ? 'active' : ''}" data-action="set-theme" data-theme="light" type="button">
-                        <span class="material-symbols-rounded" style="color:#eab308;">light_mode</span> Light
-                      </button>
+                    <div class="settings-badge-locked">
+                      <span class="material-symbols-rounded" style="color:var(--green); font-size:1rem; margin-right:4px;">dark_mode</span>
+                      <span>AMOLED Black</span>
                     </div>
                   </div>
 
@@ -315,7 +311,9 @@ export function renderOverlay() {
                       <div class="you-setting-label">Floating Video Player</div>
                       <div class="you-setting-desc">Show video feed window while music is streaming.</div>
                     </div>
-                    <button class="md3-switch ${state.videoVisible ? 'active' : ''}" data-action="toggle-video" type="button" role="switch" aria-checked="${state.videoVisible ? 'true' : 'false'}" aria-label="Toggle Video Player"></button>
+                    <button class="md3-switch ${state.videoVisible ? 'active' : ''}" data-action="toggle-video" type="button" role="switch" aria-checked="${state.videoVisible ? 'true' : 'false'}" aria-label="Toggle Video Player">
+                      <span class="md3-switch-thumb"></span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -335,7 +333,9 @@ export function renderOverlay() {
                       <div class="you-setting-label">Continuous Streaming (Autoplay)</div>
                       <div class="you-setting-desc">Automatically play next queued track when song finishes.</div>
                     </div>
-                    <button class="md3-switch ${state.autoplay !== false ? 'active' : ''}" data-action="toggle-autoplay" type="button" role="switch" aria-checked="${state.autoplay !== false ? 'true' : 'false'}" aria-label="Toggle Autoplay"></button>
+                    <button class="md3-switch ${state.autoplay !== false ? 'active' : ''}" data-action="toggle-autoplay" type="button" role="switch" aria-checked="${state.autoplay !== false ? 'true' : 'false'}" aria-label="Toggle Autoplay">
+                      <span class="md3-switch-thumb"></span>
+                    </button>
                   </div>
 
                   <div class="you-setting-divider"></div>
@@ -369,7 +369,9 @@ export function renderOverlay() {
                       <div class="you-setting-label">Shuffle Mode</div>
                       <div class="you-setting-desc">Randomize track playback order.</div>
                     </div>
-                    <button class="md3-switch ${state.shuffleMode ? 'active' : ''}" data-action="toggle-shuffle" type="button" role="switch" aria-checked="${state.shuffleMode ? 'true' : 'false'}" aria-label="Toggle Shuffle"></button>
+                    <button class="md3-switch ${state.shuffleMode ? 'active' : ''}" data-action="toggle-shuffle" type="button" role="switch" aria-checked="${state.shuffleMode ? 'true' : 'false'}" aria-label="Toggle Shuffle">
+                      <span class="md3-switch-thumb"></span>
+                    </button>
                   </div>
                 </div>
               </div>
