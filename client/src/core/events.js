@@ -752,6 +752,8 @@ export function bindGlobalEvents() {
 
       if (action === 'export-library') {
         event.preventDefault();
+        const ok = window.confirm('Export your Pawtify playlists, liked tracks, and saved library as a JSON backup?');
+        if (!ok) return;
         const data = {
           favorites: state.favorites || [],
           playlists: state.playlists || [],
@@ -774,11 +776,18 @@ export function bindGlobalEvents() {
 
       if (action === 'import-library') {
         event.preventDefault();
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'application/json';
+        let input = document.getElementById('pawtify-file-importer');
+        if (!input) {
+          input = document.createElement('input');
+          input.id = 'pawtify-file-importer';
+          input.type = 'file';
+          input.accept = '.json,application/json';
+          input.style.display = 'none';
+          document.body.appendChild(input);
+        }
+        input.value = '';
         input.onchange = (e) => {
-          const file = e.target.files[0];
+          const file = e.target.files && e.target.files[0];
           if (!file) return;
           const reader = new FileReader();
           reader.onload = (ev) => {
