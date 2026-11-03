@@ -356,12 +356,25 @@ if (miniPlayer) {
     'touchmove',
     (e) => {
       if (!isMiniPlayerDragging) return;
+      const currentX = e.changedTouches[0].screenX;
       const currentY = e.changedTouches[0].screenY;
+      const diffX = currentX - miniPlayerTouchStartX;
       const diffY = currentY - miniPlayerTouchStartY;
-      if (diffY > 0) {
+      const absX = Math.abs(diffX);
+      const absY = Math.abs(diffY);
+
+      if (absX > absY) {
+        // Horizontal Swipe Physics (Track navigation)
+        miniPlayer.style.transform = `translateX(${diffX * 0.7}px) scale(0.98)`;
+        miniPlayer.style.opacity = `${Math.max(0.65, 1 - absX / 280)}`;
+      } else if (diffY > 0) {
         // Dragging down toward dismiss
-        miniPlayer.style.transform = `translateY(${diffY}px)`;
-        miniPlayer.style.opacity = `${Math.max(0.35, 1 - diffY / 160)}`;
+        miniPlayer.style.transform = `translateY(${diffY}px) scale(${Math.max(0.92, 1 - diffY / 400)})`;
+        miniPlayer.style.opacity = `${Math.max(0.3, 1 - diffY / 160)}`;
+      } else if (diffY < 0) {
+        // Dragging up toward expand
+        miniPlayer.style.transform = `translateY(${diffY * 0.4}px) scale(1.01)`;
+        miniPlayer.style.opacity = '1';
       }
     },
     { passive: true }
@@ -376,11 +389,35 @@ if (miniPlayer) {
       const touchEndY = e.changedTouches[0].screenY;
       const diffX = touchEndX - miniPlayerTouchStartX;
       const diffY = touchEndY - miniPlayerTouchStartY;
+      const absX = Math.abs(diffX);
+      const absY = Math.abs(diffY);
 
-      miniPlayer.style.transition = 'transform 0.28s cubic-bezier(0.2, 0, 0, 1), opacity 0.25s cubic-bezier(0.2, 0, 0, 1)';
+      miniPlayer.style.transition = 'transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s ease';
 
-      // Swipe Down to Dismiss Miniplayer
-      if (diffY > SWIPE_THRESHOLD) {
+      // 1. Horizontal Swipe (Swipe Left -> Next Track, Swipe Right -> Previous Track)
+      if (absX > absY && absX > 35) {
+        const isNext = diffX < 0; // Swipe left
+        miniPlayer.style.transform = isNext ? 'translateX(-100%)' : 'translateX(100%)';
+        miniPlayer.style.opacity = '0';
+        setTimeout(() => {
+          miniPlayer.style.transition = 'none';
+          miniPlayer.style.transform = isNext ? 'translateX(60%)' : 'translateX(-60%)';
+          if (isNext) {
+            nextTrack();
+          } else {
+            previousTrack();
+          }
+          requestAnimationFrame(() => {
+            miniPlayer.style.transition = 'transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s ease';
+            miniPlayer.style.transform = '';
+            miniPlayer.style.opacity = '';
+          });
+        }, 160);
+        return;
+      }
+
+      // 2. Swipe Down to Dismiss/Close current playing track entirely
+      if (diffY > 35) {
         miniPlayer.style.transform = 'translateY(120%)';
         miniPlayer.style.opacity = '0';
         setTimeout(() => {
@@ -388,28 +425,16 @@ if (miniPlayer) {
           miniPlayer.style.opacity = '';
           miniPlayer.style.transition = '';
           dismissPlayer();
-        }, 220);
+        }, 200);
         return;
       }
 
-      // Swipe Up to Expand Fullscreen Player
+      // 3. Swipe Up to Expand Fullscreen Player
       if (diffY < -30) {
         miniPlayer.style.transform = '';
         miniPlayer.style.opacity = '';
         state.fullscreenPlayer = true;
         renderFullscreenPlayer();
-        return;
-      }
-
-      // Horizontal Swipe: Track Switching
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
-        miniPlayer.style.transform = '';
-        miniPlayer.style.opacity = '';
-        if (diffX > 0) {
-          previousTrack();
-        } else {
-          nextTrack();
-        }
         return;
       }
 

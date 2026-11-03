@@ -9,14 +9,12 @@ import { getSongById } from '../core/details.js';
 
 export function getGreeting() {
   const hour = new Date().getHours();
-  let text = 'Good Evening';
-  if (hour < 12) text = 'Good Morning';
-  else if (hour < 18) text = 'Good Afternoon';
+  let text = 'Good evening';
+  if (hour >= 5 && hour < 12) text = 'Good morning';
+  else if (hour >= 12 && hour < 18) text = 'Good afternoon';
 
-  if (state.userName) {
-    return `${text}, ${state.userName}`;
-  }
-  return text;
+  const name = state.userName || 'Music Lover';
+  return `${text}, ${name}`;
 }
 
 /**
@@ -158,73 +156,59 @@ export function renderHomePage() {
   const topRecentPicks = [];
   const seenIds = new Set();
 
-  if (activeFilter === 'podcasts') {
-    // Curated podcasts in compact grid
-    PODCAST_SHOWS.slice(0, 6).forEach((show) => {
-      topRecentPicks.push({
-        id: show.id,
-        title: show.title,
-        coverUrl: show.coverUrl,
-        action: 'search-category',
-        category: show.title,
-      });
+  if (state.favorites && state.favorites.length > 0) {
+    topRecentPicks.push({
+      id: 'liked-songs',
+      title: 'Liked Songs',
+      coverUrl: state.favorites[0].coverUrl || '/assets/pawtify.png',
+      action: 'navigate-liked',
+      route: '/playlist/liked',
     });
-  } else {
-    // Music or All mode
-    if (state.favorites && state.favorites.length > 0) {
+  }
+
+  (state.playlists || []).forEach((p) => {
+    if (topRecentPicks.length < 8) {
       topRecentPicks.push({
-        id: 'liked-songs',
-        title: 'Liked Songs',
-        coverUrl: state.favorites[0].coverUrl || '/assets/pawtify.png',
-        action: 'navigate-liked',
-        route: '/playlist/liked',
+        id: p.id,
+        title: p.name,
+        coverUrl: p.coverUrl || p.songs?.[0]?.coverUrl || '/assets/pawtify.png',
+        action: 'open-playlist-profile',
+        playlistId: p.id,
       });
     }
+  });
 
-    (state.playlists || []).forEach((p) => {
-      if (topRecentPicks.length < 8) {
+  // Pull from recently played tracks
+  (state.recentlyPlayed || []).forEach((songId) => {
+    if (topRecentPicks.length < 8 && !seenIds.has(songId)) {
+      const s = getSongById(songId);
+      if (s) {
+        seenIds.add(songId);
         topRecentPicks.push({
-          id: p.id,
-          title: p.name,
-          coverUrl: p.coverUrl || p.songs?.[0]?.coverUrl || '/assets/pawtify.png',
-          action: 'open-playlist-profile',
-          playlistId: p.id,
+          id: s.id,
+          title: s.title,
+          coverUrl: s.coverUrl,
+          action: 'play-song',
+          songId: s.id,
+        });
+      }
+    }
+  });
+
+  // Fallbacks from recommended or feed categories if fewer than 8
+  if (topRecentPicks.length < 8 && rec.length) {
+    rec.forEach((s) => {
+      if (topRecentPicks.length < 8 && !seenIds.has(s.id)) {
+        seenIds.add(s.id);
+        topRecentPicks.push({
+          id: s.id,
+          title: s.title,
+          coverUrl: s.coverUrl,
+          action: 'play-song',
+          songId: s.id,
         });
       }
     });
-
-    // Pull from recently played tracks
-    (state.recentlyPlayed || []).forEach((songId) => {
-      if (topRecentPicks.length < 8 && !seenIds.has(songId)) {
-        const s = getSongById(songId);
-        if (s) {
-          seenIds.add(songId);
-          topRecentPicks.push({
-            id: s.id,
-            title: s.title,
-            coverUrl: s.coverUrl,
-            action: 'play-song',
-            songId: s.id,
-          });
-        }
-      }
-    });
-
-    // Fallbacks from recommended or feed categories if fewer than 8
-    if (topRecentPicks.length < 8 && rec.length) {
-      rec.forEach((s) => {
-        if (topRecentPicks.length < 8 && !seenIds.has(s.id)) {
-          seenIds.add(s.id);
-          topRecentPicks.push({
-            id: s.id,
-            title: s.title,
-            coverUrl: s.coverUrl,
-            action: 'play-song',
-            songId: s.id,
-          });
-        }
-      });
-    }
   }
 
   // 2-Column Grid HTML
@@ -253,119 +237,97 @@ export function renderHomePage() {
   // Sections
   let sectionsHTML = '';
 
-  if (activeFilter === 'podcasts') {
-    // 1. Popular Podcast Shows Carousel
-    sectionsHTML += `
-      <section class="home-section">
-        <h2 class="home-section-title">Popular Podcast Shows</h2>
-        <div class="home-scroll">
-          ${PODCAST_SHOWS.map((show, idx) => `
-            <article class="home-scroll-card" data-action="search-category" data-category="${escapeHTML(show.title)}" role="button" tabindex="0">
-              <div class="scroll-cover-wrap">
-                <img src="${escapeHTML(show.coverUrl)}" alt="${escapeHTML(show.title)}" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-              </div>
-              <h3 class="scroll-title">${escapeHTML(show.title)}</h3>
-              <p class="scroll-subtitle">${escapeHTML(show.publisher)}</p>
-            </article>
-          `).join('')}
-        </div>
-      </section>
-    `;
-
-    // 2. Latest Podcast Episodes Carousel
-    sectionsHTML += `
-      <section class="home-section">
-        <h2 class="home-section-title">Top Podcast Episodes</h2>
-        <div class="home-scroll">
-          ${PODCAST_EPISODES.map((ep, idx) => `
-            <article class="home-scroll-card" data-action="search-category" data-category="${escapeHTML(ep.title)}" role="button" tabindex="0">
-              <div class="scroll-cover-wrap">
-                <img src="${escapeHTML(ep.coverUrl)}" alt="${escapeHTML(ep.title)}" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-              </div>
-              <h3 class="scroll-title">${escapeHTML(ep.title)}</h3>
-              <p class="scroll-subtitle">${escapeHTML(ep.artist)}</p>
-            </article>
-          `).join('')}
-        </div>
-      </section>
-    `;
-  } else {
-    // Music or All mode
-    // Recents section
-    if (state.recentlyPlayed && state.recentlyPlayed.length) {
-      const recentSongs = state.recentlyPlayed
-        .map((id) => getSongById(id))
-        .filter(Boolean)
-        .slice(0, 10);
-      if (recentSongs.length) {
-        sectionsHTML += `
-          <section class="home-section">
-            <div class="home-section-header">
-              <h2 class="home-section-title">Recents</h2>
-              <button class="home-section-link" data-route="/playlist/history" type="button">Show all</button>
-            </div>
-            <div class="home-scroll">
-              ${recentSongs.map((s, i) => renderHomeScrollCard(s, i, 'history')).join('')}
-            </div>
-          </section>
-        `;
-      }
-    }
-
-    // Recommended For You
-    if (rec.length) {
+  // Recents section
+  if (state.recentlyPlayed && state.recentlyPlayed.length) {
+    const recentSongs = state.recentlyPlayed
+      .map((id) => getSongById(id))
+      .filter(Boolean)
+      .slice(0, 10);
+    if (recentSongs.length) {
       sectionsHTML += `
         <section class="home-section">
-          <h2 class="home-section-title">Made for You</h2>
-          <div class="home-scroll">
-            ${rec.map((s, i) => renderHomeScrollCard(s, i, 'recommended')).join('')}
+          <div class="home-section-header">
+            <h2 class="home-section-title">Recents</h2>
+            <button class="home-section-link" data-route="/playlist/history" type="button">Show all</button>
           </div>
-        </section>
-      `;
-    }
-
-    // Feed categories
-    categories.forEach((cat) => {
-      if (cat.songs && cat.songs.length) {
-        sectionsHTML += `
-          <section class="home-section">
-            <h2 class="home-section-title">${escapeHTML(cat.title)}</h2>
-            <div class="home-scroll">
-              ${cat.songs.map((s, i) => renderHomeScrollCard(s, i, cat.id)).join('')}
-            </div>
-          </section>
-        `;
-      }
-    });
-
-    if (!rec.length && !categories.length) {
-      sectionsHTML += `
-        <section class="home-section">
-          <h2 class="home-section-title">Trending Now</h2>
           <div class="home-scroll">
-            ${Array(5).fill('').map(() => renderHomeScrollSkeleton()).join('')}
+            ${recentSongs.map((s, i) => renderHomeScrollCard(s, i, 'history')).join('')}
           </div>
         </section>
       `;
     }
   }
 
+  // Recommended For You
+  if (rec.length) {
+    sectionsHTML += `
+      <section class="home-section">
+        <h2 class="home-section-title">Made for You</h2>
+        <div class="home-scroll">
+          ${rec.map((s, i) => renderHomeScrollCard(s, i, 'recommended')).join('')}
+        </div>
+      </section>
+    `;
+  }
+
+  // Feed categories
+  categories.forEach((cat) => {
+    if (cat.songs && cat.songs.length) {
+      sectionsHTML += `
+        <section class="home-section">
+          <h2 class="home-section-title">${escapeHTML(cat.title)}</h2>
+          <div class="home-scroll">
+            ${cat.songs.map((s, i) => renderHomeScrollCard(s, i, cat.id)).join('')}
+          </div>
+        </section>
+      `;
+    }
+  });
+
+  // Popular Podcast Shows Carousel
+  sectionsHTML += `
+    <section class="home-section">
+      <h2 class="home-section-title">Popular Shows</h2>
+      <div class="home-scroll">
+        ${PODCAST_SHOWS.map((show) => `
+          <article class="home-scroll-card" data-action="search-category" data-category="${escapeHTML(show.title)}" role="button" tabindex="0">
+            <div class="scroll-cover-wrap">
+              <img src="${escapeHTML(show.coverUrl)}" alt="${escapeHTML(show.title)}" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+            </div>
+            <h3 class="scroll-title">${escapeHTML(show.title)}</h3>
+            <p class="scroll-subtitle">${escapeHTML(show.publisher)}</p>
+          </article>
+        `).join('')}
+      </div>
+    </section>
+  `;
+
+  if (!rec.length && !categories.length) {
+    sectionsHTML += `
+      <section class="home-section">
+        <h2 class="home-section-title">Trending Now</h2>
+        <div class="home-scroll">
+          ${Array(5).fill('').map(() => renderHomeScrollSkeleton()).join('')}
+        </div>
+      </section>
+    `;
+  }
+
   return `
     <section class="page home-page-spotify">
-      <!-- Top Bar: User Profile Avatar & Horizontal Filter Chips (Real-time Filtering) -->
+      <!-- Dynamic Welcome Header -->
       <header class="home-top-bar">
-        <button class="home-user-avatar-btn" data-route="/you" type="button" aria-label="Your Profile" title="Profile">
-          <img class="home-user-avatar" src="/assets/pawtify.png" alt="Profile" />
-        </button>
-        <div class="home-chips-scroll">
-          <button class="home-filter-chip ${activeFilter === 'all' ? 'active' : ''}" data-action="set-home-filter" data-filter="all" type="button">
-            All
+        <div class="home-welcome-wrap">
+          <button class="home-user-avatar-btn" data-route="/you" type="button" aria-label="Your Profile" title="Profile">
+            <span class="material-symbols-rounded" style="font-size: 1.5rem; color: #ffffff;">account_circle</span>
           </button>
-          <button class="home-filter-chip ${activeFilter === 'music' ? 'active' : ''}" data-action="set-home-filter" data-filter="music" type="button">
-            Music
-          </button>
-          <button class="home-filter-chip ${activeFilter === 'podcasts' ? 'active' : ''}" data-action="set-home-filter" data-filter="podcasts" type="button">
-            Podcasts
+          <div class="home-welcome-text">
+            <h1 class="home-greeting-title">${escapeHTML(greeting)}</h1>
+          </div>
+        </div>
+        <div class="home-header-actions">
+          <button class="icon-btn" data-action="open-settings" type="button" aria-label="Settings" title="Settings">
+            <span class="material-symbols-rounded">settings</span>
           </button>
         </div>
       </header>

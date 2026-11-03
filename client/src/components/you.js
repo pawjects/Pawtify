@@ -4,6 +4,7 @@ import {
   formatTime,
   getOptimizedArtwork,
   formatRelativeTime,
+  isAppInstalled,
 } from '../utils/utils.js';
 import { getSongById } from '../core/details.js';
 import { isArtistFollowed, isPlaylistSaved, isAlbumSaved } from './player.js';
@@ -148,7 +149,8 @@ export function renderYouPage() {
 
   // 5. Downloads / Offline Item
   const downloadsItems = `
-    <article class="library-list-item" data-action="install-pwa" role="button" tabindex="0">
+    ${!isAppInstalled() ? `
+    <article class="library-list-item install-pwa-row" data-action="install-pwa" role="button" tabindex="0">
       <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
         <span class="material-symbols-rounded" style="color: #1db954; font-size: 1.3rem;">download</span>
       </div>
@@ -160,6 +162,7 @@ export function renderYouPage() {
         Install
       </button>
     </article>
+    ` : ''}
     <article class="library-list-item" data-action="export-library" role="button" tabindex="0">
       <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
         <span class="material-symbols-rounded" style="color: #1db954; font-size: 1.3rem;">upload</span>
@@ -170,6 +173,18 @@ export function renderYouPage() {
       </div>
       <button class="btn btn-soft btn-sm" data-action="export-library" type="button">
         Export
+      </button>
+    </article>
+    <article class="library-list-item" data-action="import-library" role="button" tabindex="0">
+      <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
+        <span class="material-symbols-rounded" style="color: #1db954; font-size: 1.3rem;">download</span>
+      </div>
+      <div class="library-item-info">
+        <h3 class="library-item-title">Import Library Backup</h3>
+        <p class="library-item-sub">Restore playlists and history from JSON</p>
+      </div>
+      <button class="btn btn-soft btn-sm" data-action="import-library" type="button">
+        Import
       </button>
     </article>
   `;
@@ -211,20 +226,31 @@ export function renderYouPage() {
 
   return `
     <section class="page you-page-spotify">
-      <!-- High-Density Header -->
-      <header class="library-header-spotify" style="padding: 16px 16px 6px;">
-        <div class="library-top-bar" style="margin-bottom: 10px;">
-          <div class="library-user-title-wrap">
-            <button class="library-avatar-btn" data-action="edit-user-name" type="button" aria-label="Profile">
-              <img class="library-avatar-img" src="${LOGO_URL}" alt="Profile" />
-            </button>
-            <h1 class="library-title-spotify">${escapeHTML(state.userName || 'You')}</h1>
+      <!-- Prominent Material Design 3 User Profile Header -->
+      <header class="you-profile-section">
+        <div class="you-profile-card">
+          <button class="you-avatar-btn" data-action="edit-user-name" type="button" aria-label="Profile Avatar" title="Edit Profile Name">
+            <div class="you-avatar-circle">
+              <span class="material-symbols-rounded you-avatar-icon">person</span>
+            </div>
+          </button>
+          <div class="you-profile-info">
+            <div class="you-profile-name-row">
+              <h1 class="you-profile-name">${escapeHTML(state.userName || 'Listener')}</h1>
+              <button class="icon-btn small you-name-edit-icon" data-action="edit-user-name" type="button" aria-label="Edit Name" title="Edit Name">
+                <span class="material-symbols-rounded" style="font-size: 1rem;">edit</span>
+              </button>
+            </div>
+            <div class="you-profile-meta-row">
+              <span class="you-badge-member">Pawtify Free</span>
+              <span class="you-meta-stats">&bull; ${playlistsCount} playlists &bull; ${favoritesCount} liked songs</span>
+            </div>
           </div>
-          <div class="library-actions">
-            <button class="library-icon-btn" data-action="open-create-playlist" type="button" aria-label="New Playlist" title="Create Playlist">
+          <div class="you-profile-actions">
+            <button class="icon-btn" data-action="open-create-playlist" type="button" aria-label="New Playlist" title="Create Playlist">
               <span class="material-symbols-rounded">add</span>
             </button>
-            <button class="library-icon-btn" data-action="open-settings" type="button" aria-label="Settings" title="Settings">
+            <button class="icon-btn" data-action="open-settings" type="button" aria-label="Settings" title="Settings">
               <span class="material-symbols-rounded">settings</span>
             </button>
           </div>
@@ -323,7 +349,8 @@ export function renderSettingsSections() {
         <span class="material-symbols-rounded">database</span> Storage &amp; Offline
       </div>
       <div class="settings-flat-group">
-        <div class="settings-flat-row">
+        ${!isAppInstalled() ? `
+        <div class="settings-flat-row install-pwa-row">
           <div class="settings-flat-info">
             <div class="settings-flat-label">PWA Progressive App</div>
             <div class="settings-flat-desc">Install to home screen for offline playback</div>
@@ -332,6 +359,7 @@ export function renderSettingsSections() {
             <span class="material-symbols-rounded">download</span> Install
           </button>
         </div>
+        ` : ''}
 
         <div class="settings-flat-row">
           <div class="settings-flat-info">

@@ -98,3 +98,13 @@ export function formatActivityDateTime(timestamp) {
     minute: '2-digit',
   });
 }
+
+export function isAppInstalled() {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true ||
+    (typeof document !== 'undefined' && document.referrer.includes('android-app://'))
+  );
+}
+

@@ -1,4 +1,4 @@
-import { escapeHTML, getOptimizedArtwork } from '../utils/utils.js';
+import { escapeHTML, getOptimizedArtwork, isAppInstalled } from '../utils/utils.js';
 import { state } from '../config/config.js';
 import { getSongById, dedupeSongs, rememberSongs } from '../core/details.js';
 import { fetchPlaylistDetails } from '../services/apiMapping.js';
@@ -412,15 +412,14 @@ export function renderSearchPage() {
 
   return `
     <section class="page search-page-spotify">
-      <!-- Top Header: User Profile Avatar, Search Title, Camera Icon -->
+      <!-- Top Header: User Profile Avatar, Search Title (Camera Icon Removed) -->
       <header class="search-top-header">
-        <button class="search-avatar-btn" data-route="/you" type="button" aria-label="Profile" title="Profile">
-          <img class="search-avatar-img" src="/assets/pawtify.png" alt="Profile" />
-        </button>
-        <h1 class="search-title-spotify">Search</h1>
-        <button class="search-camera-btn" type="button" aria-label="Camera search" title="Scan">
-          <span class="material-symbols-rounded">photo_camera</span>
-        </button>
+        <div class="search-title-wrap" style="display: flex; align-items: center; gap: 12px;">
+          <button class="search-avatar-btn" data-route="/you" type="button" aria-label="Profile" title="Profile">
+            <span class="material-symbols-rounded" style="font-size: 1.5rem; color: #ffffff;">account_circle</span>
+          </button>
+          <h1 class="search-title-spotify">Search</h1>
+        </div>
       </header>
 
       <!-- Prominent Pill-Shaped Search Input Bar -->
@@ -545,7 +544,8 @@ export function renderLibraryPage() {
   } else if (activeTab === 'downloads') {
     tabContent = `
       <div class="library-list-container">
-        <article class="library-list-item" data-action="install-pwa" role="button" tabindex="0">
+        ${!isAppInstalled() ? `
+        <article class="library-list-item install-pwa-row" data-action="install-pwa" role="button" tabindex="0">
           <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
             <span class="material-symbols-rounded" style="color: #1db954; font-size: 1.3rem;">download</span>
           </div>
@@ -557,6 +557,7 @@ export function renderLibraryPage() {
             Install
           </button>
         </article>
+        ` : ''}
         <article class="library-list-item" data-action="export-library" role="button" tabindex="0">
           <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
             <span class="material-symbols-rounded" style="color: #1db954; font-size: 1.3rem;">upload</span>
@@ -1197,4 +1198,21 @@ export function renderSearchCategories() {
       </section>
     </div>
   `;
+}
+
+/**
+ * Real-time background polling update for search categories, discover, and recommended stations
+ * Seamlessly crossfades and preserves scroll position without DOM layout jumps
+ */
+export function refreshSearchCardsSilently() {
+  const contentArea = document.getElementById('search-content-area');
+  if (!contentArea || (state.searchQuery && state.searchQuery.trim().length > 0)) return;
+  const prevScroll = contentArea.scrollTop;
+  contentArea.style.transition = 'opacity 0.25s ease';
+  contentArea.style.opacity = '0.75';
+  setTimeout(() => {
+    contentArea.innerHTML = renderSearchCategories();
+    contentArea.scrollTop = prevScroll;
+    contentArea.style.opacity = '1';
+  }, 120);
 }

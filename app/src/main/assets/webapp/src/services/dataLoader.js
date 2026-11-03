@@ -1,6 +1,7 @@
 import { DISCOVERY_CATEGORIES, state, STORAGE } from '../config/config.js';
 import { getSongById, dedupeSongs, rememberSongs } from '../core/details.js';
 import { renderCurrentRoute } from '../components/master.js';
+import { refreshSearchCardsSilently } from '../components/components.js';
 import {
   isValidMusicContent,
   prioritizeMusic,
@@ -189,14 +190,25 @@ export async function refreshFeedSilently() {
       rememberSongs(all);
       state.trendingSongs = all;
       if (state.route?.name === 'home') {
+        const main = document.getElementById('app-main');
+        const prevScroll = main ? main.scrollTop : 0;
+        const page = main?.querySelector('.home-page-spotify');
+        if (page) {
+          page.style.transition = 'opacity 0.22s ease';
+          page.style.opacity = '0.85';
+        }
         renderCurrentRoute();
+        if (main && prevScroll > 0) main.scrollTop = prevScroll;
       }
     }
 
     if (state.currentSong?.id) {
       await loadRecommendations();
       if (state.route?.name === 'home') {
+        const main = document.getElementById('app-main');
+        const prevScroll = main ? main.scrollTop : 0;
         renderCurrentRoute();
+        if (main && prevScroll > 0) main.scrollTop = prevScroll;
       }
     }
   } catch (err) {
@@ -209,15 +221,19 @@ export async function refreshFeedSilently() {
 let feedPollingTimer = null;
 
 /**
- * Initializes continuous background polling (every 45s) for the Feed and Recommendations
+ * Initializes continuous background polling (every 35s) for the Feed and Search recommendations
  */
 export function startFeedPolling() {
   if (feedPollingTimer || typeof window === 'undefined') return;
   feedPollingTimer = setInterval(() => {
-    if (!document.hidden && state.route?.name === 'home') {
-      refreshFeedSilently();
+    if (!document.hidden) {
+      if (state.route?.name === 'home') {
+        refreshFeedSilently();
+      } else if (state.route?.name === 'search' && (!state.searchQuery || !state.searchQuery.trim())) {
+        refreshSearchCardsSilently();
+      }
     }
-  }, 45000);
+  }, 35000);
 }
 
 export async function loadRecommendations() {

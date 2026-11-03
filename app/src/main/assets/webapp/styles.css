@@ -315,8 +315,16 @@ button:active,
 [role="button"]:active,
 .interactive-item:active,
 .player-more-card:active,
-.player-more-grid-btn:active {
-  transform: scale(0.96) !important;
+.player-more-grid-btn:active,
+.player-more-item:active,
+.player-more-icon-btn:active,
+.fs-ctrl-btn:active,
+.fs-play-btn-accent:active,
+.fs-play-btn-cyan:active,
+.fs-extra-btn:active,
+.fs-heart-btn:active,
+.fs-kebab-btn:active {
+  transform: scale(0.95) !important;
   opacity: 0.85 !important;
   background-color: rgba(255, 255, 255, 0.09);
 }
@@ -2222,7 +2230,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
 .fullscreen-player {
   position: fixed;
   inset: 0;
-  z-index: 110;
+  z-index: 100;
   background-color: #000000 !important;
   background-image: none !important;
   display: flex;
@@ -2574,10 +2582,10 @@ body.has-fullscreen-open .mobile-nav {
 .player-more-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 130;
+  z-index: 170;
   background-color: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
@@ -2595,7 +2603,7 @@ body.has-fullscreen-open .mobile-nav {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 135;
+  z-index: 175;
   background-color: #121212;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 28px 28px 0 0;
@@ -2674,6 +2682,40 @@ body.has-fullscreen-open .mobile-nav {
   text-overflow: ellipsis;
 }
 
+.player-more-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.player-more-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, color 0.15s ease;
+}
+
+.player-more-icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.player-more-icon-btn:active {
+  transform: scale(0.92) !important;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.player-more-icon-btn.active {
+  color: var(--md-sys-color-primary);
+}
+
 .player-more-options-list {
   display: flex;
   flex-direction: column;
@@ -2731,8 +2773,8 @@ body.has-fullscreen-open .mobile-nav {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 120;
-  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 140;
+  background-color: rgba(0, 0, 0, 0.65);
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
@@ -2746,11 +2788,22 @@ body.has-fullscreen-open .mobile-nav {
 
 /* ============ MATERIAL 3 BOTTOM SHEETS & PANELS ============ */
 .queue-panel,
-.lyrics-panel,
+.lyrics-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background-color: var(--md-sys-color-surface-container);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--md-elevation-3);
+  border: 1px solid var(--md-sys-color-outline);
+}
+
 .artist-profile {
   position: fixed;
   inset: 0;
-  z-index: 125;
+  z-index: 160 !important;
   background-color: var(--md-sys-color-surface-container);
   display: none;
   flex-direction: column;
@@ -3018,7 +3071,7 @@ body.has-fullscreen-open .mobile-nav {
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 135;
+  z-index: 180 !important;
   background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
@@ -3272,6 +3325,94 @@ body.has-fullscreen-open .mobile-nav {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* Explicit styling for MD3 Profile Header in You Tab */
+.you-profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.you-avatar-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.you-avatar-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 2px solid var(--md-sys-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md-sys-color-primary);
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.you-avatar-btn:active .you-avatar-circle {
+  transform: scale(0.92);
+}
+
+.you-avatar-icon {
+  font-size: 2rem !important;
+}
+
+.you-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.you-profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.you-profile-name {
+  font-size: 1.25rem !important;
+  font-weight: 800 !important;
+  color: var(--md-sys-color-on-surface) !important;
+  margin: 0 !important;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.you-name-edit-icon {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.you-profile-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+  flex-wrap: wrap;
+}
+
+.you-meta-stats {
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.you-profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
 }
 
@@ -5983,40 +6124,174 @@ input[type="checkbox"]:checked::after,
   background-color: #000000 !important;
 }
 
-/* Pull to Refresh Indicator */
-.pull-to-refresh-indicator {
-  position: fixed;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%) translateY(-60px);
-  width: 40px;
-  height: 40px;
-  background-color: #121814;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--green);
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.25s ease;
-  opacity: 0;
-  pointer-events: none;
+/* PWA Install Button Hiding When App Is Installed */
+body.is-standalone [data-action="install-pwa"],
+body.is-standalone .install-pwa-row,
+body.is-standalone .install-app-btn,
+body.is-standalone [data-action="open-install-guide"] {
+  display: none !important;
 }
 
-.pull-to-refresh-indicator.visible {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
+/* Fluid MD3 Page Transitions Without Layout Jumps */
+.page {
+  animation: md3PageFadeIn 0.22s cubic-bezier(0.2, 0, 0, 1) forwards;
+  will-change: opacity, transform;
 }
 
-.pull-to-refresh-indicator.spinning i {
-  animation: spin 0.8s linear infinite;
+@keyframes md3PageFadeIn {
+  from {
+    opacity: 0.88;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+/* Home Welcome Bar & Avatar */
+.home-top-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 10px 0 16px !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+
+.home-welcome-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+}
+
+.home-user-avatar-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 50% !important;
+  background-color: var(--md-sys-color-surface-container-high) !important;
+  border: 1px solid var(--md-sys-color-outline) !important;
+  cursor: pointer;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.home-user-avatar-btn:active {
+  transform: scale(0.95) !important;
+}
+
+.home-greeting-title {
+  font-size: 1.35rem !important;
+  font-weight: 800 !important;
+  color: var(--md-sys-color-on-surface) !important;
+  margin: 0 !important;
+  letter-spacing: -0.02em !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.home-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Settings List Edge-to-Edge Flex Alignment & MD3 Switches */
+.settings-flat-row,
+.you-setting-row,
+.settings-item {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  gap: 16px !important;
+  padding: 14px 0 !important;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant) !important;
+  box-sizing: border-box !important;
+}
+
+.settings-flat-text {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.settings-flat-title {
+  font-size: 0.9375rem !important;
+  font-weight: 600 !important;
+  color: var(--md-sys-color-on-surface) !important;
+}
+
+.settings-flat-sub {
+  font-size: 0.75rem !important;
+  color: var(--md-sys-color-on-surface-variant) !important;
+}
+
+/* Pure CSS MD3 Pill-Shaped Switch Component */
+.md3-switch {
+  position: relative !important;
+  display: inline-block !important;
+  width: 50px !important;
+  height: 28px !important;
+  flex-shrink: 0 !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+}
+
+.md3-switch input {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  margin: 0 !important;
+  pointer-events: none !important;
+}
+
+.md3-switch-track {
+  position: absolute !important;
+  inset: 0 !important;
+  background-color: var(--md-sys-color-surface-container-highest) !important;
+  border: 2px solid var(--md-sys-color-outline) !important;
+  border-radius: 14px !important;
+  transition: background-color 0.22s cubic-bezier(0.2, 0, 0, 1), border-color 0.22s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.md3-switch-thumb {
+  position: absolute !important;
+  top: 3px !important;
+  left: 3px !important;
+  width: 18px !important;
+  height: 18px !important;
+  background-color: var(--md-sys-color-on-surface-variant) !important;
+  border-radius: 50% !important;
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), background-color 0.22s cubic-bezier(0.2, 0, 0, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45) !important;
+}
+
+.md3-switch input:checked + .md3-switch-track {
+  background-color: var(--md-sys-color-primary) !important;
+  border-color: var(--md-sys-color-primary) !important;
+}
+
+.md3-switch input:checked + .md3-switch-track .md3-switch-thumb {
+  transform: translateX(22px) !important;
+  background-color: #000000 !important;
+}
+
+/* Toast Container High Z-Index */
+#toast-container,
+.toast-container,
+.toast {
+  z-index: 9999 !important;
 }
 
 /* ==========================================================================

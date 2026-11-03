@@ -303,7 +303,7 @@ export function openPlayerMoreSheet() {
             <span class="material-symbols-rounded ${isSaved ? 'filled' : ''}">${isSaved ? 'bookmark' : 'bookmark_border'}</span>
           </button>
           <button class="player-more-icon-btn" data-action="share-song" type="button" aria-label="Share song">
-            <span class="material-symbols-rounded">link</span>
+            <span class="material-symbols-rounded">share</span>
           </button>
         </div>
       </div>

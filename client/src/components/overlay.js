@@ -315,9 +315,7 @@ export function renderOverlay() {
                       <div class="you-setting-label">Floating Video Player</div>
                       <div class="you-setting-desc">Show video feed window while music is streaming.</div>
                     </div>
-                    <button class="btn btn-soft you-setting-btn" data-action="toggle-video" type="button">
-                      ${state.videoVisible ? '<span class="material-symbols-rounded">visibility_off</span> Hide Video' : '<span class="material-symbols-rounded">tv</span> Show Video'}
-                    </button>
+                    <button class="md3-switch ${state.videoVisible ? 'active' : ''}" data-action="toggle-video" type="button" role="switch" aria-checked="${state.videoVisible ? 'true' : 'false'}" aria-label="Toggle Video Player"></button>
                   </div>
                 </div>
               </div>
@@ -337,9 +335,7 @@ export function renderOverlay() {
                       <div class="you-setting-label">Continuous Streaming (Autoplay)</div>
                       <div class="you-setting-desc">Automatically play next queued track when song finishes.</div>
                     </div>
-                    <button class="btn ${state.autoplay !== false ? 'btn-primary' : 'btn-soft'} you-setting-btn" data-action="toggle-autoplay" type="button">
-                      ${state.autoplay !== false ? '<span class="material-symbols-rounded">check</span> Enabled' : 'Disabled'}
-                    </button>
+                    <button class="md3-switch ${state.autoplay !== false ? 'active' : ''}" data-action="toggle-autoplay" type="button" role="switch" aria-checked="${state.autoplay !== false ? 'true' : 'false'}" aria-label="Toggle Autoplay"></button>
                   </div>
 
                   <div class="you-setting-divider"></div>
@@ -373,9 +369,7 @@ export function renderOverlay() {
                       <div class="you-setting-label">Shuffle Mode</div>
                       <div class="you-setting-desc">Randomize track playback order.</div>
                     </div>
-                    <button class="btn ${state.shuffleMode ? 'btn-primary' : 'btn-soft'} you-setting-btn" data-action="toggle-shuffle" type="button">
-                      ${state.shuffleMode ? '<span class="material-symbols-rounded">shuffle</span> On' : 'Off'}
-                    </button>
+                    <button class="md3-switch ${state.shuffleMode ? 'active' : ''}" data-action="toggle-shuffle" type="button" role="switch" aria-checked="${state.shuffleMode ? 'true' : 'false'}" aria-label="Toggle Shuffle"></button>
                   </div>
                 </div>
               </div>
@@ -390,25 +384,22 @@ export function renderOverlay() {
               <div class="you-settings-group">
                 <div class="you-settings-group-title"><span class="material-symbols-rounded">smartphone</span> App &amp; Storage</div>
                 <div class="you-settings-box">
-                  <div class="you-setting-row">
-                    <div class="you-setting-info">
-                      <div class="you-setting-label">PWA Installation</div>
-                      <div class="you-setting-desc">
-                        ${isStandalone ? 'Installed as standalone application with offline support.' : 'Install to your device home screen for a fullscreen native experience.'}
+                  ${
+                    !isStandalone
+                      ? `
+                    <div class="you-setting-row install-pwa-row">
+                      <div class="you-setting-info">
+                        <div class="you-setting-label">PWA Installation</div>
+                        <div class="you-setting-desc">Install to home screen for an offline fullscreen experience.</div>
                       </div>
-                    </div>
-                    ${
-                      canInstall
-                        ? `
                       <button class="btn btn-primary you-setting-btn" data-action="install-pwa" type="button">
                         <span class="material-symbols-rounded">download</span> Install App
                       </button>
-                    `
-                        : `
-                      <span class="you-badge-soft">${isStandalone ? '<span class="material-symbols-rounded">check</span> Installed' : 'Browser Mode'}</span>
-                    `
-                    }
-                  </div>
+                    </div>
+                    <div class="you-setting-divider"></div>
+                  `
+                      : ''
+                  }
 
                   <div class="you-setting-divider"></div>
 
