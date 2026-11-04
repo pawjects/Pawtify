@@ -412,12 +412,9 @@ export function renderSearchPage() {
 
   return `
     <section class="page search-page-spotify">
-      <!-- Top Header: User Profile Avatar, Search Title (Camera Icon Removed) -->
+      <!-- Top Header: Search Title -->
       <header class="search-top-header">
         <div class="search-title-wrap" style="display: flex; align-items: center; gap: 12px;">
-          <button class="search-avatar-btn" data-route="/you" type="button" aria-label="Profile" title="Profile">
-            <span class="material-symbols-rounded" style="font-size: 1.5rem; color: #ffffff;">account_circle</span>
-          </button>
           <h1 class="search-title-spotify">
             <span class="material-symbols-rounded header-title-icon">search</span>
             <span>Search</span>
@@ -688,9 +685,6 @@ export function renderLibraryPage() {
       <header class="library-header-spotify">
         <div class="library-top-bar">
           <div class="library-user-title-wrap">
-            <button class="library-avatar-btn" data-route="/you" type="button" aria-label="Profile" title="Profile">
-              <span class="material-symbols-rounded" style="font-size: 1.5rem; color: #ffffff;">account_circle</span>
-            </button>
             <h1 class="library-title-spotify">
               <span class="material-symbols-rounded header-title-icon">library_music</span>
               <span>Your Library</span>
@@ -834,6 +828,9 @@ export function renderPlaylistPage(playlistId) {
   const coverUrl = playlist.coverUrl || (playlist.songs && playlist.songs.length > 0 ? playlist.songs[0].coverUrl : '/assets/pawtify.png');
   const songCount = playlist.songs ? playlist.songs.length : 0;
   const isPlayingThis = state.isPlaying && state.currentPlaylistId === playlist.id;
+  const isCustomLocal = (state.playlists || []).some((p) => p.id === playlist.id);
+  const isSystem = playlist.id === 'history' || playlist.id === 'liked' || playlist.id === 'favorites';
+  const isSavedToLibrary = (state.savedPlaylists || []).some((p) => String(p.id) === String(playlist.id));
 
   return `
     <section class="page playlist-page-spotify">
@@ -866,6 +863,19 @@ export function renderPlaylistPage(playlistId) {
       <!-- Action Row: Circular Download, Share, Shuffle + Green Circular Play FAB (#1ed760) -->
       <div class="playlist-action-bar">
         <div class="playlist-left-actions">
+          ${!isSystem && !isCustomLocal ? `
+            <button class="playlist-action-circle ${isSavedToLibrary ? 'active' : ''}"
+                    data-action="toggle-save-playlist"
+                    data-playlist-id="${escapeHTML(playlist.id)}"
+                    data-playlist-name="${escapeHTML(playlist.name)}"
+                    data-playlist-uploader="${escapeHTML(playlist.uploaderName || '')}"
+                    data-playlist-cover="${escapeHTML(coverUrl)}"
+                    type="button"
+                    aria-label="${isSavedToLibrary ? 'Remove from Library' : 'Save to Library'}"
+                    title="${isSavedToLibrary ? 'Saved to Library' : 'Save to Library'}">
+              <span class="material-symbols-rounded ${isSavedToLibrary ? 'filled' : ''}">${isSavedToLibrary ? 'bookmark_added' : 'bookmark_add'}</span>
+            </button>
+          ` : ''}
           <button class="playlist-action-circle" data-action="download-playlist" data-playlist-id="${escapeHTML(playlist.id)}" type="button" aria-label="Download playlist">
             <span class="material-symbols-rounded">download</span>
           </button>

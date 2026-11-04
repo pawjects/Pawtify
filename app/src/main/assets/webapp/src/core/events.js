@@ -19,6 +19,7 @@ import {
   toggleFollowArtist,
   toggleSavePlaylist,
   toggleSaveAlbum,
+  playQueueTrack,
 } from '../components/player.js';
 import {
   playSongById,
@@ -317,8 +318,15 @@ export function bindGlobalEvents() {
         const name = actionNode.dataset.playlistName;
         const uploader = actionNode.dataset.playlistUploader;
         const cover = actionNode.dataset.playlistCover;
+        const yt = state.ytPlaylists?.[pid];
         if (pid) {
-          toggleSavePlaylist({ id: pid, name, uploaderName: uploader, coverUrl: cover });
+          toggleSavePlaylist({
+            id: pid,
+            name: name || yt?.name,
+            uploaderName: uploader || yt?.uploaderName,
+            coverUrl: cover || yt?.coverUrl,
+            songs: yt?.songs || [],
+          });
         }
         return;
       }
@@ -612,9 +620,8 @@ export function bindGlobalEvents() {
       if (action === 'play-queue-track') {
         event.preventDefault();
         const qIdx = parseInt(actionNode.dataset.queueIndex, 10);
-        if (!isNaN(qIdx) && state.queue[qIdx]) {
-          state.currentSongIndex = qIdx;
-          play(state.queue[qIdx], state.queue, true);
+        if (!isNaN(qIdx) && state.queue && state.queue[qIdx]) {
+          playQueueTrack(qIdx);
         }
         return;
       }

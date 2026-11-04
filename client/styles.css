@@ -2898,15 +2898,16 @@ body.has-fullscreen-open .mobile-nav {
 .queue-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px;
-  border-radius: var(--md-shape-sm);
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
   background-color: transparent;
   cursor: pointer;
   position: relative;
   transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
   border-top: 2px solid transparent;
   border-bottom: 2px solid transparent;
+  margin-bottom: 2px;
 }
 
 .queue-item:hover {
@@ -2967,9 +2968,9 @@ body.has-fullscreen-open .mobile-nav {
 }
 
 .queue-item-cover {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--md-shape-xs);
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
 }
@@ -2977,13 +2978,13 @@ body.has-fullscreen-open .mobile-nav {
 .queue-item-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   flex: 1;
   min-width: 0;
 }
 
 .queue-item-title {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: var(--md-sys-color-on-surface);
   overflow: hidden;
@@ -2991,8 +2992,12 @@ body.has-fullscreen-open .mobile-nav {
   white-space: nowrap;
 }
 
+.queue-item-current .queue-item-title {
+  color: #1db954 !important;
+}
+
 .queue-item-artist {
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   color: var(--md-sys-color-on-surface-variant);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4489,18 +4494,17 @@ body.has-active-track #toast-container {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 360px;
+  max-width: 370px;
   margin: 14px auto 10px;
 }
 
 .fs-play-btn-accent,
 .fs-play-btn-cyan {
-  width: 66px;
-  height: 66px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background-color: #1db954;
   color: #000000;
-  font-size: 1.55rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4508,6 +4512,11 @@ body.has-active-track #toast-container {
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(29, 185, 84, 0.4);
   transition: border-radius 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fs-play-btn-accent .material-symbols-rounded,
+.fs-play-btn-cyan .material-symbols-rounded {
+  font-size: 2.35rem !important;
 }
 
 .fs-play-btn-accent:hover,
@@ -4521,13 +4530,12 @@ body.has-active-track #toast-container {
 }
 
 .fs-nav-circle-btn {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background-color: #181818;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 1.15rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4536,12 +4544,28 @@ body.has-active-track #toast-container {
   transition: border-radius 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease, color 0.2s ease;
 }
 
+.fs-nav-circle-btn .material-symbols-rounded {
+  font-size: 1.85rem !important;
+}
+
 .fs-nav-circle-btn:hover,
 .fs-nav-circle-btn:active {
   border-radius: 16px;
   transform: scale(0.95);
   background-color: #242424;
   color: #1db954;
+}
+
+.fs-controls-spotify .fs-extra-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fs-controls-spotify .fs-extra-btn .material-symbols-rounded {
+  font-size: 1.45rem !important;
 }
 
 /* ==========================================================================
@@ -5816,6 +5840,28 @@ body.has-active-track #toast-container {
 .home-square-card:active {
   background-color: var(--md-sys-color-surface-container-high, #181818) !important;
   border-radius: 8px !important;
+}
+
+.home-compact-icon-wrap {
+  position: relative !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  height: 56px !important;
+  flex-shrink: 0 !important;
+  border-radius: 8px 0 0 8px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.home-compact-icon {
+  font-size: 1.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
 }
 
 .home-compact-thumb-wrap {

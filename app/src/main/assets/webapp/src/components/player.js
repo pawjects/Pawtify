@@ -606,3 +606,56 @@ export function toggleSaveAlbum(albumData) {
   renderCurrentRoute();
   return !exists;
 }
+
+export async function playQueueTrack(index) {
+  if (!state.queue || index < 0 || index >= state.queue.length) return;
+  const song = state.queue[index];
+  if (!song) return;
+
+  state.currentSongIndex = index;
+  const playableSong = song;
+  rememberSongs([playableSong]);
+  state.currentSong = playableSong;
+  fetchLyricsForSong(playableSong);
+
+  state.progress = 0;
+  state.duration = playableSong.durationSec || 0;
+  state.isPlaying = true;
+  saveJSON(STORAGE.CURRENT_TIME, 0);
+  startBackgroundAudio();
+
+  try {
+    updateMediaSession(playableSong);
+  } catch (e) {}
+  try {
+    if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing';
+    }
+  } catch (e) {}
+
+  startYtLoadTimeout();
+  if (
+    globals.ytPlayerReady &&
+    globals.ytPlayer &&
+    typeof globals.ytPlayer.loadVideoById === 'function'
+  ) {
+    try {
+      globals.ytPlayer.loadVideoById(playableSong.id);
+    } catch (e) {
+      handlePlaybackError(e);
+    }
+  } else {
+    globals.pendingVideoId = playableSong.id;
+    globals.pendingAutoplay = true;
+    loadYTApi();
+  }
+
+  addRecentlyPlayed(playableSong.id, playableSong);
+  persistPlayer();
+  updateDynamicNowPlayingTheme(playableSong, true);
+  await loadRecommendations();
+  renderQueuePanel();
+  refreshPlaybackUI();
+  renderCurrentRoute();
+}
+

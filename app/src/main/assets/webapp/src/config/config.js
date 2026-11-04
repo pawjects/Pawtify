@@ -224,7 +224,7 @@ Object.assign(state, {
   searchSuggestions: [],
   searchDropdownOpen: false,
   searchTab: 'all',
-  libraryTab: 'recent',
+  libraryTab: 'playlists',
   searchLoading: false,
   searchResults: { songs: [], artists: [], playlists: [], albums: [] },
   ytPlaylists: {},

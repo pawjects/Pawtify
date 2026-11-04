@@ -44,7 +44,29 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
     />
-    <link rel="stylesheet" href="/styles.css?v=2.5" />
+    <script>
+      // Immediate self-healing recovery from stale cached syntax errors
+      window.addEventListener('error', function (e) {
+        if (e && e.message && e.message.includes('Illegal return statement')) {
+          console.warn('[Pawtify] Stale cached syntax detected; clearing caches and reloading...');
+          if ('caches' in window) {
+            caches.keys().then(function (keys) {
+              return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            }).then(function () {
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function (regs) {
+                  regs.forEach(function (r) { r.unregister(); });
+                  window.location.reload();
+                });
+              } else {
+                window.location.reload();
+              }
+            });
+          }
+        }
+      });
+    </script>
+    <link rel="stylesheet" href="/styles.css?v=2.6" />
   </head>
   <body>
     <!-- PWA Install Prompt -->
@@ -212,6 +234,6 @@
         if (closeBtn && banner) banner.style.display = 'none';
       });
     </script>
-    <script type="module" src="/src/main.js?v=2.5"></script>
+    <script type="module" src="/src/main.js?v=2.6"></script>
   </body>
 </html>

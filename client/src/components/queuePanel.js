@@ -4,6 +4,7 @@ import { escapeHTML, saveJSON, getOptimizedArtwork, formatTime } from '../utils/
 import { renderPlayerBar, refreshPlaybackUI } from './playerBar.js';
 import { previousTrack, nextTrack, play, dismissPlayer } from './player.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
+import { openFullscreenPlayer } from '../core/navigationHistory.js';
 import { rememberSongs } from '../core/details.js';
 
 let draggedQueueIndex = null;
@@ -340,7 +341,7 @@ if (miniPlayer) {
   miniPlayer.addEventListener(
     'touchstart',
     (e) => {
-      if (e.target.closest('button, [role="button"], .mini-player-btn')) {
+      if (e.target.closest('button, .mini-player-btn, [data-action="toggle-play"], [data-action="dismiss-player"]')) {
         isMiniPlayerDragging = false;
         return;
       }
@@ -430,11 +431,10 @@ if (miniPlayer) {
       }
 
       // 3. Swipe Up to Expand Fullscreen Player
-      if (diffY < -30) {
+      if (diffY < -30 && Math.abs(diffY) > absX) {
         miniPlayer.style.transform = '';
         miniPlayer.style.opacity = '';
-        state.fullscreenPlayer = true;
-        renderFullscreenPlayer();
+        openFullscreenPlayer();
         return;
       }
 
