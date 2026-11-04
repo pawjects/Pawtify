@@ -18,6 +18,7 @@ import { persistPlayer } from '../core/details.js';
 import { loadJSON, saveJSON, getOptimizedArtwork } from '../utils/utils.js';
 import { refreshPlaybackUI } from '../components/playerBar.js';
 import { updateDynamicNowPlayingTheme } from '../utils/themeEngine.js';
+import { syncLyricsWithPlayback as syncLyricsWithLrcService } from './lyricsService.js';
 
 export function loadYTApi() {
   if (globals.ytPlayer) return;
@@ -83,13 +84,15 @@ export function getNativeAudio() {
     if (!nativeAudioElement) {
       nativeAudioElement = document.createElement('audio');
       nativeAudioElement.id = 'pawtify-native-audio';
-      nativeAudioElement.playsInline = true;
-      nativeAudioElement.preload = 'auto';
-      nativeAudioElement.style.display = 'none';
-      nativeAudioElement.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-      nativeAudioElement.loop = true;
       document.body.appendChild(nativeAudioElement);
     }
+  }
+  nativeAudioElement.playsInline = true;
+  nativeAudioElement.preload = 'auto';
+  nativeAudioElement.style.display = 'none';
+  nativeAudioElement.loop = true;
+  if (!nativeAudioElement.src || nativeAudioElement.src === window.location.href) {
+    nativeAudioElement.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
   }
   return nativeAudioElement;
 }
@@ -468,7 +471,11 @@ window.addEventListener('offline', () => {
 });
 
 export function syncLyricsWithPlayback() {
-  // Placeholder - live lyrics sync not available in YouTube audio mode
+  try {
+    syncLyricsWithLrcService();
+  } catch (err) {
+    // Graceful fallback if lyrics container is not mounted
+  }
 }
 
 export function isValidMusicContent(item) {

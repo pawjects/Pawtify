@@ -36,12 +36,14 @@ import { renderFullscreenPlayer } from './fullscreen.js';
 import { updateWavyProgress } from './wavyProgress.js';
 import { renderQueuePanel } from './queuePanel.js';
 import { updateDynamicNowPlayingTheme } from '../utils/themeEngine.js';
+import { fetchLyricsForSong } from '../services/lyricsService.js';
 
 export async function play(song, queue = null, autoplay = true) {
   if (!song) return;
   let playableSong = song;
   rememberSongs([playableSong]);
   state.currentSong = playableSong;
+  fetchLyricsForSong(playableSong);
   if (queue?.length) {
     state.queue = dedupeSongs(queue);
     const index = state.queue.findIndex((item) => item.id === playableSong.id);
