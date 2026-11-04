@@ -74,98 +74,8 @@ window.onYouTubeIframeAPIReady = function () {
   }
 };
 
-// Native HTMLMediaElement Audio Anchor & Universal Background Engine
+// Native HTMLMediaElement Audio Anchor & Standard Media Session
 let nativeAudioElement = null;
-let silentBlobUrl = null;
-let wakeLockSentinel = null;
-let audioContextInstance = null;
-
-function getSilentAudioUrl() {
-  if (silentBlobUrl) return silentBlobUrl;
-  try {
-    const sampleRate = 8000;
-    const durationSec = 2;
-    const numFrames = sampleRate * durationSec;
-    const buffer = new ArrayBuffer(44 + numFrames * 2);
-    const view = new DataView(buffer);
-
-    const writeStr = (offset, str) => {
-      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-    };
-
-    writeStr(0, 'RIFF');
-    view.setUint32(4, 36 + numFrames * 2, true);
-    writeStr(8, 'WAVE');
-    writeStr(12, 'fmt ');
-    view.setUint32(16, 16, true); // PCM Chunk size
-    view.setUint16(20, 1, true);  // PCM format
-    view.setUint16(22, 1, true);  // Mono
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true); // Byte rate
-    view.setUint16(32, 2, true);  // Block align
-    view.setUint16(34, 16, true); // 16-bit
-    writeStr(36, 'data');
-    view.setUint32(40, numFrames * 2, true);
-
-    const blob = new Blob([buffer], { type: 'audio/wav' });
-    silentBlobUrl = URL.createObjectURL(blob);
-    return silentBlobUrl;
-  } catch (e) {
-    return 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-  }
-}
-
-export async function requestWakeLock() {
-  try {
-    if ('wakeLock' in navigator && !wakeLockSentinel && state.isPlaying) {
-      wakeLockSentinel = await navigator.wakeLock.request('screen');
-      wakeLockSentinel.addEventListener('release', () => {
-        wakeLockSentinel = null;
-      });
-    }
-  } catch (err) {
-    // Graceful fallback if device policy disallows wake lock
-  }
-}
-
-export function releaseWakeLock() {
-  if (wakeLockSentinel) {
-    try {
-      wakeLockSentinel.release();
-    } catch (e) {}
-    wakeLockSentinel = null;
-  }
-}
-
-if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && state.isPlaying) {
-      requestWakeLock();
-    }
-  });
-}
-
-export function unlockAudioContext() {
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    if (!audioContextInstance) {
-      audioContextInstance = new AudioCtx();
-    }
-    if (audioContextInstance.state === 'suspended') {
-      audioContextInstance.resume();
-    }
-    if (!globals.silentOscActive) {
-      const osc = audioContextInstance.createOscillator();
-      const gain = audioContextInstance.createGain();
-      gain.gain.value = 0.00001; // Inaudible DAC excitation keeping audio pipeline alive
-      osc.connect(gain);
-      gain.connect(audioContextInstance.destination);
-      osc.start(0);
-      globals.silentOscActive = true;
-    }
-  } catch (e) {}
-}
 
 export function getNativeAudio() {
   if (typeof document === 'undefined') return null;
@@ -182,14 +92,12 @@ export function getNativeAudio() {
   nativeAudioElement.style.display = 'none';
   nativeAudioElement.loop = true;
   if (!nativeAudioElement.src || nativeAudioElement.src === window.location.href) {
-    nativeAudioElement.src = getSilentAudioUrl();
+    nativeAudioElement.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
   }
   return nativeAudioElement;
 }
 
 export function startBackgroundAudio() {
-  unlockAudioContext();
-  requestWakeLock();
   const audio = getNativeAudio();
   if (!audio) return;
   audio.volume = typeof state.volume === 'number' ? state.volume : 0.7;
@@ -202,7 +110,6 @@ export function startBackgroundAudio() {
 }
 
 export function stopBackgroundAudio() {
-  releaseWakeLock();
   const audio = getNativeAudio();
   if (audio && !audio.paused) {
     try {
