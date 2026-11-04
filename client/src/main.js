@@ -1,4 +1,4 @@
-import { initApp } from './config/config.js';
+import { initApp, state } from './config/config.js';
 import './services/youtube.js';
 import './core/events.js';
 import './config/router.js';
@@ -73,8 +73,113 @@ if (typeof window !== 'undefined') {
   });
 }
 
+/**
+ * Service Worker Registration & Seamless Auto-Reload Lifecycle
+ * - Detects new versions via 'updatefound' and 'statechange'
+ * - Reloads silently to apply latest assets when active controller exists
+ * - Defers reload if a song is actively playing until playback pauses
+ */
+function initServiceWorkerLifecycle() {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+  if (typeof window !== 'undefined') {
+    window.pawtifyState = state;
+  }
+
+  let isReloading = false;
+
+  const triggerUpdateReload = () => {
+    if (isReloading) return;
+
+    const performReload = () => {
+      if (isReloading) return;
+      isReloading = true;
+      console.info('[Pawtify SW] Applying seamless update reload...');
+      window.location.reload();
+    };
+
+    // If audio is currently playing, defer reload until playback pauses
+    if (state && state.isPlaying) {
+      console.info('[Pawtify SW] Audio is actively playing; deferring reload until paused.');
+      let pausedListenerAttached = false;
+
+      const checkPauseInterval = setInterval(() => {
+        if (!state.isPlaying) {
+          clearInterval(checkPauseInterval);
+          performReload();
+        }
+      }, 1000);
+
+      // Listen for global audio pause event as immediate fallback
+      const audioEl = document.getElementById('pawtify-native-audio');
+      if (audioEl && !pausedListenerAttached) {
+        pausedListenerAttached = true;
+        audioEl.addEventListener('pause', () => {
+          clearInterval(checkPauseInterval);
+          performReload();
+        }, { once: true });
+      }
+    } else {
+      performReload();
+    }
+  };
+
+  const registerSW = () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => {
+        console.info('[Pawtify SW] Registered successfully with scope:', reg.scope);
+
+        // Check if an updated worker is already waiting in the background
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          console.info('[Pawtify SW] Updated worker waiting; triggering reload.');
+          triggerUpdateReload();
+        }
+
+        // Listen for updates discovered by the browser
+        reg.addEventListener('updatefound', () => {
+          const installingWorker = reg.installing;
+          if (!installingWorker) return;
+
+          console.info('[Pawtify SW] New service worker version detected, installing...');
+          installingWorker.addEventListener('statechange', () => {
+            if (installingWorker.state === 'installed') {
+              if (navigator.serviceWorker.controller) {
+                console.info('[Pawtify SW] New service worker installed with active controller; updating...');
+                triggerUpdateReload();
+              } else {
+                console.info('[Pawtify SW] Content cached for offline use for the first time.');
+              }
+            }
+          });
+        });
+      })
+      .catch((err) => {
+        console.warn('[Pawtify SW Registration Error]:', err);
+      });
+  };
+
+  if (document.readyState === 'complete') {
+    registerSW();
+  } else {
+    window.addEventListener('load', registerSW);
+  }
+
+  // Handle controllerchange when skipWaiting activates a new SW
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    console.info('[Pawtify SW] Controller changed; triggering update reload.');
+    triggerUpdateReload();
+  });
+}
+
 async function bootApp() {
   console.info('[Pawtify Boot] Booting Pawtify application entry point...');
+
+  try {
+    initServiceWorkerLifecycle();
+  } catch (swErr) {
+    console.warn('[Pawtify Boot Warning] Service Worker lifecycle setup error:', swErr);
+  }
 
   try {
     console.info('[Pawtify Boot] Calling initApp()...');
