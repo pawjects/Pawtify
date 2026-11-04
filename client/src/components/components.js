@@ -418,7 +418,10 @@ export function renderSearchPage() {
           <button class="search-avatar-btn" data-route="/you" type="button" aria-label="Profile" title="Profile">
             <span class="material-symbols-rounded" style="font-size: 1.5rem; color: #ffffff;">account_circle</span>
           </button>
-          <h1 class="search-title-spotify">Search</h1>
+          <h1 class="search-title-spotify">
+            <span class="material-symbols-rounded header-title-icon">search</span>
+            <span>Search</span>
+          </h1>
         </div>
       </header>
 
@@ -688,7 +691,10 @@ export function renderLibraryPage() {
             <button class="library-avatar-btn" data-route="/you" type="button" aria-label="Profile" title="Profile">
               <span class="material-symbols-rounded" style="font-size: 1.5rem; color: #ffffff;">account_circle</span>
             </button>
-            <h1 class="library-title-spotify">Your Library</h1>
+            <h1 class="library-title-spotify">
+              <span class="material-symbols-rounded header-title-icon">library_music</span>
+              <span>Your Library</span>
+            </h1>
           </div>
           <div class="library-actions">
             <button class="library-icon-btn" data-action="navigate" data-path="/search" type="button" aria-label="Search in library" title="Search">

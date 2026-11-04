@@ -134,3 +134,30 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// PWA Notification Routing: Focus or open standalone PWA window
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetPath = event.notification.data?.url || '/';
+  const urlToOpen = new URL(targetPath, self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // 1. Focus existing active PWA client if available
+      for (const client of windowClients) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // 2. Open standalone window if none is open
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+
+self.addEventListener('notificationclose', (event) => {
+  // Graceful notification close
+});
+
