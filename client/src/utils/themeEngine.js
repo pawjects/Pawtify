@@ -29,6 +29,11 @@ export function enforceAmoledTheme() {
     body.style.backgroundImage = 'none';
     body.style.backgroundColor = '#000000';
   }
+
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme && metaTheme.getAttribute('content') !== '#000000') {
+    metaTheme.setAttribute('content', '#000000');
+  }
 }
 
 /**

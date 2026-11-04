@@ -246,7 +246,7 @@ export function renderYouPage() {
                 </button>
               </div>
               <div class="you-profile-meta-row">
-                <span class="you-badge-member">Pawtify Free &bull; AMOLED Edition</span>
+                <span class="you-badge-member">Pawtify user 👑</span>
               </div>
             </div>
             <div class="you-profile-actions">
@@ -314,7 +314,7 @@ export function renderYouPage() {
       <footer class="you-footer-credits">
         <span>Made with</span>
         <span class="material-symbols-rounded you-credits-heart">favorite</span>
-        <span>for music lovers &bull; Pawtify</span>
+        <span>for music lovers &bull; <a href="https://github.com/pawjects/Pawtify" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">Pawtify</a></span>
       </footer>
     </section>
   `;

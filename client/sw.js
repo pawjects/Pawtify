@@ -1,8 +1,8 @@
 /* =============================================
-   Pawtify Service Worker v2.5
-   Seamless Lifecycle & Network-First HTML Caching
+   Pawtify Service Worker v2.6
+   Seamless Lifecycle & Network-First Scripts & HTML Caching
    ============================================= */
-const CACHE_VERSION = 'v2.5';
+const CACHE_VERSION = 'v2.6';
 const CACHE_NAME = `pawtify-app-shell-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `pawtify-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `pawtify-api-${CACHE_VERSION}`;
@@ -13,8 +13,8 @@ const CURRENT_CACHES = [CACHE_NAME, DYNAMIC_CACHE, API_CACHE, MEDIA_CACHE];
 const ASSETS = [
   '/',
   '/index.html',
-  '/styles.css?v=2.5',
-  '/src/main.js?v=2.5',
+  '/styles.css?v=2.6',
+  '/src/main.js?v=2.6',
   '/manifest.webmanifest',
   '/assets/pawtify.png',
   '/assets/icon-192.png',
@@ -153,7 +153,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4. App Shell & Other Static Assets (JS, CSS, Fonts, Manifest) -> Stale-While-Revalidate
+  // 4. JavaScript Scripts -> Network-First (ensures script updates are delivered instantly)
+  if (
+    event.request.destination === 'script' ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.includes('/src/')
+  ) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.ok && url.origin === self.location.origin) {
+            const clone = response.clone();
+            caches
+              .open(CACHE_NAME)
+              .then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(event.request);
+          if (cached) return cached;
+          return new Response('', { status: 408, statusText: 'Offline' });
+        })
+    );
+    return;
+  }
+
+  // 5. App Shell & Other Static Assets (CSS, Fonts, Manifest) -> Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const networkFetch = fetch(event.request)

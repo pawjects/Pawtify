@@ -163,37 +163,40 @@ export function renderHomePage() {
     {
       id: 'card-liked-songs',
       title: 'Liked Songs',
-      coverUrl: favCover,
+      icon: 'favorite',
+      iconColor: '#1db954',
       route: '/playlist/liked',
       isLiked: true,
     },
     {
       id: 'card-heavy-rotation',
       title: 'Heavy Rotation',
-      coverUrl: heavyCover,
+      icon: 'history',
+      iconColor: '#ffffff',
       route: '/playlist/history',
       songId: heavySong?.id || null,
     },
     {
       id: 'card-discover-weekly',
       title: 'Discover Weekly',
-      coverUrl: discoverCover,
+      icon: 'explore',
+      iconColor: '#ffffff',
       action: 'search-category',
       category: 'Discover',
     },
     {
       id: 'card-top-mixes',
       title: 'Top Mixes',
-      coverUrl: topMixCover,
+      icon: 'queue_music',
+      iconColor: '#ffffff',
       action: 'navigate',
       path: '/library',
     },
   ];
 
-  // 4-Card Grid HTML (2 rows of 2 standard square cards, no hover haptics)
+  // 4-Card Grid HTML (2 rows of 2 standard square cards, centered Material Symbols icons, no image thumbnails)
   const compactGridHTML = topFourCards
     .map((item) => {
-      const cover = getOptimizedArtwork(item.coverUrl, 160);
       return `
         <article class="home-compact-card home-square-card"
                  ${item.route ? `data-route="${escapeHTML(item.route)}"` : ''}
@@ -203,9 +206,8 @@ export function renderHomePage() {
                  role="button"
                  tabindex="0"
                  aria-label="Open ${escapeHTML(item.title)}">
-          <div class="home-compact-thumb-wrap">
-            <img class="home-compact-thumb" src="${escapeHTML(cover)}" alt="" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-            ${item.isLiked ? '<span class="home-compact-heart"><span class="material-symbols-rounded">favorite</span></span>' : ''}
+          <div class="home-compact-icon-wrap">
+            <span class="material-symbols-rounded home-compact-icon" style="color: ${item.iconColor};">${item.icon}</span>
           </div>
           <span class="home-compact-title">${escapeHTML(item.title)}</span>
         </article>
@@ -228,9 +230,9 @@ export function renderHomePage() {
     `;
   }
 
-  // Feed categories
+  // Feed categories (filter out any broken [object Object] categories)
   categories.forEach((cat) => {
-    if (cat.songs && cat.songs.length) {
+    if (cat.songs && cat.songs.length && cat.title && typeof cat.title === 'string' && !cat.title.includes('[object')) {
       sectionsHTML += `
         <section class="home-section">
           <h2 class="home-section-title">${escapeHTML(cat.title)}</h2>

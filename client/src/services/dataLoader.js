@@ -48,14 +48,6 @@ export function getDiscoveryCategories() {
       query: `${randomArtist2} playlist`,
     });
   }
-  if (topSearches.length > 0) {
-    const randomSearch =
-      topSearches[Math.floor(Math.random() * topSearches.length)];
-    custom.push({
-      title: `Inspired by "${randomSearch}"`,
-      query: `${randomSearch} music`,
-    });
-  }
 
   // Shuffle custom and base categories separately
   const selectedCustom = custom.sort(() => 0.5 - Math.random()).slice(0, 2);
@@ -112,7 +104,7 @@ export async function loadTrendingSongs(forceRefresh = false) {
       })
     );
 
-    state.feedCategories = feed.filter((cat) => cat.songs.length > 0);
+    state.feedCategories = feed.filter((cat) => cat.songs.length > 0 && typeof cat.title === 'string' && !cat.title.includes('[object'));
 
     const all = dedupeSongs(state.feedCategories.flatMap((c) => c.songs));
     rememberSongs(all);
@@ -183,7 +175,7 @@ export async function refreshFeedSilently() {
       })
     );
 
-    const validFeed = feed.filter((cat) => cat.songs.length > 0);
+    const validFeed = feed.filter((cat) => cat.songs.length > 0 && typeof cat.title === 'string' && !cat.title.includes('[object'));
     if (validFeed.length > 0) {
       state.feedCategories = validFeed;
       const all = dedupeSongs(state.feedCategories.flatMap((c) => c.songs));

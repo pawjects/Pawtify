@@ -20,6 +20,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Explicit Service Worker route with zero-caching headers so client updates apply immediately
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, '../client/sw.js'));
+});
+
 // Serve static assets from public/ and client/ directories
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.static(path.join(__dirname, '../client')));
