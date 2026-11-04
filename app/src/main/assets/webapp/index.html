@@ -44,7 +44,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=2.5" />
   </head>
   <body>
     <!-- PWA Install Prompt -->
@@ -191,13 +191,6 @@
     ></audio>
 
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker
-            .register('sw.js')
-            .catch((err) => console.warn('SW error:', err));
-        });
-      }
       window.deferredPrompt = null;
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
@@ -219,6 +212,6 @@
         if (closeBtn && banner) banner.style.display = 'none';
       });
     </script>
-    <script type="module" src="src/main.js?v=11"></script>
+    <script type="module" src="/src/main.js?v=2.5"></script>
   </body>
 </html>
