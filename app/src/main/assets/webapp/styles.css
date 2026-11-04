@@ -4544,41 +4544,95 @@ body.has-active-track #toast-container {
   color: #1db954;
 }
 
+/* ==========================================================================
+   MD3 SEGMENTED BUTTON GROUP (Speed, Lyrics, Queue)
+   ========================================================================== */
 .fs-pills-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 14px;
-  width: 100%;
+  display: flex !important;
+  gap: 2px !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin-top: 14px !important;
+  width: 100% !important;
 }
 
 .fs-pill-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 18px;
-  border-radius: 50px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-radius 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease, border-color 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 8px 18px !important;
+  min-height: 40px !important;
+  box-sizing: border-box !important;
+  background: #1E1E1E !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+  user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
-.fs-pill-btn:hover,
-.fs-pill-btn:active {
-  border-radius: 16px !important;
-  transform: scale(0.95) !important;
+.fs-pill-btn .material-symbols-rounded {
+  font-size: 1.15rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: inherit !important;
+  vertical-align: middle !important;
+}
+
+/* Left Button (Speed / 1x): Fully rounded on the left, slightly rounded on the right */
+.fs-pill-btn:first-child,
+.fs-pill-btn[data-action="toggle-speed"] {
+  border-radius: 32px 8px 8px 32px !important;
+  padding-left: 16px !important;
+}
+
+/* Middle Button (Lyrics): Slightly rounded on all corners */
+.fs-pill-btn:nth-child(2),
+.fs-pill-btn[data-action="open-lyrics"] {
+  border-radius: 8px !important;
+}
+
+/* Right Button (Queue): Slightly rounded on the left, fully rounded on the right */
+.fs-pill-btn:last-child,
+.fs-pill-btn[data-action="open-queue"] {
+  border-radius: 8px 32px 32px 8px !important;
+  padding-right: 16px !important;
+}
+
+/* Hover & Active Feedback: Slight lightening + scale haptics */
+.fs-pill-btn:hover {
   background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
+.fs-pill-btn:active {
+  transform: scale(0.95) !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
+/* Active Selected State (e.g., active panel toggled) */
 .fs-pill-btn.active {
-  background: #1db954;
-  color: #000000;
-  border-color: #1db954;
+  background: #1DB954 !important;
+  color: #000000 !important;
+  border-color: #1DB954 !important;
+}
+
+.fs-pill-btn.active .material-symbols-rounded {
+  color: #000000 !important;
+}
+
+.fs-pill-btn.active:hover {
+  background: #1ed760 !important;
+}
+
+.fs-pill-btn.active:active {
+  transform: scale(0.95) !important;
+  background: #1aa34a !important;
 }
 
 /* 2. Queue Up Next Bottom Sheet & Animated Equalizer */
@@ -4851,13 +4905,12 @@ body.has-active-track #toast-container {
   align-items: center;
   gap: 10px;
   background: #242424;
-  border-radius: 0px !important;
+  border-radius: 8px !important;
   overflow: hidden;
   height: 56px;
   padding-right: 8px;
   cursor: pointer;
   transition: background-color 0.15s ease;
-  transform: none !important;
 }
 
 .home-compact-card:hover,
@@ -4865,8 +4918,7 @@ body.has-active-track #toast-container {
 .home-square-card:hover,
 .home-square-card:active {
   background: #303030;
-  border-radius: 0px !important;
-  transform: none !important;
+  border-radius: 8px !important;
 }
 
 .home-compact-thumb {
@@ -5746,7 +5798,7 @@ body.has-active-track #toast-container {
   gap: 10px !important;
   background-color: var(--md-sys-color-surface-container) !important;
   border: 1px solid var(--md-sys-color-outline) !important;
-  border-radius: 0px !important;
+  border-radius: 8px !important;
   overflow: hidden !important;
   height: 56px !important;
   min-height: 56px !important;
@@ -5756,7 +5808,6 @@ body.has-active-track #toast-container {
   min-width: 0 !important;
   box-sizing: border-box !important;
   transition: background-color 0.15s ease !important;
-  transform: none !important;
 }
 
 .home-compact-card:hover,
@@ -5764,8 +5815,7 @@ body.has-active-track #toast-container {
 .home-square-card:hover,
 .home-square-card:active {
   background-color: var(--md-sys-color-surface-container-high, #181818) !important;
-  border-radius: 0px !important;
-  transform: none !important;
+  border-radius: 8px !important;
 }
 
 .home-compact-thumb-wrap {
@@ -5775,7 +5825,8 @@ body.has-active-track #toast-container {
   max-width: 56px !important;
   height: 56px !important;
   flex-shrink: 0 !important;
-  border-radius: 0px !important;
+  border-radius: 8px 0 0 8px !important;
+  overflow: hidden !important;
 }
 
 .home-compact-thumb {
@@ -5785,7 +5836,7 @@ body.has-active-track #toast-container {
   height: 56px !important;
   aspect-ratio: 1 / 1 !important;
   object-fit: cover !important;
-  border-radius: 0px !important;
+  border-radius: 8px 0 0 8px !important;
   flex-shrink: 0 !important;
   display: block !important;
 }
@@ -5798,7 +5849,7 @@ body.has-active-track #toast-container {
   justify-content: center !important;
   background: rgba(0, 0, 0, 0.45) !important;
   color: var(--md-sys-color-primary, #1db954) !important;
-  border-radius: 0px !important;
+  border-radius: 8px 0 0 8px !important;
 }
 
 .home-compact-heart .material-symbols-rounded {
@@ -6674,10 +6725,6 @@ body.is-standalone [data-action="open-install-guide"] {
 .search-avatar-btn,
 .library-avatar-btn,
 .lyrics-close-btn,
-.fs-pill-btn,
-[data-action="toggle-speed"],
-[data-action="open-lyrics"],
-[data-action="open-queue"],
 .md3-shape-shift {
   border-radius: 50% !important;
   transition: border-radius 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease, box-shadow 0.2s ease !important;
@@ -6707,14 +6754,6 @@ body.is-standalone [data-action="open-install-guide"] {
 .library-avatar-btn:active,
 .lyrics-close-btn:hover,
 .lyrics-close-btn:active,
-.fs-pill-btn:hover,
-.fs-pill-btn:active,
-[data-action="toggle-speed"]:hover,
-[data-action="toggle-speed"]:active,
-[data-action="open-lyrics"]:hover,
-[data-action="open-lyrics"]:active,
-[data-action="open-queue"]:hover,
-[data-action="open-queue"]:active,
 .md3-shape-shift:hover,
 .md3-shape-shift:active {
   border-radius: 16px !important;
@@ -6722,12 +6761,24 @@ body.is-standalone [data-action="open-install-guide"] {
 }
 
 /* Header Icons Alignment & Accent */
+.search-title-spotify,
+.library-title-spotify,
+.library-user-title-wrap h1 {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  vertical-align: middle !important;
+}
+
 .header-title-icon {
   font-size: 1.5rem !important;
   color: var(--md-sys-color-primary, #1db954) !important;
-  margin-right: 6px !important;
+  margin-right: 2px !important;
   vertical-align: middle !important;
-  display: inline-block !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
 /* 'You' Page Footer Credit Text */
