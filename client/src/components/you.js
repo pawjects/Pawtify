@@ -309,6 +309,13 @@ export function renderYouPage() {
       <div class="library-list-container">
         ${listItemsHTML}
       </div>
+
+      <!-- Neatly Aligned Compact Credit Text -->
+      <footer class="you-footer-credits">
+        <span>Made with</span>
+        <span class="material-symbols-rounded you-credits-heart">favorite</span>
+        <span>for music lovers &bull; Pawtify</span>
+      </footer>
     </section>
   `;
 }

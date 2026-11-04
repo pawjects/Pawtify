@@ -190,12 +190,12 @@ export function renderHomePage() {
     },
   ];
 
-  // 4-Card Grid HTML (2 rows of 2)
+  // 4-Card Grid HTML (2 rows of 2 standard square cards, no hover haptics)
   const compactGridHTML = topFourCards
     .map((item) => {
       const cover = getOptimizedArtwork(item.coverUrl, 160);
       return `
-        <article class="home-compact-card md3-shape-shift"
+        <article class="home-compact-card home-square-card"
                  ${item.route ? `data-route="${escapeHTML(item.route)}"` : ''}
                  ${item.path ? `data-action="navigate" data-path="${escapeHTML(item.path)}"` : ''}
                  ${item.action ? `data-action="${escapeHTML(item.action)}" data-category="${escapeHTML(item.category || '')}"` : ''}
@@ -213,7 +213,7 @@ export function renderHomePage() {
     })
     .join('');
 
-  // Sections (Recents carousel removed per design specifications; accessible in Library)
+  // Sections (Recents carousel and Popular Shows removed per specifications)
   let sectionsHTML = '';
 
   // Recommended For You
@@ -241,24 +241,6 @@ export function renderHomePage() {
       `;
     }
   });
-
-  // Popular Podcast Shows Carousel
-  sectionsHTML += `
-    <section class="home-section">
-      <h2 class="home-section-title">Popular Shows</h2>
-      <div class="home-scroll">
-        ${PODCAST_SHOWS.map((show) => `
-          <article class="home-scroll-card" data-action="search-category" data-category="${escapeHTML(show.title)}" role="button" tabindex="0">
-            <div class="scroll-cover-wrap">
-              <img src="${escapeHTML(show.coverUrl)}" alt="${escapeHTML(show.title)}" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-            </div>
-            <h3 class="scroll-title">${escapeHTML(show.title)}</h3>
-            <p class="scroll-subtitle">${escapeHTML(show.publisher)}</p>
-          </article>
-        `).join('')}
-      </div>
-    </section>
-  `;
 
   if (!rec.length && !categories.length) {
     sectionsHTML += `

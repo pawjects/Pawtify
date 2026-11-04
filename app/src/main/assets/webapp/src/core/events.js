@@ -53,6 +53,7 @@ import {
 import { downloadCurrentSong, formatTime, openLyrics, saveJSON } from '../utils/utils.js';
 import { renderLyricsPanel } from '../components/lyrics.js';
 import { fetchLyricsForSong } from '../services/lyricsService.js';
+import { unlockAudioContext } from '../services/youtube.js';
 import { updateWavyProgress } from '../components/wavyProgress.js';
 import {
   openArtistProfile,
@@ -111,10 +112,11 @@ export function bindGlobalEvents() {
   window.addEventListener('popstate', handleGlobalPopState);
   window.addEventListener('resize', () => markActiveNav());
 
-  // Instantaneous tactile feedback on touch/click: subtle haptic tick + immediate tab indicator shift
+  // Instantaneous tactile feedback on touch/click: subtle haptic tick + immediate tab indicator shift + audio gesture unlock
   document.addEventListener(
     'pointerdown',
     (event) => {
+      unlockAudioContext();
       const routeButton = event.target.closest(
         '.nav-link, .mobile-nav-item, [data-route]'
       );

@@ -2,12 +2,14 @@
   "name": "Pawtify",
   "short_name": "Pawtify",
   "description": "A privacy-friendly, distraction-free music streaming experience.",
+  "id": "/",
   "start_url": "/",
-  "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#1db954",
-  "orientation": "portrait-primary",
   "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
   "categories": ["music", "entertainment"],
   "icons": [
     {

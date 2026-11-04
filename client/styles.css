@@ -4558,18 +4558,21 @@ body.has-active-track #toast-container {
   align-items: center;
   gap: 8px;
   padding: 8px 18px;
-  border-radius: 999px;
+  border-radius: 50px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #ffffff;
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-radius 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease, border-color 0.2s ease !important;
 }
 
-.fs-pill-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+.fs-pill-btn:hover,
+.fs-pill-btn:active {
+  border-radius: 16px !important;
+  transform: scale(0.95) !important;
+  background: rgba(255, 255, 255, 0.16) !important;
 }
 
 .fs-pill-btn.active {
@@ -4842,22 +4845,28 @@ body.has-active-track #toast-container {
   margin-bottom: 28px;
 }
 
-.home-compact-card {
+.home-compact-card,
+.home-square-card {
   display: flex;
   align-items: center;
   gap: 10px;
   background: #242424;
-  border-radius: 8px;
+  border-radius: 0px !important;
   overflow: hidden;
   height: 56px;
   padding-right: 8px;
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  transition: background-color 0.15s ease;
+  transform: none !important;
 }
 
 .home-compact-card:hover,
-.home-compact-card:active {
+.home-compact-card:active,
+.home-square-card:hover,
+.home-square-card:active {
   background: #303030;
+  border-radius: 0px !important;
+  transform: none !important;
 }
 
 .home-compact-thumb {
@@ -5730,13 +5739,14 @@ body.has-active-track #toast-container {
   width: 100% !important;
 }
 
-.home-compact-card {
+.home-compact-card,
+.home-square-card {
   display: flex !important;
   align-items: center !important;
   gap: 10px !important;
   background-color: var(--md-sys-color-surface-container) !important;
   border: 1px solid var(--md-sys-color-outline) !important;
-  border-radius: 8px !important;
+  border-radius: 0px !important;
   overflow: hidden !important;
   height: 56px !important;
   min-height: 56px !important;
@@ -5745,7 +5755,17 @@ body.has-active-track #toast-container {
   cursor: pointer;
   min-width: 0 !important;
   box-sizing: border-box !important;
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  transition: background-color 0.15s ease !important;
+  transform: none !important;
+}
+
+.home-compact-card:hover,
+.home-compact-card:active,
+.home-square-card:hover,
+.home-square-card:active {
+  background-color: var(--md-sys-color-surface-container-high, #181818) !important;
+  border-radius: 0px !important;
+  transform: none !important;
 }
 
 .home-compact-thumb-wrap {
@@ -5755,6 +5775,7 @@ body.has-active-track #toast-container {
   max-width: 56px !important;
   height: 56px !important;
   flex-shrink: 0 !important;
+  border-radius: 0px !important;
 }
 
 .home-compact-thumb {
@@ -5764,7 +5785,7 @@ body.has-active-track #toast-container {
   height: 56px !important;
   aspect-ratio: 1 / 1 !important;
   object-fit: cover !important;
-  border-radius: 8px 0 0 8px !important;
+  border-radius: 0px !important;
   flex-shrink: 0 !important;
   display: block !important;
 }
@@ -5777,7 +5798,7 @@ body.has-active-track #toast-container {
   justify-content: center !important;
   background: rgba(0, 0, 0, 0.45) !important;
   color: var(--md-sys-color-primary, #1db954) !important;
-  border-radius: 8px 0 0 8px !important;
+  border-radius: 0px !important;
 }
 
 .home-compact-heart .material-symbols-rounded {
@@ -6653,6 +6674,10 @@ body.is-standalone [data-action="open-install-guide"] {
 .search-avatar-btn,
 .library-avatar-btn,
 .lyrics-close-btn,
+.fs-pill-btn,
+[data-action="toggle-speed"],
+[data-action="open-lyrics"],
+[data-action="open-queue"],
 .md3-shape-shift {
   border-radius: 50% !important;
   transition: border-radius 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease, box-shadow 0.2s ease !important;
@@ -6682,10 +6707,48 @@ body.is-standalone [data-action="open-install-guide"] {
 .library-avatar-btn:active,
 .lyrics-close-btn:hover,
 .lyrics-close-btn:active,
+.fs-pill-btn:hover,
+.fs-pill-btn:active,
+[data-action="toggle-speed"]:hover,
+[data-action="toggle-speed"]:active,
+[data-action="open-lyrics"]:hover,
+[data-action="open-lyrics"]:active,
+[data-action="open-queue"]:hover,
+[data-action="open-queue"]:active,
 .md3-shape-shift:hover,
 .md3-shape-shift:active {
   border-radius: 16px !important;
   transform: scale(0.95) !important;
+}
+
+/* Header Icons Alignment & Accent */
+.header-title-icon {
+  font-size: 1.5rem !important;
+  color: var(--md-sys-color-primary, #1db954) !important;
+  margin-right: 6px !important;
+  vertical-align: middle !important;
+  display: inline-block !important;
+}
+
+/* 'You' Page Footer Credit Text */
+.you-footer-credits {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 36px 16px 28px !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  color: var(--md-sys-color-on-surface-muted, #738077) !important;
+  text-align: center !important;
+  letter-spacing: 0.02em !important;
+  user-select: none !important;
+}
+
+.you-footer-credits .you-credits-heart {
+  font-size: 0.875rem !important;
+  color: var(--md-sys-color-primary, #1db954) !important;
+  font-variation-settings: 'FILL' 1 !important;
 }
 
 /* Bottom Navigation Bar Fluid Transitions & Haptics */
