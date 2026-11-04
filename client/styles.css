@@ -4774,15 +4774,16 @@ body.has-active-track #toast-container {
 
 /* 4. Home Screen Spotify Overhaul */
 .home-page-spotify {
-  background-color: #121212;
-  padding: 16px 16px 120px;
+  background-color: #000000 !important;
+  padding: 8px 16px 120px !important;
 }
 
 .home-top-bar {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 12px !important;
+  padding: 6px 0 !important;
 }
 
 .home-user-avatar-btn {
@@ -5747,6 +5748,15 @@ body.has-active-track #toast-container {
   transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
+.home-compact-thumb-wrap {
+  position: relative !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  height: 56px !important;
+  flex-shrink: 0 !important;
+}
+
 .home-compact-thumb {
   width: 56px !important;
   min-width: 56px !important;
@@ -5757,6 +5767,22 @@ body.has-active-track #toast-container {
   border-radius: 8px 0 0 8px !important;
   flex-shrink: 0 !important;
   display: block !important;
+}
+
+.home-compact-heart {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  color: var(--md-sys-color-primary, #1db954) !important;
+  border-radius: 8px 0 0 8px !important;
+}
+
+.home-compact-heart .material-symbols-rounded {
+  font-size: 1.5rem !important;
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
 }
 
 .home-compact-title {
@@ -6139,7 +6165,8 @@ body.is-standalone [data-action="open-install-guide"] {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 10px 0 16px !important;
+  padding: 6px 0 10px !important;
+  margin-bottom: 8px !important;
   gap: 12px !important;
   width: 100% !important;
 }
@@ -6610,25 +6637,315 @@ body.is-standalone [data-action="open-install-guide"] {
   opacity: 0.88 !important;
 }
 
-/* Play button loading shimmer indicator */
-.play-loading-shimmer {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background-color: currentColor;
-  animation: md3PulseDot 0.8s infinite alternate cubic-bezier(0.2, 0, 0, 1);
+/* ==========================================================================
+   PHASE 4: MD3 SHAPE-SHIFTING HAPTICS & TRANSITIONS
+   Circular controls transition from 50% circle to 16px squircle on hover/active
+   ========================================================================== */
+.fs-play-btn-accent,
+.fs-play-btn-cyan,
+.fs-nav-circle-btn,
+.scroll-play-btn,
+.playlist-fab-play,
+.playlist-action-circle,
+.player-play-btn,
+.player-nav-btn,
+.home-user-avatar-btn,
+.search-avatar-btn,
+.library-avatar-btn,
+.lyrics-close-btn,
+.md3-shape-shift {
+  border-radius: 50% !important;
+  transition: border-radius 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-@keyframes md3PulseDot {
-  0% {
-    transform: scale(0.6);
-    opacity: 0.4;
+.fs-play-btn-accent:hover,
+.fs-play-btn-accent:active,
+.fs-play-btn-cyan:hover,
+.fs-play-btn-cyan:active,
+.fs-nav-circle-btn:hover,
+.fs-nav-circle-btn:active,
+.scroll-play-btn:hover,
+.scroll-play-btn:active,
+.playlist-fab-play:hover,
+.playlist-fab-play:active,
+.playlist-action-circle:hover,
+.playlist-action-circle:active,
+.player-play-btn:hover,
+.player-play-btn:active,
+.player-nav-btn:hover,
+.player-nav-btn:active,
+.home-user-avatar-btn:hover,
+.home-user-avatar-btn:active,
+.search-avatar-btn:hover,
+.search-avatar-btn:active,
+.library-avatar-btn:hover,
+.library-avatar-btn:active,
+.lyrics-close-btn:hover,
+.lyrics-close-btn:active,
+.md3-shape-shift:hover,
+.md3-shape-shift:active {
+  border-radius: 16px !important;
+  transform: scale(0.95) !important;
+}
+
+/* Bottom Navigation Bar Fluid Transitions & Haptics */
+.mobile-nav-item {
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+  user-select: none !important;
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.92) !important;
+}
+
+.mobile-nav-pill {
+  transition: background-color 0.26s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), width 0.25s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.mobile-nav-item:active .mobile-nav-pill {
+  transform: scale(0.95) !important;
+}
+
+/* ==========================================================================
+   PHASE 5: LRCLIB SYNCHRONIZED & PLAIN LYRICS OVERLAY
+   ========================================================================== */
+.lyrics-panel {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 150 !important;
+  background-color: #000000 !important;
+  display: none;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border: none !important;
+  box-shadow: 0 -8px 36px rgba(0, 0, 0, 0.8) !important;
+}
+
+.lyrics-panel.active {
+  display: flex !important;
+  animation: lyricsSlideUp 0.32s cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+@keyframes lyricsSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
   }
-  100% {
-    transform: scale(1.15);
+  to {
     opacity: 1;
+    transform: translateY(0);
   }
+}
+
+.lyrics-panel-inner {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  background-color: #000000 !important;
+  overflow: hidden !important;
+}
+
+.lyrics-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 14px 20px !important;
+  background-color: #000000 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  flex-shrink: 0 !important;
+}
+
+.lyrics-header-left {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+  padding-right: 12px !important;
+}
+
+.lyrics-track-title {
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.lyrics-track-artist {
+  font-size: 0.8125rem !important;
+  color: #888888 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.lyrics-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+}
+
+.lyrics-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  padding: 4px 10px !important;
+  border-radius: 9999px !important;
+}
+
+.lyrics-badge-synced {
+  background: rgba(29, 185, 84, 0.16) !important;
+  color: #1db954 !important;
+}
+
+.lyrics-badge-plain {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #cccccc !important;
+}
+
+.lyrics-badge-loading {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #888888 !important;
+}
+
+.lyrics-badge-icon {
+  font-size: 1rem !important;
+}
+
+.lyrics-close-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: none !important;
+  color: #ffffff !important;
+  cursor: pointer !important;
+}
+
+.lyrics-body {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  scroll-behavior: smooth !important;
+  padding: 24px 20px 140px !important;
+  background-color: #000000 !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.lyrics-synced-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  max-width: 680px !important;
+  margin: 0 auto !important;
+  padding: 20vh 0 !important;
+}
+
+.lyrics-line {
+  font-size: 1.3rem !important;
+  font-weight: 600 !important;
+  line-height: 1.45 !important;
+  color: rgba(255, 255, 255, 0.32) !important;
+  padding: 10px 16px !important;
+  border-radius: 12px !important;
+  cursor: pointer !important;
+  transition: color 0.25s cubic-bezier(0.2, 0, 0, 1), transform 0.25s cubic-bezier(0.2, 0, 0, 1), font-size 0.25s cubic-bezier(0.2, 0, 0, 1), text-shadow 0.25s ease !important;
+  user-select: none !important;
+  text-align: left !important;
+}
+
+.lyrics-line:hover {
+  color: rgba(255, 255, 255, 0.72) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.lyrics-line.active {
+  color: #1db954 !important;
+  font-size: 1.65rem !important;
+  font-weight: 800 !important;
+  transform: scale(1.03) translateX(4px) !important;
+  text-shadow: 0 0 24px rgba(29, 185, 84, 0.45) !important;
+  background: transparent !important;
+}
+
+.lyrics-plain-text {
+  max-width: 600px !important;
+  margin: 0 auto !important;
+  text-align: left !important;
+  padding: 20px 0 !important;
+}
+
+.lyrics-plain-line {
+  font-size: 1.125rem !important;
+  line-height: 1.8 !important;
+  color: #cccccc !important;
+  margin-bottom: 6px !important;
+}
+
+.lyrics-plain-gap {
+  height: 16px !important;
+}
+
+.lyrics-loading-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+  max-width: 500px !important;
+  margin: 60px auto 0 !important;
+}
+
+.lyrics-skeleton-line {
+  height: 24px !important;
+  border-radius: 8px !important;
+  background: linear-gradient(90deg, #161616 25%, #242424 50%, #161616 75%) !important;
+  background-size: 200% 100% !important;
+  animation: skeletonShimmer 1.5s infinite !important;
+}
+
+.lyrics-empty-container {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 80px 20px !important;
+}
+
+.lyrics-empty-icon {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #888888 !important;
+  margin-bottom: 20px !important;
+}
+
+.lyrics-empty-icon .material-symbols-rounded {
+  font-size: 2rem !important;
+}
+
+.lyrics-empty-title {
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin-bottom: 8px !important;
+}
+
+.lyrics-empty-desc {
+  font-size: 0.875rem !important;
+  color: #888888 !important;
+  max-width: 320px !important;
+  line-height: 1.5 !important;
 }
 
 

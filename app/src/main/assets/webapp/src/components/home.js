@@ -152,111 +152,69 @@ export function renderHomePage() {
   const categories = state.feedCategories || [];
   const activeFilter = state.homeFilter || 'all';
 
-  // 1. Collect up to 8 top items for the 2-column compact recent grid (4 rows of 2)
-  const topRecentPicks = [];
-  const seenIds = new Set();
+  // Exactly 4 horizontal quick-launch cards at the top of the feed
+  const favCover = state.favorites?.[0]?.coverUrl || '/assets/pawtify.png';
+  const heavySong = state.recentlyPlayed?.[0] ? getSongById(state.recentlyPlayed[0]) : null;
+  const heavyCover = heavySong?.coverUrl || state.recommendedSongs?.[0]?.coverUrl || '/assets/pawtify.png';
+  const discoverCover = state.recommendedSongs?.[1]?.coverUrl || state.recommendedSongs?.[0]?.coverUrl || '/assets/pawtify.png';
+  const topMixCover = state.feedCategories?.[0]?.songs?.[0]?.coverUrl || state.recommendedSongs?.[2]?.coverUrl || '/assets/pawtify.png';
 
-  if (state.favorites && state.favorites.length > 0) {
-    topRecentPicks.push({
-      id: 'liked-songs',
+  const topFourCards = [
+    {
+      id: 'card-liked-songs',
       title: 'Liked Songs',
-      coverUrl: state.favorites[0].coverUrl || '/assets/pawtify.png',
-      action: 'navigate-liked',
+      coverUrl: favCover,
       route: '/playlist/liked',
-    });
-  }
+      isLiked: true,
+    },
+    {
+      id: 'card-heavy-rotation',
+      title: 'Heavy Rotation',
+      coverUrl: heavyCover,
+      route: '/playlist/history',
+      songId: heavySong?.id || null,
+    },
+    {
+      id: 'card-discover-weekly',
+      title: 'Discover Weekly',
+      coverUrl: discoverCover,
+      action: 'search-category',
+      category: 'Discover',
+    },
+    {
+      id: 'card-top-mixes',
+      title: 'Top Mixes',
+      coverUrl: topMixCover,
+      action: 'navigate',
+      path: '/library',
+    },
+  ];
 
-  (state.playlists || []).forEach((p) => {
-    if (topRecentPicks.length < 8) {
-      topRecentPicks.push({
-        id: p.id,
-        title: p.name,
-        coverUrl: p.coverUrl || p.songs?.[0]?.coverUrl || '/assets/pawtify.png',
-        action: 'open-playlist-profile',
-        playlistId: p.id,
-      });
-    }
-  });
-
-  // Pull from recently played tracks
-  (state.recentlyPlayed || []).forEach((songId) => {
-    if (topRecentPicks.length < 8 && !seenIds.has(songId)) {
-      const s = getSongById(songId);
-      if (s) {
-        seenIds.add(songId);
-        topRecentPicks.push({
-          id: s.id,
-          title: s.title,
-          coverUrl: s.coverUrl,
-          action: 'play-song',
-          songId: s.id,
-        });
-      }
-    }
-  });
-
-  // Fallbacks from recommended or feed categories if fewer than 8
-  if (topRecentPicks.length < 8 && rec.length) {
-    rec.forEach((s) => {
-      if (topRecentPicks.length < 8 && !seenIds.has(s.id)) {
-        seenIds.add(s.id);
-        topRecentPicks.push({
-          id: s.id,
-          title: s.title,
-          coverUrl: s.coverUrl,
-          action: 'play-song',
-          songId: s.id,
-        });
-      }
-    });
-  }
-
-  // 2-Column Grid HTML
-  const compactGridHTML = topRecentPicks.length
-    ? topRecentPicks
-        .slice(0, 8)
-        .map((item) => {
-          const cover = getOptimizedArtwork(item.coverUrl, 160);
-          return `
-            <article class="home-compact-card"
-                     ${item.route ? `data-route="${escapeHTML(item.route)}"` : ''}
-                     ${item.playlistId ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(item.playlistId)}"` : ''}
-                     ${item.category ? `data-action="search-category" data-category="${escapeHTML(item.category)}"` : ''}
-                     ${item.songId ? `data-action="play-song" data-song-id="${escapeHTML(item.songId)}" data-source="home-compact"` : ''}
-                     role="button"
-                     tabindex="0"
-                     aria-label="Play ${escapeHTML(item.title)}">
-              <img class="home-compact-thumb" src="${escapeHTML(cover)}" alt="" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-              <span class="home-compact-title">${escapeHTML(item.title)}</span>
-            </article>
-          `;
-        })
-        .join('')
-    : Array(8).fill('').map(() => renderHomeGridSkeleton()).join('');
-
-  // Sections
-  let sectionsHTML = '';
-
-  // Recents section
-  if (state.recentlyPlayed && state.recentlyPlayed.length) {
-    const recentSongs = state.recentlyPlayed
-      .map((id) => getSongById(id))
-      .filter(Boolean)
-      .slice(0, 10);
-    if (recentSongs.length) {
-      sectionsHTML += `
-        <section class="home-section">
-          <div class="home-section-header">
-            <h2 class="home-section-title">Recents</h2>
-            <button class="home-section-link" data-route="/playlist/history" type="button">Show all</button>
+  // 4-Card Grid HTML (2 rows of 2)
+  const compactGridHTML = topFourCards
+    .map((item) => {
+      const cover = getOptimizedArtwork(item.coverUrl, 160);
+      return `
+        <article class="home-compact-card md3-shape-shift"
+                 ${item.route ? `data-route="${escapeHTML(item.route)}"` : ''}
+                 ${item.path ? `data-action="navigate" data-path="${escapeHTML(item.path)}"` : ''}
+                 ${item.action ? `data-action="${escapeHTML(item.action)}" data-category="${escapeHTML(item.category || '')}"` : ''}
+                 ${item.songId ? `data-action="play-song" data-song-id="${escapeHTML(item.songId)}" data-source="home-compact"` : ''}
+                 role="button"
+                 tabindex="0"
+                 aria-label="Open ${escapeHTML(item.title)}">
+          <div class="home-compact-thumb-wrap">
+            <img class="home-compact-thumb" src="${escapeHTML(cover)}" alt="" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+            ${item.isLiked ? '<span class="home-compact-heart"><span class="material-symbols-rounded">favorite</span></span>' : ''}
           </div>
-          <div class="home-scroll">
-            ${recentSongs.map((s, i) => renderHomeScrollCard(s, i, 'history')).join('')}
-          </div>
-        </section>
+          <span class="home-compact-title">${escapeHTML(item.title)}</span>
+        </article>
       `;
-    }
-  }
+    })
+    .join('');
+
+  // Sections (Recents carousel removed per design specifications; accessible in Library)
+  let sectionsHTML = '';
 
   // Recommended For You
   if (rec.length) {

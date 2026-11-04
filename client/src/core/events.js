@@ -52,6 +52,7 @@ import {
 } from '../components/fullscreen.js';
 import { downloadCurrentSong, formatTime, openLyrics, saveJSON } from '../utils/utils.js';
 import { renderLyricsPanel } from '../components/lyrics.js';
+import { fetchLyricsForSong } from '../services/lyricsService.js';
 import { updateWavyProgress } from '../components/wavyProgress.js';
 import {
   openArtistProfile,
@@ -477,6 +478,24 @@ export function bindGlobalEvents() {
       if (action === 'close-lyrics') {
         event.preventDefault();
         closeLyricsPanel();
+        return;
+      }
+      if (action === 'seek-lyric') {
+        event.preventDefault();
+        const targetTime = parseFloat(actionNode.dataset.time);
+        if (!isNaN(targetTime) && targetTime >= 0) {
+          seekTo(targetTime);
+          if (!state.isPlaying) {
+            togglePlay();
+          }
+        }
+        return;
+      }
+      if (action === 'retry-lyrics') {
+        event.preventDefault();
+        if (state.currentSong) {
+          fetchLyricsForSong(state.currentSong);
+        }
         return;
       }
       if (action === 'open-artist-profile') {
