@@ -7027,11 +7027,11 @@ body.is-standalone [data-action="open-install-guide"] {
 }
 
 .lyrics-line.active {
-  color: #1db954 !important;
+  color: #ffffff !important;
   font-size: 1.65rem !important;
   font-weight: 800 !important;
-  transform: scale(1.03) translateX(4px) !important;
-  text-shadow: 0 0 24px rgba(29, 185, 84, 0.45) !important;
+  transform: scale(1.02) translateX(2px) !important;
+  text-shadow: none !important;
   background: transparent !important;
 }
 
@@ -7106,6 +7106,227 @@ body.is-standalone [data-action="open-install-guide"] {
   color: #888888 !important;
   max-width: 320px !important;
   line-height: 1.5 !important;
+}
+
+/* ==========================================================================
+   PHASE 1 & 4: SONG INFO OVERLAY, LOADING SPINNER & MD3 POP-UP ANIMATIONS
+   ========================================================================== */
+
+/* 1. Song Info Overlay (Matching lyrics view layout & typography) */
+.fs-cover-wrap {
+  position: relative !important;
+  cursor: pointer !important;
+}
+
+.fs-song-info-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-radius: inherit !important;
+  padding: 20px 18px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: scale(0.96) !important;
+  transition: opacity 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1) !important;
+  z-index: 10 !important;
+  user-select: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.fs-song-info-overlay.active {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: scale(1) !important;
+}
+
+.fs-info-overlay-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.fs-info-overlay-title {
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  color: #ffffff !important;
+}
+
+.fs-info-overlay-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  margin: auto 0 !important;
+}
+
+.fs-info-overlay-row {
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+
+.fs-info-label {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: #888888 !important;
+  flex-shrink: 0 !important;
+}
+
+.fs-info-value {
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  color: #ffffff !important;
+  text-align: right !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 170px !important;
+}
+
+.fs-info-value.mono {
+  font-family: monospace !important;
+  font-size: 0.75rem !important;
+  color: #1db954 !important;
+}
+
+.fs-info-overlay-hint {
+  font-size: 0.7rem !important;
+  color: #666666 !important;
+  text-align: center !important;
+  padding-top: 8px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+/* 2. Full-Screen Player Thumbnail Upward Spacing & Compactness */
+.fs-body {
+  margin-top: 4px !important;
+  gap: 12px !important;
+}
+
+/* 3. Spinning MD3 Buffering/Loading Indicator */
+.play-loading-spinner {
+  display: inline-block !important;
+  font-size: 1.5rem !important;
+  animation: spin 0.8s linear infinite !important;
+  color: inherit !important;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 4. Compact Lyrics View Header & Alignment */
+.lyrics-header-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.lyrics-track-thumb {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 8px !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+  background-color: #1a1a1a !important;
+}
+
+.lyrics-track-info-text {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+/* 5. Smooth, Buttery MD3 Pop-Up Animations */
+.queue-panel.active,
+.artist-profile.active,
+.lyrics-panel.active,
+.player-more-sheet.active {
+  animation: md3PopIn 0.22s cubic-bezier(0.2, 0, 0, 1) forwards !important;
+}
+
+@keyframes md3PopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 6. MD3 Compact Search Bar (Pill-shaped, aligned icons, tight padding) */
+.search-pill-container {
+  display: flex !important;
+  align-items: center !important;
+  background: #1a1a1a !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 9999px !important;
+  height: 48px !important;
+  padding: 0 16px !important;
+  gap: 12px !important;
+  max-width: 640px !important;
+  margin: 0 auto 16px !important;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.search-pill-container:focus-within {
+  background: #222222 !important;
+  border-color: var(--green, #1db954) !important;
+  box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.25) !important;
+}
+
+.search-pill-icon {
+  color: #888888 !important;
+  font-size: 1.25rem !important;
+  flex-shrink: 0 !important;
+}
+
+.search-pill-input {
+  flex: 1 !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  color: #ffffff !important;
+  font-size: 0.9375rem !important;
+  font-weight: 500 !important;
+}
+
+.search-pill-input::placeholder {
+  color: #777777 !important;
+}
+
+/* 7. Global Header Text Tightening & Compactness */
+.search-title-spotify,
+.library-title,
+.home-greeting,
+.you-profile-name {
+  font-size: 1.35rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+}
+
+.you-quick-hub-three {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 10px !important;
 }
 
 

@@ -1,6 +1,6 @@
 import { state } from '../config/config.js';
 import { lyricsPanel } from '../config/dom.js';
-import { escapeHTML } from '../utils/utils.js';
+import { escapeHTML, getOptimizedArtwork } from '../utils/utils.js';
 import {
   fetchLyricsForSong,
   recordUserLyricsScroll,
@@ -134,8 +134,11 @@ export function renderLyricsPanel() {
     <div class="lyrics-panel-inner">
       <div class="lyrics-header">
         <div class="lyrics-header-left">
-          <div class="lyrics-track-title">${song ? escapeHTML(song.title) : 'Lyrics'}</div>
-          <div class="lyrics-track-artist">${song ? escapeHTML(song.artist || song.uploaderName || '') : ''}</div>
+          <img class="lyrics-track-thumb" src="${escapeHTML(getOptimizedArtwork(song?.coverUrl, 120))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+          <div class="lyrics-track-info-text">
+            <div class="lyrics-track-title">${song ? escapeHTML(song.title) : 'Lyrics'}</div>
+            <div class="lyrics-track-artist">${song ? escapeHTML(song.artist || song.uploaderName || '') : ''}</div>
+          </div>
         </div>
         <div class="lyrics-header-actions">
           ${statusBadge}

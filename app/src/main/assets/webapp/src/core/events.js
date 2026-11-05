@@ -50,6 +50,7 @@ import {
   openSleepTimerMenu,
   setSleepTimer,
   togglePlaybackSpeed,
+  toggleSongInfoOverlay,
 } from '../components/fullscreen.js';
 import { downloadCurrentSong, formatTime, openLyrics, saveJSON } from '../utils/utils.js';
 import { renderLyricsPanel } from '../components/lyrics.js';
@@ -633,6 +634,11 @@ export function bindGlobalEvents() {
       if (action === 'toggle-speed') {
         event.preventDefault();
         togglePlaybackSpeed();
+        return;
+      }
+      if (action === 'toggle-song-info-overlay') {
+        event.preventDefault();
+        toggleSongInfoOverlay();
         return;
       }
       if (action === 'start-song-radio') {

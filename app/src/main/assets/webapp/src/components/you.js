@@ -239,14 +239,12 @@ export function renderYouPage() {
             </button>
             <div class="you-profile-info">
               <span class="you-profile-kicker">Listener Profile</span>
-              <div class="you-profile-name-row">
+              <div class="you-profile-name-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                 <h1 class="you-profile-name">${escapeHTML(state.userName || 'Music Lover')}</h1>
-                <button class="icon-btn small you-name-edit-icon" data-action="edit-user-name" type="button" aria-label="Edit Name" title="Edit Name">
-                  <span class="material-symbols-rounded" style="font-size: 1rem;">edit</span>
-                </button>
-              </div>
-              <div class="you-profile-meta-row">
-                <span class="you-badge-member">Pawtify user 👑</span>
+                <span class="you-badge-member">
+                  <span class="material-symbols-rounded" style="font-size: 0.95rem; margin-right: 3px;">workspace_premium</span>
+                  <span>Pawtify user</span>
+                </span>
               </div>
             </div>
             <div class="you-profile-actions">
@@ -280,23 +278,19 @@ export function renderYouPage() {
             </div>
           </div>
 
-          <!-- Quick Navigation Hub -->
-          <div class="you-quick-hub">
+          <!-- Primary Quick Hub Actions: Exactly 3 (Liked Songs, Playlists, History) -->
+          <div class="you-quick-hub you-quick-hub-three">
+            <button class="you-hub-tile" data-action="navigate" data-path="/playlist/liked" type="button">
+              <span class="material-symbols-rounded you-hub-icon" style="color:var(--green, #1db954);">favorite</span>
+              <span class="you-hub-title">Liked Songs</span>
+            </button>
             <button class="you-hub-tile" data-action="navigate" data-path="/library" type="button">
               <span class="material-symbols-rounded you-hub-icon">library_music</span>
-              <span class="you-hub-title">Your Library</span>
-            </button>
-            <button class="you-hub-tile" data-action="navigate" data-path="/playlist/liked" type="button">
-              <span class="material-symbols-rounded you-hub-icon" style="color:var(--green);">favorite</span>
-              <span class="you-hub-title">Liked Songs</span>
+              <span class="you-hub-title">Playlists</span>
             </button>
             <button class="you-hub-tile" data-action="navigate" data-path="/playlist/history" type="button">
               <span class="material-symbols-rounded you-hub-icon">history</span>
-              <span class="you-hub-title">Recents</span>
-            </button>
-            <button class="you-hub-tile" data-action="open-settings" type="button">
-              <span class="material-symbols-rounded you-hub-icon">tune</span>
-              <span class="you-hub-title">Settings</span>
+              <span class="you-hub-title">History</span>
             </button>
           </div>
         </div>

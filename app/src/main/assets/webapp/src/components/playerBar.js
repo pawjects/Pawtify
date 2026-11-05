@@ -335,7 +335,7 @@ export function refreshPlaybackUI() {
   playToggles.forEach((playToggle) => {
     if (playToggle) {
       if (state.isLoading) {
-        playToggle.innerHTML = '<span class="play-loading-shimmer" aria-label="Loading audio"></span>';
+        playToggle.innerHTML = '<span class="material-symbols-rounded play-loading-spinner" aria-label="Buffering audio">progress_activity</span>';
       } else {
         playToggle.innerHTML = state.isPlaying
           ? '<span class="material-symbols-rounded">pause</span>'

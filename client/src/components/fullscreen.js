@@ -178,8 +178,10 @@ export function renderFullscreenPlayer(force = false) {
   const isFav = state.favorites.some((item) => item.id === song.id);
   const fsMax = Math.max(1, Math.floor(state.duration || song.durationSec || 1));
   const curProgress = Math.max(0, Math.min(fsMax, state.progress || 0));
-  const remainingSec = Math.max(0, fsMax - curProgress);
   const speedLabel = state.playbackRate ? `${state.playbackRate}x` : '1x';
+  const showInfo = Boolean(state.showSongInfoOverlay);
+  const audioQuality = getExactAudioQuality() || '256kbps AAC (Opus)';
+  const uploadDate = song.uploadedAt || song.uploadDate || song.publishedText || 'Official Release';
 
   const repeatIcon =
     state.repeatMode === 'one'
@@ -200,8 +202,41 @@ export function renderFullscreenPlayer(force = false) {
        </div>
 
        <div class="fs-body">
-         <div class="fs-cover-wrap">
+         <div class="fs-cover-wrap" data-action="toggle-song-info-overlay" role="button" tabindex="0" title="Click to view track info">
            <img class="fs-cover" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 720))}" alt="${escapeHTML(song.title)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+           <div class="fs-song-info-overlay ${showInfo ? 'active' : ''}" id="fs-song-info-overlay">
+             <div class="fs-info-overlay-header">
+               <span class="material-symbols-rounded" style="color: var(--green, #1db954); font-size: 1.15rem;">info</span>
+               <span class="fs-info-overlay-title">Track Metadata</span>
+             </div>
+             <div class="fs-info-overlay-body">
+               <div class="fs-info-overlay-row">
+                 <span class="fs-info-label">Name</span>
+                 <span class="fs-info-value">${escapeHTML(song.title || 'Unknown')}</span>
+               </div>
+               <div class="fs-info-overlay-row">
+                 <span class="fs-info-label">Artist</span>
+                 <span class="fs-info-value">${escapeHTML(song.artist || song.uploaderName || 'Unknown')}</span>
+               </div>
+               <div class="fs-info-overlay-row">
+                 <span class="fs-info-label">Duration</span>
+                 <span class="fs-info-value">${formatTime(fsMax)}</span>
+               </div>
+               <div class="fs-info-overlay-row">
+                 <span class="fs-info-label">Upload Date</span>
+                 <span class="fs-info-value">${escapeHTML(uploadDate)}</span>
+               </div>
+               <div class="fs-info-overlay-row">
+                 <span class="fs-info-label">Video ID</span>
+                 <span class="fs-info-value mono">${escapeHTML(song.id || 'N/A')}</span>
+               </div>
+               <div class="fs-info-overlay-row">
+                 <span class="fs-info-label">Quality</span>
+                 <span class="fs-info-value">${escapeHTML(audioQuality)}</span>
+               </div>
+             </div>
+             <div class="fs-info-overlay-hint">Tap again to view artwork</div>
+           </div>
          </div>
 
          <div class="fs-info">
@@ -221,7 +256,7 @@ export function renderFullscreenPlayer(force = false) {
            </div>
            <div class="fs-time">
              <span id="fs-time-current">${formatTime(curProgress)}</span>
-             <span id="fs-time-total">-${formatTime(remainingSec)}</span>
+             <span id="fs-time-total">${formatTime(fsMax)}</span>
            </div>
          </div>
 
@@ -234,7 +269,7 @@ export function renderFullscreenPlayer(force = false) {
              <span class="material-symbols-rounded">skip_previous</span>
            </button>
            <button class="fs-play-btn-accent fs-play-btn-cyan" data-action="toggle-play" type="button" aria-label="Play/Pause">
-             ${state.isPlaying ? '<span class="material-symbols-rounded">pause</span>' : '<span class="material-symbols-rounded">play_arrow</span>'}
+             ${state.isLoading ? '<span class="material-symbols-rounded play-loading-spinner">progress_activity</span>' : (state.isPlaying ? '<span class="material-symbols-rounded">pause</span>' : '<span class="material-symbols-rounded">play_arrow</span>')}
            </button>
            <button class="fs-nav-circle-btn" data-action="next-track" type="button" aria-label="Next">
              <span class="material-symbols-rounded">skip_next</span>
@@ -522,4 +557,14 @@ export async function playYTPlaylist(playlistId) {
   }
   state.isLoading = false;
   renderCurrentRoute();
+}
+
+export function toggleSongInfoOverlay() {
+  state.showSongInfoOverlay = !state.showSongInfoOverlay;
+  const overlay = document.getElementById('fs-song-info-overlay');
+  if (overlay) {
+    overlay.classList.toggle('active', Boolean(state.showSongInfoOverlay));
+  } else {
+    renderFullscreenPlayer(true);
+  }
 }

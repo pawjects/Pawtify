@@ -851,8 +851,8 @@ export function renderPlaylistPage(playlistId) {
           <img class="playlist-art-large" src="${escapeHTML(getOptimizedArtwork(coverUrl, 560))}" alt="${escapeHTML(playlist.name)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
         </div>
         <h1 class="playlist-title-large">${escapeHTML(playlist.name)}</h1>
-        <div class="playlist-creator-meta">
-          <img class="playlist-creator-avatar" src="/assets/pawtify.png" alt="Pawtify" />
+        <div class="playlist-creator-meta" style="display: flex; align-items: center; gap: 6px; justify-content: center;">
+          <span class="material-symbols-rounded playlist-creator-icon" style="font-size: 1.35rem; color: var(--green, #1db954);">account_circle</span>
           <span class="playlist-creator-name">${escapeHTML(playlist.uploaderName || 'Pawtify')}</span>
         </div>
         <p class="playlist-sub-stats">
@@ -1161,23 +1161,6 @@ export function renderSearchCategories() {
         </div>
       ` : ''}
 
-      <!-- Discover something new Horizontal Carousel (Tall Vertical Video Cards with tags) -->
-      <section class="discover-section">
-        <h2 class="discover-section-title">Discover something new</h2>
-        <div class="discover-carousel">
-          ${DISCOVER_ITEMS.map((item) => `
-            <article class="discover-card-vertical" data-action="use-recent-search" data-query="${escapeHTML(item.query)}" role="button" tabindex="0" style="background-image: url('${item.bg}');">
-              <div class="discover-card-overlay"></div>
-              <div class="discover-card-tag">${escapeHTML(item.tag)}</div>
-              <div class="discover-card-info">
-                <span class="discover-card-title">${escapeHTML(item.title)}</span>
-                <span class="discover-card-artist">${escapeHTML(item.artist)}</span>
-              </div>
-            </article>
-          `).join('')}
-        </div>
-      </section>
-
       <!-- Browse All 2-Column Angled Category Grid -->
       <section class="search-browse-section">
         <h2 class="search-section-title" style="margin-bottom: 14px;">Browse all</h2>
@@ -1187,28 +1170,6 @@ export function renderSearchCategories() {
               <span class="category-card-title">${escapeHTML(cat.name)}</span>
               <img class="angled-thumb" src="${cat.image}" alt="" loading="lazy" draggable="false" />
             </div>
-          `).join('')}
-        </div>
-      </section>
-
-      <!-- Recommended Stations Horizontal Carousel (Moved from Home Page) -->
-      <section class="search-section search-stations-section" style="margin-top: 20px;">
-        <h2 class="search-section-title" style="margin-bottom: 14px;">Recommended Stations</h2>
-        <div class="home-scroll station-scroll">
-          ${RECOMMENDED_STATIONS.map((st) => `
-            <article class="station-card" style="background-color: ${st.bgColor}; color: ${st.textColor};" data-action="search-artist-station" data-artist="${escapeHTML(st.artist)}" role="button" tabindex="0">
-              <div class="station-header">
-                <span class="material-symbols-rounded station-logo" style="font-size: 1.15rem;">music_note</span>
-                <span class="station-badge">RADIO</span>
-              </div>
-              <div class="station-art-wrap">
-                <img class="station-artist-photo" src="${escapeHTML(st.artistImg)}" alt="${escapeHTML(st.artist)}" loading="lazy" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-              </div>
-              <div class="station-footer">
-                <h3 class="station-title" style="color: ${st.textColor};">${escapeHTML(st.artist)}</h3>
-                <p class="station-subtitle" style="color: rgba(0,0,0,0.65);">${escapeHTML(st.subtitle)}</p>
-              </div>
-            </article>
           `).join('')}
         </div>
       </section>

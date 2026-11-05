@@ -144,8 +144,7 @@ function drawFrame() {
 
   const fsTotalLabel = document.getElementById('fs-time-total');
   if (fsTotalLabel && !state.isSeeking) {
-    const remaining = Math.max(0, maxSec - curSec);
-    fsTotalLabel.textContent = `-${formatTime(remaining)}`;
+    fsTotalLabel.textContent = formatTime(maxSec);
   }
 
   const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
