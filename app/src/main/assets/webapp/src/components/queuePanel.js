@@ -123,6 +123,17 @@ function bindQueueDragAndDrop() {
   const items = container.querySelectorAll('.queue-item-reorderable');
 
   items.forEach((item) => {
+    // Row click event: bound to the entire list item row (text + thumbnail container)
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('button, .song-action-btn, .song-menu-trigger, .queue-menu-btn')) {
+        return;
+      }
+      const qIdx = parseInt(item.dataset.queueIndex, 10);
+      if (!isNaN(qIdx) && state.queue && state.queue[qIdx]) {
+        playQueueTrack(qIdx);
+      }
+    });
+
     // --- DESKTOP HTML5 DRAG & DROP ---
     item.addEventListener('dragstart', (e) => {
       draggedQueueIndex = parseInt(item.dataset.queueIndex, 10);
@@ -348,7 +359,6 @@ if (miniPlayer) {
       miniPlayerTouchStartX = e.changedTouches[0].screenX;
       miniPlayerTouchStartY = e.changedTouches[0].screenY;
       isMiniPlayerDragging = true;
-      miniPlayer.style.transition = 'none';
     },
     { passive: true }
   );
@@ -356,27 +366,8 @@ if (miniPlayer) {
   miniPlayer.addEventListener(
     'touchmove',
     (e) => {
+      // Invisible gesture registration without DOM translation
       if (!isMiniPlayerDragging) return;
-      const currentX = e.changedTouches[0].screenX;
-      const currentY = e.changedTouches[0].screenY;
-      const diffX = currentX - miniPlayerTouchStartX;
-      const diffY = currentY - miniPlayerTouchStartY;
-      const absX = Math.abs(diffX);
-      const absY = Math.abs(diffY);
-
-      if (absX > absY) {
-        // Horizontal Swipe Physics (Track navigation)
-        miniPlayer.style.transform = `translateX(${diffX * 0.7}px) scale(0.98)`;
-        miniPlayer.style.opacity = `${Math.max(0.65, 1 - absX / 280)}`;
-      } else if (diffY > 0) {
-        // Dragging down toward dismiss
-        miniPlayer.style.transform = `translateY(${diffY}px) scale(${Math.max(0.92, 1 - diffY / 400)})`;
-        miniPlayer.style.opacity = `${Math.max(0.3, 1 - diffY / 160)}`;
-      } else if (diffY < 0) {
-        // Dragging up toward expand
-        miniPlayer.style.transform = `translateY(${diffY * 0.4}px) scale(1.01)`;
-        miniPlayer.style.opacity = '1';
-      }
     },
     { passive: true }
   );
@@ -393,65 +384,32 @@ if (miniPlayer) {
       const absX = Math.abs(diffX);
       const absY = Math.abs(diffY);
 
-      miniPlayer.style.transition = 'transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s ease';
-
       // 1. Horizontal Swipe (Swipe Left -> Next Track, Swipe Right -> Previous Track)
       if (absX > absY && absX > 35) {
-        const isNext = diffX < 0; // Swipe left
-        miniPlayer.style.transform = isNext ? 'translateX(-100%)' : 'translateX(100%)';
-        miniPlayer.style.opacity = '0';
-        setTimeout(() => {
-          miniPlayer.style.transition = 'none';
-          miniPlayer.style.transform = isNext ? 'translateX(60%)' : 'translateX(-60%)';
-          if (isNext) {
-            nextTrack();
-          } else {
-            previousTrack();
-          }
-          requestAnimationFrame(() => {
-            miniPlayer.style.transition = 'transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s ease';
-            miniPlayer.style.transform = '';
-            miniPlayer.style.opacity = '';
-          });
-        }, 160);
+        if (diffX < 0) {
+          nextTrack();
+        } else {
+          previousTrack();
+        }
         return;
       }
 
-      // 2. Swipe Down to Dismiss/Close current playing track entirely
-      if (diffY > 35) {
-        miniPlayer.style.transform = 'translateY(120%)';
-        miniPlayer.style.opacity = '0';
-        setTimeout(() => {
-          miniPlayer.style.transform = '';
-          miniPlayer.style.opacity = '';
-          miniPlayer.style.transition = '';
-          dismissPlayer();
-        }, 200);
+      // 2. Swipe Down to Dismiss
+      if (diffY > 40 && diffY > absX) {
+        dismissPlayer();
         return;
       }
 
       // 3. Swipe Up to Expand Fullscreen Player
-      if (diffY < -30 && Math.abs(diffY) > absX) {
-        miniPlayer.style.transform = '';
-        miniPlayer.style.opacity = '';
+      if (diffY < -35 && Math.abs(diffY) > absX) {
         openFullscreenPlayer();
         return;
       }
-
-      // Reset to resting docked position
-      miniPlayer.style.transform = '';
-      miniPlayer.style.opacity = '';
-      setTimeout(() => {
-        miniPlayer.style.transition = '';
-      }, 250);
     },
     { passive: true }
   );
 
   miniPlayer.addEventListener('touchcancel', () => {
     isMiniPlayerDragging = false;
-    miniPlayer.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
-    miniPlayer.style.transform = '';
-    miniPlayer.style.opacity = '';
   });
 }
