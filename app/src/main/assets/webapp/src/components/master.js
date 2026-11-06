@@ -1,6 +1,6 @@
 import { state, showToast } from '../config/config.js';
 import { appMain } from '../config/dom.js';
-import { parseRoute, isValidSongId, navigate } from '../config/router.js';
+import { parseRoute, isValidSongId, navigate, updateDynamicLinkPreview } from '../config/router.js';
 import {
   markActiveNav,
   renderPlayerBar,
@@ -66,6 +66,7 @@ export async function handleSongDeepLink(songId) {
 
     // Directly open corresponding music/player view
     state.fullscreenPlayer = true;
+    updateDynamicLinkPreview(song);
     renderFullscreenPlayer();
 
     // Make sure the correct track is loaded into the player
@@ -174,7 +175,7 @@ export function renderCurrentRoute() {
           <p style="color: var(--muted); font-size: 0.9rem; max-width: 420px; margin: 0 auto 16px;">
             An error occurred while mounting the "${state.route?.name || 'current'}" screen.
           </p>
-          <button class="btn btn-primary" onclick="window.location.hash='#/'; window.location.reload();" type="button" style="padding: 8px 20px;">
+          <button class="btn btn-primary" onclick="window.location.replace('/');" type="button" style="padding: 8px 20px;">
             <span class="material-symbols-rounded">refresh</span> Reload App
           </button>
         </div>

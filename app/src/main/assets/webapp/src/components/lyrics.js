@@ -132,18 +132,6 @@ export function renderLyricsViewHTML(song) {
 
   return `
     <div class="fs-lyrics-view">
-      <div class="fs-lyrics-header">
-        <div class="fs-lyrics-header-left">
-          <img class="fs-lyrics-thumb" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 120))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-          <div class="fs-lyrics-track-info">
-            <div class="fs-lyrics-track-title">${escapeHTML(song.title)}</div>
-            <div class="fs-lyrics-track-artist">${escapeHTML(song.artist || song.uploaderName || '')}</div>
-          </div>
-        </div>
-        <div class="fs-lyrics-header-actions">
-          ${statusBadge}
-        </div>
-      </div>
       <div class="lyrics-body" id="lyrics-body-scroller">
         ${bodyContent}
       </div>

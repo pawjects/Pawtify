@@ -2,17 +2,18 @@ import { state, STORAGE, showToast, globals } from '../config/config.js';
 import { fullscreenPlayer } from '../config/dom.js';
 import { escapeHTML, formatTime, saveJSON, getOptimizedArtwork } from '../utils/utils.js';
 import { renderCurrentRoute } from './master.js';
-import { play, pause, togglePlay, previousTrack, nextTrack, toggleShuffle, toggleRepeat, setVolume } from './player.js';
+import { play, pause, togglePlay, previousTrack, nextTrack, toggleShuffle, toggleRepeat } from './player.js';
 import {
   initWavyProgress,
   teardownWavyProgress,
   updateWavyProgress,
 } from './wavyProgress.js';
-import { getExactAudioQuality, getNativeAudio } from '../services/youtube.js';
+import { getExactAudioQuality } from '../services/youtube.js';
 import { closeFullscreenPlayer, openLyricsPanel, openQueuePanel } from '../core/navigationHistory.js';
 import { refreshPlaybackUI } from './playerBar.js';
 import { renderLyricsViewHTML, attachLyricsScrollerListeners } from './lyrics.js';
 import { fetchLyricsForSong, syncLyricsWithPlayback } from '../services/lyricsService.js';
+import { extractDominantColor } from '../utils/colorExtractor.js';
 
 let gesturesInitialized = false;
 let touchStartY = 0;
@@ -190,8 +191,6 @@ export function renderFullscreenPlayer(force = false) {
   const isFav = state.favorites.some((item) => item.id === song.id);
   const fsMax = Math.max(1, Math.floor(state.duration || song.durationSec || 1));
   const curProgress = Math.max(0, Math.min(fsMax, state.progress || 0));
-  const curVolume = typeof state.volume === 'number' ? Math.max(0, Math.min(1, state.volume)) : 0.7;
-  const volPct = Math.round(curVolume * 100);
   const speedLabel = state.playbackRate ? `${state.playbackRate}x` : '1x';
 
   const repeatIcon =
@@ -201,11 +200,16 @@ export function renderFullscreenPlayer(force = false) {
   const repeatActive = state.repeatMode !== 'none' ? 'active' : '';
   const shuffleActive = state.shuffleMode ? 'active' : '';
 
-  const displayCoverOrLyricsHTML = isLyricsActive
-    ? `<div class="fs-cover-wrap fs-lyrics-mode" id="fs-cover-area">${renderLyricsViewHTML(song)}</div>`
-    : `<div class="fs-cover-wrap" id="fs-cover-area">
-         <img class="fs-cover" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 720))}" alt="${escapeHTML(song.title)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-       </div>`;
+  const coverUrl = getOptimizedArtwork(song.coverUrl, 720);
+  const glowCol = state.dominantGlowColor || { r: 29, g: 185, b: 84 };
+  const shadowGlow = `box-shadow: 0 8px 40px rgba(${glowCol.r}, ${glowCol.g}, ${glowCol.b}, 0.4);`;
+
+  const displayCoverOrLyricsHTML = `
+    <div class="fs-cover-wrap ${isLyricsActive ? 'fs-lyrics-mode' : ''}" id="fs-cover-area" style="${shadowGlow}">
+      <img class="fs-cover ${isLyricsActive ? 'lyrics-blurred' : ''}" id="fs-cover-img" src="${escapeHTML(coverUrl)}" alt="${escapeHTML(song.title)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+      ${isLyricsActive ? `<div class="fs-lyrics-overlay" id="fs-lyrics-overlay">${renderLyricsViewHTML(song)}</div>` : ''}
+    </div>
+  `;
 
   fullscreenPlayer.innerHTML = `
      <div class="fs-content">
@@ -274,26 +278,6 @@ export function renderFullscreenPlayer(force = false) {
            </button>
          </div>
 
-         <!-- Compact MD3 Volume Control Slider -->
-         <div class="fs-volume-row">
-           <button class="fs-volume-btn" data-action="fs-volume-down" type="button" aria-label="Lower volume" title="Mute / Lower volume">
-             <span class="material-symbols-rounded">volume_down</span>
-           </button>
-           <input
-             id="fs-volume-slider"
-             class="fs-volume-slider"
-             type="range"
-             min="0"
-             max="1"
-             step="0.01"
-             value="${curVolume}"
-             style="background: linear-gradient(90deg, #1DB954 0%, #1DB954 ${volPct}%, #1E1E1E ${volPct}%);"
-             aria-label="Volume slider"
-           />
-           <button class="fs-volume-btn" data-action="fs-volume-up" type="button" aria-label="Increase volume" title="Increase volume">
-             <span class="material-symbols-rounded">volume_up</span>
-           </button>
-         </div>
        </div>
      </div>
    `;
@@ -302,6 +286,15 @@ export function renderFullscreenPlayer(force = false) {
   if (waveContainer) {
     initWavyProgress(waveContainer);
   }
+
+  // Dynamic dominant color extraction for thumbnail glow drop-shadow
+  extractDominantColor(coverUrl, (color) => {
+    state.dominantGlowColor = color;
+    const coverArea = document.getElementById('fs-cover-area');
+    if (coverArea) {
+      coverArea.style.boxShadow = `0 8px 40px rgba(${color.r}, ${color.g}, ${color.b}, 0.4)`;
+    }
+  });
 
   if (isLyricsActive) {
     if ((!state.lyricsData || state.lyricsData.songId !== song.id) && !state.lyricsLoading) {
@@ -315,21 +308,7 @@ export function renderFullscreenPlayer(force = false) {
     }
   }
 
-  const fsVolSlider = fullscreenPlayer.querySelector('#fs-volume-slider');
-  if (fsVolSlider) {
-    const handleVolumeInput = (e) => {
-      const val = parseFloat(e.target.value);
-      if (!isNaN(val)) {
-        setVolume(val);
-        const audio = getNativeAudio();
-        if (audio) audio.volume = val;
-        const pct = Math.round(val * 100);
-        fsVolSlider.style.background = `linear-gradient(90deg, #1DB954 0%, #1DB954 ${pct}%, #1E1E1E ${pct}%)`;
-      }
-    };
-    fsVolSlider.addEventListener('input', handleVolumeInput);
-    fsVolSlider.addEventListener('change', handleVolumeInput);
-  }
+
 }
 
 /**

@@ -109,8 +109,13 @@ export function vibrate(pattern = 8) {
 }
 
 export function bindGlobalEvents() {
-  window.addEventListener('hashchange', renderCurrentRoute);
-  window.addEventListener('popstate', handleGlobalPopState);
+  window.addEventListener('popstate', (e) => {
+    handleGlobalPopState(e);
+    renderCurrentRoute();
+  });
+  window.addEventListener('pawtify:navigate', () => {
+    renderCurrentRoute();
+  });
   window.addEventListener('resize', () => markActiveNav());
 
   // Instantaneous tactile feedback on touch/click: subtle haptic tick + immediate tab indicator shift
@@ -177,13 +182,11 @@ export function bindGlobalEvents() {
       if (state.fullscreenPlayer) closeFullscreenPlayer();
       const targetRoute = routeButton.dataset.route;
 
-      const currentHash = window.location.hash
-        ? window.location.hash.replace(/^#\/?/, '').trim()
-        : '';
+      const currentPath = window.location.pathname.replace(/^\//, '').trim();
       const cleanTarget = targetRoute.replace(/^\//, '').trim();
       const isSameRoute =
-        (cleanTarget === '' && (currentHash === '' || currentHash === '/')) ||
-        cleanTarget === currentHash;
+        (cleanTarget === '' && (currentPath === '' || currentPath === '/')) ||
+        cleanTarget === currentPath;
 
       if (isSameRoute) {
         // Tapping already-active tab smoothly scrolls to top without reload or duplicate history
@@ -1321,8 +1324,7 @@ export function bindGlobalEvents() {
         }
         showToast('All data has been reset.');
         setTimeout(() => {
-          window.location.hash = '#/';
-          window.location.reload();
+          window.location.replace('/');
         }, 500);
         return;
       }

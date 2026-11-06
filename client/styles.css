@@ -2282,7 +2282,8 @@ body.has-fullscreen-open .mobile-nav {
   justify-content: flex-end;
   width: 100%;
   flex-shrink: 0;
-  padding: 0 4px;
+  padding: 4px 4px 10px;
+  margin-bottom: 4px;
 }
 
 .fs-close-btn,
@@ -2323,19 +2324,21 @@ body.has-fullscreen-open .mobile-nav {
 }
 
 .fs-cover-wrap {
-  width: min(80vw, 300px, 36vh);
-  height: min(80vw, 300px, 36vh);
+  width: min(78vw, 290px, 35vh);
+  height: min(78vw, 290px, 35vh);
   aspect-ratio: 1 / 1;
-  margin: 0 auto;
-  border-radius: var(--md-shape-lg);
+  margin: 8px auto 10px;
+  border-radius: var(--md-shape-lg, 24px);
   overflow: hidden;
-  box-shadow: 0 10px 32px -6px rgba(0, 0, 0, 0.55);
-  background-color: var(--md-sys-color-surface-container);
-  border: 1px solid var(--md-sys-color-outline);
+  box-shadow: 0 8px 40px rgba(29, 185, 84, 0.4);
+  background-color: var(--md-sys-color-surface-container, #121212);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  transition: box-shadow 0.4s ease, border-color 0.4s ease;
 }
 
 .fs-cover {
@@ -2343,6 +2346,12 @@ body.has-fullscreen-open .mobile-nav {
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: inherit;
+  position: relative;
+  z-index: 1;
+  filter: none;
+  transform: scale(1);
+  transition: filter 0.35s ease, transform 0.35s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .fs-info {
@@ -4503,14 +4512,14 @@ body.has-active-track #toast-container {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 370px;
-  margin: 14px auto 10px;
+  max-width: 380px;
+  margin: 8px auto 6px;
 }
 
 .fs-play-btn-accent,
 .fs-play-btn-cyan {
-  width: 72px;
-  height: 72px;
+  width: 78px;
+  height: 78px;
   border-radius: 50%;
   background-color: #1db954;
   color: #000000;
@@ -4525,22 +4534,22 @@ body.has-active-track #toast-container {
 
 .fs-play-btn-accent .material-symbols-rounded,
 .fs-play-btn-cyan .material-symbols-rounded {
-  font-size: 2.35rem !important;
+  font-size: 2.6rem !important;
 }
 
 .fs-play-btn-accent:hover,
 .fs-play-btn-accent:active,
 .fs-play-btn-cyan:hover,
 .fs-play-btn-cyan:active {
-  border-radius: 16px;
+  border-radius: 18px;
   transform: scale(0.95);
   background-color: #1ed760;
   box-shadow: 0 6px 24px rgba(29, 185, 84, 0.55);
 }
 
 .fs-nav-circle-btn {
-  width: 52px;
-  height: 52px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   background-color: #181818;
   color: #ffffff;
@@ -4554,7 +4563,7 @@ body.has-active-track #toast-container {
 }
 
 .fs-nav-circle-btn .material-symbols-rounded {
-  font-size: 1.85rem !important;
+  font-size: 2rem !important;
 }
 
 .fs-nav-circle-btn:hover,
@@ -4566,15 +4575,15 @@ body.has-active-track #toast-container {
 }
 
 .fs-controls-spotify .fs-extra-btn {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .fs-controls-spotify .fs-extra-btn .material-symbols-rounded {
-  font-size: 1.45rem !important;
+  font-size: 1.55rem !important;
 }
 
 /* ==========================================================================
@@ -4673,15 +4682,7 @@ body.has-active-track #toast-container {
    MD3 COMPACT VOLUME CONTROL SLIDER (Framed by volume_down & volume_up)
    ========================================================================== */
 .fs-volume-row {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  width: 100% !important;
-  max-width: 320px !important;
-  margin: 8px auto 0 !important;
-  padding: 2px 4px !important;
-  box-sizing: border-box !important;
+  display: none !important;
 }
 
 .fs-volume-btn {
@@ -7218,34 +7219,60 @@ body.is-standalone [data-action="open-install-guide"] {
    PHASE 1 & 4: SONG INFO OVERLAY, LOADING SPINNER & MD3 POP-UP ANIMATIONS
    ========================================================================== */
 
-/* 1. Full-Screen Player Artwork & In-Place Lyrics View */
+/* 1. Full-Screen Player Artwork, Dynamic Colored Glow & Immersive Blurred Lyrics */
 .fs-cover-wrap {
   position: relative !important;
   cursor: default !important;
   width: min(78vw, 290px, 35vh) !important;
   height: min(78vw, 290px, 35vh) !important;
   aspect-ratio: 1 / 1 !important;
-  margin: 0 auto !important;
+  margin: 8px auto 10px !important;
   border-radius: 24px !important;
   overflow: hidden !important;
-  box-shadow: 0 10px 32px -6px rgba(0, 0, 0, 0.65) !important;
   background-color: #121212 !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   flex-shrink: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: transform 0.28s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.28s ease !important;
+  box-shadow: 0 8px 40px rgba(29, 185, 84, 0.4) !important;
+  transition: box-shadow 0.4s ease, border-color 0.4s ease, transform 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
 }
 
-.fs-cover-wrap.fs-lyrics-mode {
+/* Main Thumbnail Pop & Blur when Lyrics View is active */
+.fs-cover {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+  border-radius: inherit !important;
+  position: relative !important;
+  z-index: 1 !important;
+  filter: none !important;
+  transform: scale(1) !important;
+  transition: filter 0.35s ease, transform 0.35s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.fs-cover.lyrics-blurred,
+.fs-cover-wrap.fs-lyrics-mode .fs-cover {
+  filter: blur(25px) !important;
+  transform: scale(1.1) !important;
+  z-index: 0 !important;
+}
+
+/* Translucent Dark Overlay Sitting Securely on Top */
+.fs-lyrics-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2 !important;
+  background: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   display: flex !important;
   flex-direction: column !important;
-  justify-content: flex-start !important;
-  align-items: stretch !important;
-  background-color: #0d0d0d !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75) !important;
+  border-radius: inherit !important;
+  overflow: hidden !important;
+  animation: fadeIn 0.25s ease-out !important;
 }
 
 .fs-lyrics-view {
@@ -7257,116 +7284,43 @@ body.is-standalone [data-action="open-install-guide"] {
   box-sizing: border-box !important;
 }
 
-.fs-lyrics-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 10px 14px !important;
-  background: rgba(20, 20, 20, 0.95) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  flex-shrink: 0 !important;
-  gap: 10px !important;
-}
-
-.fs-lyrics-header-left {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  min-width: 0 !important;
-  flex: 1 !important;
-}
-
-.fs-lyrics-thumb {
-  width: 36px !important;
-  height: 36px !important;
-  border-radius: 6px !important;
-  object-fit: cover !important;
-  flex-shrink: 0 !important;
-  background: #181818 !important;
-}
-
-.fs-lyrics-track-info {
-  display: flex !important;
-  flex-direction: column !important;
-  min-width: 0 !important;
-  flex: 1 !important;
-}
-
-.fs-lyrics-track-title {
-  font-size: 0.875rem !important;
-  font-weight: 700 !important;
-  color: #ffffff !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  line-height: 1.25 !important;
-}
-
-.fs-lyrics-track-artist {
-  font-size: 0.75rem !important;
-  color: #999999 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  line-height: 1.2 !important;
-}
-
-.fs-lyrics-badge {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  font-size: 0.7rem !important;
-  font-weight: 600 !important;
-  color: #1db954 !important;
-  background: rgba(29, 185, 84, 0.12) !important;
-  padding: 3px 8px !important;
-  border-radius: 999px !important;
-  flex-shrink: 0 !important;
-}
-
-.fs-lyrics-badge.loading {
-  color: #ffb74d !important;
-  background: rgba(255, 183, 77, 0.12) !important;
-}
-
-.fs-lyrics-view .lyrics-body {
+/* Lyrics Body: Strictly Displays Scrolling Lyrics Lines */
+.lyrics-body {
   flex: 1 !important;
   overflow-y: auto !important;
-  padding: 16px 14px 24px !important;
+  padding: 24px 16px 28px !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 14px !important;
+  gap: 16px !important;
   box-sizing: border-box !important;
   scroll-behavior: smooth !important;
   -webkit-overflow-scrolling: touch !important;
   overscroll-behavior: contain !important;
+  text-align: center !important;
 }
 
-.fs-lyrics-view .lyrics-line {
-  font-size: 0.95rem !important;
-  line-height: 1.45 !important;
-  color: rgba(255, 255, 255, 0.38) !important;
+.lyrics-line {
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+  color: rgba(255, 255, 255, 0.4) !important;
   font-weight: 500 !important;
-  transition: color 0.22s ease, font-size 0.22s ease, transform 0.22s ease !important;
+  transition: color 0.22s ease, font-size 0.22s ease, transform 0.22s ease, text-shadow 0.22s ease !important;
   cursor: pointer !important;
-  padding: 4px 6px !important;
-  border-radius: 8px !important;
+  padding: 6px 12px !important;
+  border-radius: 12px !important;
 }
 
-.fs-lyrics-view .lyrics-line:hover {
-  color: rgba(255, 255, 255, 0.75) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+.lyrics-line:hover {
+  color: rgba(255, 255, 255, 0.8) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
 }
 
-.fs-lyrics-view .lyrics-line.active {
-  font-size: 1.15rem !important;
+.lyrics-line.active {
+  font-size: 1.25rem !important;
   font-weight: 700 !important;
   color: #ffffff !important;
-  transform: scale(1.02) !important;
-  transform-origin: left center !important;
-  text-shadow: 0 0 16px rgba(29, 185, 84, 0.45) !important;
+  transform: scale(1.05) !important;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.6) !important;
 }
 
 /* 2. Full-Screen Player Layout: Responsive Distribution & Compact Spacing */
@@ -7377,8 +7331,16 @@ body.is-standalone [data-action="open-install-guide"] {
   flex: 1 !important;
   width: 100% !important;
   margin: 0 !important;
-  gap: 8px !important;
+  gap: 6px !important;
   min-height: 0 !important;
+}
+
+.fs-body .fs-info {
+  margin: 2px 0 0 !important;
+}
+
+.fs-body .fs-progress {
+  margin: 2px 0 !important;
 }
 
 /* 3. Spinning MD3 Buffering/Loading Indicator */

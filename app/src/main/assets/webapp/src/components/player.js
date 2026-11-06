@@ -25,6 +25,7 @@ import {
 } from '../services/youtube.js';
 import { loadRecommendations } from '../services/dataLoader.js';
 import { renderCurrentRoute } from './master.js';
+import { updateDynamicLinkPreview } from '../config/router.js';
 import {
   refreshPlaybackUI,
   renderPlayerBar,
@@ -43,6 +44,7 @@ export async function play(song, queue = null, autoplay = true) {
   let playableSong = song;
   rememberSongs([playableSong]);
   state.currentSong = playableSong;
+  updateDynamicLinkPreview(playableSong);
   fetchLyricsForSong(playableSong);
   if (queue?.length) {
     state.queue = dedupeSongs(queue);
