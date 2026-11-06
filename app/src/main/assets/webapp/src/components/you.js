@@ -1,155 +1,22 @@
-import { state, LOGO_URL } from '../config/config.js';
+import { state } from '../config/config.js';
 import {
   escapeHTML,
-  formatTime,
-  getOptimizedArtwork,
-  formatRelativeTime,
   isAppInstalled,
 } from '../utils/utils.js';
-import { getSongById } from '../core/details.js';
-import { isArtistFollowed, isPlaylistSaved, isAlbumSaved } from './player.js';
 
 /**
- * High-Density Material Design 3 (MD3) You / Personal Profile & Hub Page
- * Features a prominent profile section, neatly organized stats, quick hub tiles,
- * and library collection access.
+ * Material Design 3 (MD3) You / Personal Profile & Hub Page
+ * Features a listener profile card, 3x1 stats grid, and bottom system utilities.
  */
 export function renderYouPage() {
-  const activeFilter = state.youFilter || 'all';
-
   const playlistsCount =
     (state.playlists ? state.playlists.length : 0) +
     (state.savedPlaylists ? state.savedPlaylists.length : 0);
   const favoritesCount = state.favorites ? state.favorites.length : 0;
   const historyCount = state.recentlyPlayed ? state.recentlyPlayed.length : 0;
-  const albumsCount = state.savedAlbums ? state.savedAlbums.length : 0;
-  const artistsCount = state.followedArtists ? state.followedArtists.length : 0;
 
-  // Filter chips row
-  const filterChipsHTML = `
-    <div class="you-filter-chips-row" role="tablist">
-      <button class="you-filter-chip ${activeFilter === 'all' ? 'active' : ''}" data-action="set-you-filter" data-filter="all" type="button">All</button>
-      <button class="you-filter-chip ${activeFilter === 'playlists' ? 'active' : ''}" data-action="set-you-filter" data-filter="playlists" type="button">Playlists (${playlistsCount})</button>
-      <button class="you-filter-chip ${activeFilter === 'liked' ? 'active' : ''}" data-action="set-you-filter" data-filter="liked" type="button">Liked (${favoritesCount})</button>
-      <button class="you-filter-chip ${activeFilter === 'albums' ? 'active' : ''}" data-action="set-you-filter" data-filter="albums" type="button">Albums (${albumsCount})</button>
-      <button class="you-filter-chip ${activeFilter === 'artists' ? 'active' : ''}" data-action="set-you-filter" data-filter="artists" type="button">Artists (${artistsCount})</button>
-      <button class="you-filter-chip ${activeFilter === 'downloads' ? 'active' : ''}" data-action="set-you-filter" data-filter="downloads" type="button">Downloads</button>
-    </div>
-  `;
-
-  // Content generation based on filter
-  let listItemsHTML = '';
-
-  // 1. Liked Songs Item
-  const likedRow = `
-    <article class="library-list-item" data-action="navigate" data-path="/playlist/liked" role="button" tabindex="0">
-      <div class="library-item-thumb-gradient">
-        <span class="material-symbols-rounded" style="color: #ffffff; font-size: 1.35rem;">favorite</span>
-      </div>
-      <div class="library-item-info">
-        <h3 class="library-item-title">Liked Songs</h3>
-        <p class="library-item-sub"><span class="material-symbols-rounded pinned-icon" style="color:var(--green); font-size:0.75rem;">push_pin</span> Pinned &bull; ${favoritesCount} song${favoritesCount === 1 ? '' : 's'}</p>
-      </div>
-      <button class="icon-btn small" data-action="play-favorites" type="button" aria-label="Play Liked Songs">
-        <span class="material-symbols-rounded">play_arrow</span>
-      </button>
-    </article>
-  `;
-
-  // 2. Playlists
-  const allUserAndSavedPlaylists = [
-    ...(state.playlists || []),
-    ...(state.savedPlaylists || []).filter(
-      (sp) => !(state.playlists || []).some((p) => p.id === sp.id)
-    ),
-  ];
-
-  const playlistsItems = allUserAndSavedPlaylists.map((p) => {
-    const cover = p.coverUrl || p.songs?.[0]?.coverUrl || '/assets/pawtify.png';
-    const uploader =
-      p.uploaderName ||
-      (state.playlists.some((sp) => sp.id === p.id) ? 'You' : 'Pawtify');
-    const count = p.songs ? p.songs.length : p.songCount || 0;
-    return `
-      <article class="library-list-item" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(p.id)}" role="button" tabindex="0">
-        <img class="library-item-thumb" src="${escapeHTML(getOptimizedArtwork(cover, 160))}" alt="${escapeHTML(p.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-        <div class="library-item-info">
-          <h3 class="library-item-title">${escapeHTML(p.name)}</h3>
-          <p class="library-item-sub">Playlist &bull; ${escapeHTML(uploader)}${count ? ` &bull; ${count} songs` : ''}</p>
-        </div>
-        <button class="icon-btn small" data-action="play-all-playlist" data-playlist-id="${escapeHTML(p.id)}" type="button" aria-label="Play playlist">
-          <span class="material-symbols-rounded">play_arrow</span>
-        </button>
-      </article>
-    `;
-  }).join('');
-
-  // 3. Saved Albums
-  const albumMap = new Map();
-  (state.savedAlbums || []).forEach((alb) => {
-    const key = (alb.name || alb.title || '').trim().toLowerCase();
-    if (key && !albumMap.has(key)) {
-      albumMap.set(key, {
-        id: alb.id || alb.albumId,
-        name: alb.name || alb.title,
-        artist: alb.artist || 'Unknown Artist',
-        coverUrl: getOptimizedArtwork(alb.coverUrl || alb.imageUrl, 240),
-        songCount: alb.songCount || 1,
-      });
-    }
-  });
-
-  const albumsItems = Array.from(albumMap.values()).map((album) => {
-    const isRemote = album.id && !String(album.id).startsWith('album-');
-    return `
-      <article class="library-list-item" ${isRemote ? `data-action="open-playlist-profile" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} role="button" tabindex="0">
-        <img class="library-item-thumb" src="${escapeHTML(album.coverUrl)}" alt="${escapeHTML(album.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-        <div class="library-item-info">
-          <h3 class="library-item-title">${escapeHTML(album.name)}</h3>
-          <p class="library-item-sub">Album &bull; ${escapeHTML(album.artist)} &bull; ${album.songCount} track${album.songCount === 1 ? '' : 's'}</p>
-        </div>
-        <button class="icon-btn small" ${isRemote ? `data-action="play-all-playlist" data-playlist-id="${escapeHTML(album.id)}"` : `data-action="open-artist-profile" data-artist="${escapeHTML(album.artist)}"`} type="button" aria-label="Play Album">
-          <span class="material-symbols-rounded">play_arrow</span>
-        </button>
-      </article>
-    `;
-  }).join('');
-
-  // 4. Followed Artists
-  const artistMap = new Map();
-  (state.followedArtists || []).forEach((fa) => {
-    const name = (typeof fa === 'string' ? fa : fa.name || '').trim();
-    if (name && !artistMap.has(name.toLowerCase())) {
-      artistMap.set(name.toLowerCase(), {
-        name,
-        imageUrl: fa.imageUrl || '',
-      });
-    }
-  });
-
-  const artistsItems = Array.from(artistMap.values()).map((artist) => {
-    return `
-      <article class="library-list-item" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" role="button" tabindex="0">
-        <div style="width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: var(--hover); flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
-          ${
-            artist.imageUrl
-              ? `<img src="${escapeHTML(getOptimizedArtwork(artist.imageUrl, 160))}" alt="${escapeHTML(artist.name)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><span class="material-symbols-rounded" style="display:none; font-size: 1.5rem; color: var(--muted);">person</span>`
-              : `<span class="material-symbols-rounded" style="font-size: 1.5rem; color: var(--muted);">person</span>`
-          }
-        </div>
-        <div class="library-item-info">
-          <h3 class="library-item-title">${escapeHTML(artist.name)}</h3>
-          <p class="library-item-sub">Artist &bull; Following</p>
-        </div>
-        <button class="icon-btn small" data-action="open-artist-profile" data-artist="${escapeHTML(artist.name)}" type="button" aria-label="View artist">
-          <span class="material-symbols-rounded">chevron_right</span>
-        </button>
-      </article>
-    `;
-  }).join('');
-
-  // 5. Downloads / Offline Item
-  const downloadsItems = `
+  // Preserved bottom utility and settings list items
+  const utilityItems = `
     ${!isAppInstalled() ? `
     <article class="library-list-item install-pwa-row" data-action="install-pwa" role="button" tabindex="0">
       <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
@@ -164,6 +31,18 @@ export function renderYouPage() {
       </button>
     </article>
     ` : ''}
+    <article class="library-list-item" data-action="open-settings" role="button" tabindex="0">
+      <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
+        <span class="material-symbols-rounded" style="color: #1db954; font-size: 1.3rem;">tune</span>
+      </div>
+      <div class="library-item-info">
+        <h3 class="library-item-title">Settings &amp; Preferences</h3>
+        <p class="library-item-sub">Audio quality, AMOLED pitch-black, and autoplay</p>
+      </div>
+      <button class="icon-btn small" data-action="open-settings" type="button" aria-label="Open Settings">
+        <span class="material-symbols-rounded">chevron_right</span>
+      </button>
+    </article>
     <article class="library-list-item" data-action="export-library" role="button" tabindex="0">
       <div class="library-item-thumb-gradient" style="background: #1a1a1a;">
         <span class="material-symbols-rounded" style="color: #1db954; font-size: 1.3rem;">upload</span>
@@ -189,41 +68,6 @@ export function renderYouPage() {
       </button>
     </article>
   `;
-
-  if (activeFilter === 'all') {
-    listItemsHTML = likedRow + playlistsItems + albumsItems + artistsItems + downloadsItems;
-  } else if (activeFilter === 'playlists') {
-    listItemsHTML = `
-      <div style="padding: 4px 10px 10px;">
-        <button class="btn btn-primary btn-sm" data-action="open-create-playlist" type="button" style="border-radius: 9999px; width: 100%;">
-          <span class="material-symbols-rounded">add</span> New Playlist
-        </button>
-      </div>
-      ${playlistsItems || '<div class="empty-state"><p>No custom playlists saved yet.</p></div>'}
-    `;
-  } else if (activeFilter === 'liked') {
-    const favorites = state.favorites || [];
-    listItemsHTML = favorites.length
-      ? favorites.map((song) => `
-        <article class="library-list-item" data-action="play-song" data-song-id="${escapeHTML(song.id)}" data-source="favorites" role="button" tabindex="0">
-          <img class="library-item-thumb" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" alt="${escapeHTML(song.title)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-          <div class="library-item-info">
-            <h3 class="library-item-title">${escapeHTML(song.title)}</h3>
-            <p class="library-item-sub"><span class="material-symbols-rounded" style="color:var(--green); font-size:0.75rem;">favorite</span> ${escapeHTML(song.artist)}</p>
-          </div>
-          <button class="icon-btn small song-menu-trigger" data-action="open-track-menu" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="More options">
-            <span class="material-symbols-rounded">more_vert</span>
-          </button>
-        </article>
-      `).join('')
-      : '<div class="empty-state"><p>No liked songs yet.</p></div>';
-  } else if (activeFilter === 'albums') {
-    listItemsHTML = albumsItems || '<div class="empty-state"><p>No saved albums found.</p></div>';
-  } else if (activeFilter === 'artists') {
-    listItemsHTML = artistsItems || '<div class="empty-state"><p>No followed artists found.</p></div>';
-  } else if (activeFilter === 'downloads') {
-    listItemsHTML = downloadsItems;
-  }
 
   return `
     <section class="page you-page-spotify">
@@ -254,8 +98,8 @@ export function renderYouPage() {
             </div>
           </div>
 
-          <!-- Organized Stats Counters Grid -->
-          <div class="you-stats-grid">
+          <!-- Stat Cards: Single-Row 3x1 Grid (Liked Songs, Playlists, History) -->
+          <div class="you-stats-grid you-stats-grid-3x1">
             <div class="you-stat-card" data-action="navigate" data-path="/playlist/liked" role="button" tabindex="0">
               <span class="you-stat-num">${favoritesCount}</span>
               <span class="you-stat-label">Liked Songs</span>
@@ -264,44 +108,17 @@ export function renderYouPage() {
               <span class="you-stat-num">${playlistsCount}</span>
               <span class="you-stat-label">Playlists</span>
             </div>
-            <div class="you-stat-card" data-action="navigate" data-path="/albums" role="button" tabindex="0">
-              <span class="you-stat-num">${albumsCount}</span>
-              <span class="you-stat-label">Albums</span>
-            </div>
-            <div class="you-stat-card" data-action="navigate" data-path="/artists" role="button" tabindex="0">
-              <span class="you-stat-num">${artistsCount}</span>
-              <span class="you-stat-label">Artists</span>
-            </div>
             <div class="you-stat-card" data-action="navigate" data-path="/playlist/history" role="button" tabindex="0">
               <span class="you-stat-num">${historyCount}</span>
               <span class="you-stat-label">History</span>
             </div>
           </div>
-
-          <!-- Primary Quick Hub Actions: Exactly 3 (Liked Songs, Playlists, History) -->
-          <div class="you-quick-hub you-quick-hub-three">
-            <button class="you-hub-tile" data-action="navigate" data-path="/playlist/liked" type="button">
-              <span class="material-symbols-rounded you-hub-icon" style="color:var(--green, #1db954);">favorite</span>
-              <span class="you-hub-title">Liked Songs</span>
-            </button>
-            <button class="you-hub-tile" data-action="navigate" data-path="/library" type="button">
-              <span class="material-symbols-rounded you-hub-icon">library_music</span>
-              <span class="you-hub-title">Playlists</span>
-            </button>
-            <button class="you-hub-tile" data-action="navigate" data-path="/playlist/history" type="button">
-              <span class="material-symbols-rounded you-hub-icon">history</span>
-              <span class="you-hub-title">History</span>
-            </button>
-          </div>
         </div>
-
-        <!-- Filter Chips Row -->
-        ${filterChipsHTML}
       </header>
 
-      <!-- Compact MD3 List Container -->
-      <div class="library-list-container">
-        ${listItemsHTML}
+      <!-- Preserved Utility & Settings List Container Directly Below 3x1 Stats Grid -->
+      <div class="library-list-container you-utility-list" style="margin-top: 12px;">
+        ${utilityItems}
       </div>
 
       <!-- Neatly Aligned Compact Credit Text -->

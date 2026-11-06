@@ -121,14 +121,23 @@ export function openLyricsPanel() {
   if (state.lyricsPanel) return;
   state.lyricsPanel = true;
   pushHistoryLayer('lyrics');
-  renderLyricsPanel();
-  updatePanelBackdrop();
+  if (state.fullscreenPlayer) {
+    renderFullscreenPlayer(true);
+  } else {
+    renderLyricsPanel();
+    updatePanelBackdrop();
+  }
 }
 
 export function closeLyricsPanel(syncHistory = true) {
+  if (!state.lyricsPanel) return;
   state.lyricsPanel = false;
-  renderLyricsPanel();
-  updatePanelBackdrop();
+  if (state.fullscreenPlayer) {
+    renderFullscreenPlayer(true);
+  } else {
+    renderLyricsPanel();
+    updatePanelBackdrop();
+  }
   if (syncHistory) {
     popHistoryLayer('lyrics');
   }

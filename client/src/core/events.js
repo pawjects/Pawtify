@@ -352,7 +352,24 @@ export function bindGlobalEvents() {
       }
       if (action === 'open-song-details') {
         event.preventDefault();
+        closePlayerMoreSheet();
         openSongDetails();
+        return;
+      }
+      if (action === 'copy-video-id') {
+        event.preventDefault();
+        const id = actionNode.dataset.id;
+        if (id) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(id).then(() => {
+              showToast(`Copied Video ID: ${id}`);
+            }).catch(() => {
+              showToast(id);
+            });
+          } else {
+            showToast(id);
+          }
+        }
         return;
       }
       if (action === 'share-song') {
@@ -481,7 +498,11 @@ export function bindGlobalEvents() {
       }
       if (action === 'open-lyrics') {
         event.preventDefault();
-        openLyricsPanel();
+        if (state.lyricsPanel) {
+          closeLyricsPanel();
+        } else {
+          openLyricsPanel();
+        }
         return;
       }
       if (action === 'close-lyrics') {
@@ -634,6 +655,20 @@ export function bindGlobalEvents() {
       if (action === 'toggle-speed') {
         event.preventDefault();
         togglePlaybackSpeed();
+        return;
+      }
+      if (action === 'fs-volume-down') {
+        event.preventDefault();
+        const cur = typeof state.volume === 'number' ? state.volume : 0.7;
+        const next = Math.max(0, parseFloat((cur - 0.1).toFixed(2)));
+        setVolume(next);
+        return;
+      }
+      if (action === 'fs-volume-up') {
+        event.preventDefault();
+        const cur = typeof state.volume === 'number' ? state.volume : 0.7;
+        const next = Math.min(1, parseFloat((cur + 0.1).toFixed(2)));
+        setVolume(next);
         return;
       }
       if (action === 'toggle-song-info-overlay') {
@@ -1482,7 +1517,15 @@ export function bindGlobalEvents() {
         }
       }
     }
-    if (target.id === 'volume-slider' || target.id === 'fs-volume-slider') {
+    if (target.id === 'fs-volume-slider') {
+      let nextVolume = Number.parseFloat(target.value);
+      if (nextVolume > 1) nextVolume = nextVolume / 100;
+      if (!Number.isNaN(nextVolume)) {
+        setVolume(nextVolume);
+        const pct = Math.round(nextVolume * 100);
+        target.style.background = `linear-gradient(90deg, #1DB954 0%, #1DB954 ${pct}%, #1E1E1E ${pct}%)`;
+      }
+    } else if (target.id === 'volume-slider') {
       const nextVolume = Number.parseFloat(target.value) / 100;
       if (!Number.isNaN(nextVolume)) setVolume(nextVolume);
     }
@@ -1494,6 +1537,10 @@ export function bindGlobalEvents() {
       state.isSeeking = false;
       const nextTime = Number.parseFloat(target.value);
       if (!Number.isNaN(nextTime)) seekTo(nextTime);
+    } else if (target.id === 'fs-volume-slider') {
+      let nextVolume = Number.parseFloat(target.value);
+      if (nextVolume > 1) nextVolume = nextVolume / 100;
+      if (!Number.isNaN(nextVolume)) setVolume(nextVolume);
     }
   });
 

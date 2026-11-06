@@ -352,9 +352,10 @@ export function refreshPlaybackUI() {
   }
   const fsVol = document.getElementById('fs-volume-slider');
   if (fsVol && document.activeElement !== fsVol) {
-    fsVol.value = String(Math.round(state.volume * 100));
-    const volPct = Math.round(state.volume * 100);
-    fsVol.style.background = `linear-gradient(90deg, var(--green) 0%, var(--green) ${volPct}%, #3e3e3e ${volPct}%)`;
+    const vol = typeof state.volume === 'number' ? Math.max(0, Math.min(1, state.volume)) : 0.7;
+    fsVol.value = String(vol);
+    const volPct = Math.round(vol * 100);
+    fsVol.style.background = `linear-gradient(90deg, #1DB954 0%, #1DB954 ${volPct}%, #1E1E1E ${volPct}%)`;
   }
 
   // Ensure active-track class is kept in sync on document body

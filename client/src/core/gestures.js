@@ -44,9 +44,11 @@ export function setupSwipeGestures() {
     pointerActive = true;
 
     // Check if touching mini-player to drag upward
-    const mini = target.closest('#mini-player');
-    if (mini && !target.closest('button, [role="button"]')) {
-      isDraggingMiniUp = true;
+    const mini = target.closest('#mini-player, .mini-player, #player-bar');
+    if (mini) {
+      if (!target.closest('button, [role="button"]')) {
+        isDraggingMiniUp = true;
+      }
       return;
     }
 

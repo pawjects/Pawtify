@@ -1,9 +1,20 @@
 import { state, globals } from '../config/config.js';
 import { renderLyricsPanel } from '../components/lyrics.js';
+import { renderFullscreenPlayer } from '../components/fullscreen.js';
 
 const lyricsCache = new Map();
 let userScrollTimestamp = 0;
 let lastActiveIndex = -1;
+
+function notifyLyricsUpdate() {
+  if (state.lyricsPanel) {
+    if (state.fullscreenPlayer) {
+      renderFullscreenPlayer(true);
+    } else {
+      renderLyricsPanel();
+    }
+  }
+}
 
 export function cleanSongMetadata(title = '', artist = '') {
   let cleanTitle = title
@@ -81,14 +92,14 @@ export async function fetchLyricsForSong(song) {
     const cached = lyricsCache.get(cacheKey);
     state.lyricsData = cached;
     state.lyricsLoading = false;
-    if (state.lyricsPanel) renderLyricsPanel();
+    notifyLyricsUpdate();
     return cached;
   }
 
   state.lyricsLoading = true;
   state.lyricsData = null;
   lastActiveIndex = -1;
-  if (state.lyricsPanel) renderLyricsPanel();
+  notifyLyricsUpdate();
 
   const { title, artist } = cleanSongMetadata(song.title, song.artist);
   const duration = Math.round(Number(song.durationSec || state.duration || 0));
@@ -155,9 +166,7 @@ export async function fetchLyricsForSong(song) {
   state.lyricsData = lyricResult;
   state.lyricsLoading = false;
 
-  if (state.lyricsPanel) {
-    renderLyricsPanel();
-  }
+  notifyLyricsUpdate();
 
   return lyricResult;
 }

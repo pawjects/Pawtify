@@ -2,7 +2,7 @@ import { state, STORAGE, showToast } from '../config/config.js';
 import { queuePanel, miniPlayer } from '../config/dom.js';
 import { escapeHTML, saveJSON, getOptimizedArtwork, formatTime } from '../utils/utils.js';
 import { renderPlayerBar, refreshPlaybackUI } from './playerBar.js';
-import { previousTrack, nextTrack, play, dismissPlayer } from './player.js';
+import { previousTrack, nextTrack, play, dismissPlayer, playQueueTrack } from './player.js';
 import { renderFullscreenPlayer } from './fullscreen.js';
 import { openFullscreenPlayer } from '../core/navigationHistory.js';
 import { rememberSongs } from '../core/details.js';
@@ -352,6 +352,7 @@ if (miniPlayer) {
   miniPlayer.addEventListener(
     'touchstart',
     (e) => {
+      e.stopPropagation();
       if (e.target.closest('button, .mini-player-btn, [data-action="toggle-play"], [data-action="dismiss-player"]')) {
         isMiniPlayerDragging = false;
         return;
@@ -360,21 +361,23 @@ if (miniPlayer) {
       miniPlayerTouchStartY = e.changedTouches[0].screenY;
       isMiniPlayerDragging = true;
     },
-    { passive: true }
+    { passive: false }
   );
 
   miniPlayer.addEventListener(
     'touchmove',
     (e) => {
+      e.stopPropagation();
       // Invisible gesture registration without DOM translation
       if (!isMiniPlayerDragging) return;
     },
-    { passive: true }
+    { passive: false }
   );
 
   miniPlayer.addEventListener(
     'touchend',
     (e) => {
+      e.stopPropagation();
       if (!isMiniPlayerDragging) return;
       isMiniPlayerDragging = false;
       const touchEndX = e.changedTouches[0].screenX;
@@ -406,10 +409,11 @@ if (miniPlayer) {
         return;
       }
     },
-    { passive: true }
+    { passive: false }
   );
 
-  miniPlayer.addEventListener('touchcancel', () => {
+  miniPlayer.addEventListener('touchcancel', (e) => {
+    e.stopPropagation();
     isMiniPlayerDragging = false;
   });
 }
