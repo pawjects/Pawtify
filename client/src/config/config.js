@@ -378,13 +378,13 @@ export async function initApp() {
   try {
     const initialRoute = parseRoute();
     if (initialRoute.name === 'song' && initialRoute.songId) {
-      window.location.hash = `#/song/${encodeURIComponent(initialRoute.songId)}`;
+      window.history.replaceState({ path: `/song/${encodeURIComponent(initialRoute.songId)}` }, '', `/song/${encodeURIComponent(initialRoute.songId)}`);
     } else if (initialRoute.name === 'playlist' && initialRoute.playlistId) {
-      window.location.hash = `#/playlist/${encodeURIComponent(initialRoute.playlistId)}`;
+      window.history.replaceState({ path: `/playlist/${encodeURIComponent(initialRoute.playlistId)}` }, '', `/playlist/${encodeURIComponent(initialRoute.playlistId)}`);
     } else if (initialRoute.name !== 'home') {
-      window.location.hash = `#/${initialRoute.name}`;
-    } else if (!window.location.hash) {
-      window.location.hash = '#/';
+      window.history.replaceState({ path: `/${initialRoute.name}` }, '', `/${initialRoute.name}`);
+    } else if (window.location.hash) {
+      window.history.replaceState({ path: '/' }, '', '/');
     }
 
     const savedName = loadJSON(STORAGE.USER_NAME, '');

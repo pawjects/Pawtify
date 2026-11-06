@@ -28,11 +28,11 @@ let isPoppingInternally = false;
 
 export function pushHistoryLayer(layerName) {
   try {
-    const currentHash = window.location.hash || '#/';
+    const currentPath = window.location.pathname || '/';
     window.history.pushState(
-      { pawtifyLayer: layerName, hash: currentHash, timestamp: Date.now() },
+      { pawtifyLayer: layerName, path: currentPath, timestamp: Date.now() },
       '',
-      currentHash
+      currentPath
     );
   } catch (e) {
     console.warn('History pushState error:', e);
