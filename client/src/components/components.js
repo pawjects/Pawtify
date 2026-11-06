@@ -487,12 +487,17 @@ export function renderLibraryPage() {
     `;
 
     const playlistsList = allPlaylists.map((p) => {
-      const cover = p.coverUrl || p.songs?.[0]?.coverUrl || '/assets/pawtify.png';
+      const rawCover = p.coverUrl || p.songs?.[0]?.coverUrl;
+      const hasCover = Boolean(rawCover && rawCover !== '/assets/pawtify.png');
       const uploader = p.uploaderName || (state.playlists.some(sp => sp.id === p.id) ? 'You' : 'Pawtify');
       const count = p.songs ? p.songs.length : (p.songCount || 0);
       return `
         <article class="library-list-item" data-action="open-playlist-profile" data-playlist-id="${escapeHTML(p.id)}" role="button" tabindex="0">
-          <img class="library-item-thumb" src="${escapeHTML(getOptimizedArtwork(cover, 160))}" alt="${escapeHTML(p.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+          ${
+            hasCover
+              ? `<img class="library-item-thumb" src="${escapeHTML(getOptimizedArtwork(rawCover, 160))}" alt="${escapeHTML(p.name)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="library-item-thumb-placeholder" style="display:none;"><span class="material-symbols-rounded">queue_music</span></div>`
+              : `<div class="library-item-thumb-placeholder"><span class="material-symbols-rounded">queue_music</span></div>`
+          }
           <div class="library-item-info">
             <h3 class="library-item-title">${escapeHTML(p.name)}</h3>
             <p class="library-item-sub">Playlist &bull; ${escapeHTML(uploader)}${count ? ` &bull; ${count} songs` : ''}</p>

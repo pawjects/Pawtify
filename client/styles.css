@@ -2265,20 +2265,24 @@ body.has-fullscreen-open .mobile-nav {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 16px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 6px));
   max-width: 440px;
   margin: 0 auto;
   width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .fs-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   width: 100%;
   flex-shrink: 0;
+  padding: 0 4px;
 }
 
 .fs-close-btn,
@@ -2307,10 +2311,15 @@ body.has-fullscreen-open .mobile-nav {
 .fs-body {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  justify-content: space-between;
+  flex: 1;
   width: 100%;
-  margin: auto 0;
+  margin: 0;
+  padding: 4px 0 0;
   align-items: center;
+  min-height: 0;
+  box-sizing: border-box;
+  gap: 8px;
 }
 
 .fs-cover-wrap {
@@ -3854,11 +3863,11 @@ body.has-active-track #toast-container {
     height: 100dvh;
     border-radius: 0;
     border: none;
-    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
 
   body.has-active-track .main-stage {
-    padding-bottom: calc(152px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
   }
 
   .page {
@@ -4576,7 +4585,8 @@ body.has-active-track #toast-container {
   gap: 2px !important;
   justify-content: center !important;
   align-items: center !important;
-  margin-top: 14px !important;
+  margin-top: 8px !important;
+  margin-bottom: 0 !important;
   width: 100% !important;
 }
 
@@ -4657,6 +4667,115 @@ body.has-active-track #toast-container {
 .fs-pill-btn.active:active {
   transform: scale(0.95) !important;
   background: #1aa34a !important;
+}
+
+/* ==========================================================================
+   MD3 COMPACT VOLUME CONTROL SLIDER (Framed by volume_down & volume_up)
+   ========================================================================== */
+.fs-volume-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  max-width: 320px !important;
+  margin: 8px auto 0 !important;
+  padding: 2px 4px !important;
+  box-sizing: border-box !important;
+}
+
+.fs-volume-btn {
+  background: transparent !important;
+  border: none !important;
+  padding: 4px !important;
+  color: var(--md-sys-color-on-surface-variant, #a0afa4) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: color 0.15s ease, transform 0.15s ease !important;
+  user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.fs-volume-btn:hover {
+  color: #ffffff !important;
+}
+
+.fs-volume-btn:active {
+  transform: scale(0.9) !important;
+  color: #1DB954 !important;
+}
+
+.fs-volume-btn .material-symbols-rounded {
+  font-size: 1.25rem !important;
+  color: inherit !important;
+}
+
+.fs-volume-slider {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 100% !important;
+  height: 6px !important;
+  border-radius: 9999px !important;
+  background: #1E1E1E !important;
+  outline: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  position: relative !important;
+  margin: 0 !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.fs-volume-slider::-webkit-slider-runnable-track {
+  height: 6px !important;
+  border-radius: 9999px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.fs-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  border: 2px solid #1DB954 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5) !important;
+  margin-top: -4px !important;
+  cursor: pointer !important;
+  transition: transform 0.15s ease, background-color 0.15s ease !important;
+}
+
+.fs-volume-slider:active::-webkit-slider-thumb,
+.fs-volume-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.15) !important;
+  background: #1DB954 !important;
+  border-color: #ffffff !important;
+}
+
+.fs-volume-slider::-moz-range-track {
+  height: 6px !important;
+  border-radius: 9999px !important;
+  background: #1E1E1E !important;
+  border: none !important;
+}
+
+.fs-volume-slider::-moz-range-thumb {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  border: 2px solid #1DB954 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5) !important;
+  cursor: pointer !important;
+  transition: transform 0.15s ease, background-color 0.15s ease !important;
+}
+
+.fs-volume-slider:active::-moz-range-thumb {
+  transform: scale(1.15) !important;
+  background: #1DB954 !important;
 }
 
 /* 2. Queue Up Next Bottom Sheet & Animated Equalizer */
@@ -4856,7 +4975,7 @@ body.has-active-track #toast-container {
 /* 4. Home Screen Spotify Overhaul */
 .home-page-spotify {
   background-color: #000000 !important;
-  padding: 8px 16px 120px !important;
+  padding: 8px 16px 16px !important;
 }
 
 .home-top-bar {
@@ -5044,8 +5163,8 @@ body.has-active-track #toast-container {
 /* 5. Playlist / Album View */
 .playlist-page-spotify {
   background: #000000;
-  min-height: 100vh;
-  padding: 16px 16px 120px;
+  min-height: 100%;
+  padding: 16px 16px 16px;
 }
 
 .playlist-nav-bar {
@@ -5293,8 +5412,8 @@ body.has-active-track #toast-container {
 /* 6. Library Page */
 .library-page-spotify {
   background-color: #121212;
-  min-height: 100vh;
-  padding: 16px 16px 120px;
+  min-height: 100%;
+  padding: 16px 16px 16px;
 }
 
 .library-header-spotify {
@@ -5514,8 +5633,8 @@ body.has-active-track #toast-container {
 /* 7. Search Page Spotify Overhaul */
 .search-page-spotify {
   background-color: #121212;
-  min-height: 100vh;
-  padding: 16px 16px 120px;
+  min-height: 100%;
+  padding: 16px 16px 16px;
 }
 
 .search-top-header {
@@ -5544,12 +5663,11 @@ body.has-active-track #toast-container {
 }
 
 .search-title-spotify {
-  font-size: 1.45rem;
-  font-weight: 800;
+  font-size: 1.35rem;
+  font-weight: 700;
   color: #ffffff;
   margin: 0;
   flex: 1;
-  margin-left: 12px;
 }
 
 .search-camera-btn {
@@ -5995,7 +6113,7 @@ body.has-active-track #toast-container {
    ========================================================================== */
 .library-page-spotify,
 .you-page-spotify {
-  padding-bottom: 90px;
+  padding-bottom: 16px;
 }
 
 .library-filter-chips-row,
@@ -6575,18 +6693,14 @@ body.is-standalone [data-action="open-install-guide"] {
 }
 
 /* Organized Stats Grid (8px baseline) */
-.you-stats-grid {
+/* Organized Stats Grid: Single-row 3x1 Grid (Liked Songs, Playlists, History) */
+.you-stats-grid,
+.you-stats-grid-3x1 {
   display: grid !important;
-  grid-template-columns: repeat(5, 1fr) !important;
-  gap: 8px !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 10px !important;
   width: 100% !important;
   padding-top: 4px !important;
-}
-
-@media (max-width: 600px) {
-  .you-stats-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-  }
 }
 
 .you-stat-card {
@@ -6623,20 +6737,15 @@ body.is-standalone [data-action="open-install-guide"] {
   white-space: nowrap !important;
 }
 
-/* Quick Navigation Hub Tiles */
-.you-quick-hub {
+/* Quick Navigation Hub Tiles: Exact 2x2 Grid Arrangement */
+.you-quick-hub,
+.you-quick-hub-2x2 {
   display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  gap: 8px !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 10px !important;
   width: 100% !important;
   padding-top: 4px !important;
   border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-@media (max-width: 540px) {
-  .you-quick-hub {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
 }
 
 .you-hub-tile {
@@ -6707,10 +6816,7 @@ body.is-standalone [data-action="open-install-guide"] {
    MD3 LARGE BOLD PAGE HEADERS
    ========================================================================== */
 .page-title,
-.search-title-spotify,
 .playlist-title-large,
-.library-user-title-wrap h1,
-.library-user-title-wrap .library-user-title,
 .home-greeting {
   font-size: 1.75rem !important;
   font-weight: 800 !important;
@@ -6833,7 +6939,7 @@ body.is-standalone [data-action="open-install-guide"] {
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  padding: 36px 16px 28px !important;
+  padding: 16px 16px 8px !important;
   font-size: 0.75rem !important;
   font-weight: 500 !important;
   color: var(--md-sys-color-on-surface-muted, #738077) !important;
@@ -7112,106 +7218,167 @@ body.is-standalone [data-action="open-install-guide"] {
    PHASE 1 & 4: SONG INFO OVERLAY, LOADING SPINNER & MD3 POP-UP ANIMATIONS
    ========================================================================== */
 
-/* 1. Song Info Overlay (Matching lyrics view layout & typography) */
+/* 1. Full-Screen Player Artwork & In-Place Lyrics View */
 .fs-cover-wrap {
   position: relative !important;
-  cursor: pointer !important;
-}
-
-.fs-song-info-overlay {
-  position: absolute !important;
-  inset: 0 !important;
-  background: rgba(0, 0, 0, 0.92) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border-radius: inherit !important;
-  padding: 20px 18px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: space-between !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transform: scale(0.96) !important;
-  transition: opacity 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1) !important;
-  z-index: 10 !important;
-  user-select: none !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.fs-song-info-overlay.active {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  transform: scale(1) !important;
-}
-
-.fs-info-overlay-header {
+  cursor: default !important;
+  width: min(78vw, 290px, 35vh) !important;
+  height: min(78vw, 290px, 35vh) !important;
+  aspect-ratio: 1 / 1 !important;
+  margin: 0 auto !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 32px -6px rgba(0, 0, 0, 0.65) !important;
+  background-color: #121212 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  flex-shrink: 0 !important;
   display: flex !important;
   align-items: center !important;
-  gap: 8px !important;
-  padding-bottom: 10px !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  justify-content: center !important;
+  transition: transform 0.28s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.28s ease !important;
 }
 
-.fs-info-overlay-title {
-  font-size: 0.875rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.05em !important;
-  text-transform: uppercase !important;
-  color: #ffffff !important;
-}
-
-.fs-info-overlay-body {
+.fs-cover-wrap.fs-lyrics-mode {
   display: flex !important;
   flex-direction: column !important;
-  gap: 10px !important;
-  margin: auto 0 !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+  background-color: #0d0d0d !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75) !important;
 }
 
-.fs-info-overlay-row {
+.fs-lyrics-view {
   display: flex !important;
-  align-items: baseline !important;
-  justify-content: space-between !important;
-  gap: 12px !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
-.fs-info-label {
+.fs-lyrics-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 10px 14px !important;
+  background: rgba(20, 20, 20, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  flex-shrink: 0 !important;
+  gap: 10px !important;
+}
+
+.fs-lyrics-header-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.fs-lyrics-thumb {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 6px !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+  background: #181818 !important;
+}
+
+.fs-lyrics-track-info {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.fs-lyrics-track-title {
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.25 !important;
+}
+
+.fs-lyrics-track-artist {
   font-size: 0.75rem !important;
+  color: #999999 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2 !important;
+}
+
+.fs-lyrics-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 0.7rem !important;
   font-weight: 600 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  color: #888888 !important;
+  color: #1db954 !important;
+  background: rgba(29, 185, 84, 0.12) !important;
+  padding: 3px 8px !important;
+  border-radius: 999px !important;
   flex-shrink: 0 !important;
 }
 
-.fs-info-value {
-  font-size: 0.8125rem !important;
+.fs-lyrics-badge.loading {
+  color: #ffb74d !important;
+  background: rgba(255, 183, 77, 0.12) !important;
+}
+
+.fs-lyrics-view .lyrics-body {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 16px 14px 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  box-sizing: border-box !important;
+  scroll-behavior: smooth !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+}
+
+.fs-lyrics-view .lyrics-line {
+  font-size: 0.95rem !important;
+  line-height: 1.45 !important;
+  color: rgba(255, 255, 255, 0.38) !important;
   font-weight: 500 !important;
+  transition: color 0.22s ease, font-size 0.22s ease, transform 0.22s ease !important;
+  cursor: pointer !important;
+  padding: 4px 6px !important;
+  border-radius: 8px !important;
+}
+
+.fs-lyrics-view .lyrics-line:hover {
+  color: rgba(255, 255, 255, 0.75) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.fs-lyrics-view .lyrics-line.active {
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
   color: #ffffff !important;
-  text-align: right !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-  max-width: 170px !important;
+  transform: scale(1.02) !important;
+  transform-origin: left center !important;
+  text-shadow: 0 0 16px rgba(29, 185, 84, 0.45) !important;
 }
 
-.fs-info-value.mono {
-  font-family: monospace !important;
-  font-size: 0.75rem !important;
-  color: #1db954 !important;
-}
-
-.fs-info-overlay-hint {
-  font-size: 0.7rem !important;
-  color: #666666 !important;
-  text-align: center !important;
-  padding-top: 8px !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-/* 2. Full-Screen Player Thumbnail Upward Spacing & Compactness */
+/* 2. Full-Screen Player Layout: Responsive Distribution & Compact Spacing */
 .fs-body {
-  margin-top: 4px !important;
-  gap: 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  flex: 1 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  gap: 8px !important;
+  min-height: 0 !important;
 }
 
 /* 3. Spinning MD3 Buffering/Loading Indicator */
@@ -7253,42 +7420,47 @@ body.is-standalone [data-action="open-install-guide"] {
   flex: 1 !important;
 }
 
-/* 5. Smooth, Buttery MD3 Pop-Up Animations */
+/* 5. Smooth, Native MD3 Slide-Up Animations for Bottom Dialogs & Sheets */
 .queue-panel.active,
 .artist-profile.active,
 .lyrics-panel.active,
-.player-more-sheet.active {
-  animation: md3PopIn 0.22s cubic-bezier(0.2, 0, 0, 1) forwards !important;
+.player-more-sheet.active,
+.track-menu-sheet.active,
+.bottom-sheet.active {
+  animation: md3SlideUp 0.32s cubic-bezier(0.2, 0, 0, 1) forwards !important;
+  will-change: transform, opacity !important;
 }
 
-@keyframes md3PopIn {
+@keyframes md3SlideUp {
   from {
-    opacity: 0;
-    transform: scale(0.92);
+    transform: translateY(100%) !important;
+    opacity: 0 !important;
   }
   to {
-    opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) !important;
+    opacity: 1 !important;
   }
 }
 
-/* 6. MD3 Compact Search Bar (Pill-shaped, aligned icons, tight padding) */
+/* 6. MD3 Compact Search Bar (Wider edge-to-edge with standard MD3 side margins) */
 .search-pill-container {
   display: flex !important;
   align-items: center !important;
   background: #1a1a1a !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 9999px !important;
-  height: 48px !important;
+  height: 44px !important;
   padding: 0 16px !important;
   gap: 12px !important;
-  max-width: 640px !important;
-  margin: 0 auto 16px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 0 16px 0 !important;
+  box-sizing: border-box !important;
   transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
 .search-pill-container:focus-within {
-  background: #222222 !important;
+  background: #202020 !important;
   border-color: var(--green, #1db954) !important;
   box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.25) !important;
 }
@@ -7307,15 +7479,36 @@ body.is-standalone [data-action="open-install-guide"] {
   color: #ffffff !important;
   font-size: 0.9375rem !important;
   font-weight: 500 !important;
+  line-height: 1.2 !important;
 }
 
 .search-pill-input::placeholder {
   color: #777777 !important;
 }
 
-/* 7. Global Header Text Tightening & Compactness */
+/* 7. Standardized Page Header Typography (Identical sizing across Search & Library tabs) */
 .search-title-spotify,
-.library-title,
+.library-title-spotify,
+.library-user-title-wrap h1,
+.library-user-title-wrap .library-user-title {
+  font-size: 1.35rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.015em !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.search-title-spotify .header-title-icon,
+.library-title-spotify .header-title-icon {
+  font-size: 1.45rem !important;
+  color: var(--md-sys-color-primary, #1db954) !important;
+  line-height: 1 !important;
+}
+
 .home-greeting,
 .you-profile-name {
   font-size: 1.35rem !important;
@@ -7323,10 +7516,41 @@ body.is-standalone [data-action="open-install-guide"] {
   line-height: 1.25 !important;
 }
 
-.you-quick-hub-three {
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: 10px !important;
+/* 8. Library Thumbnail Icon Placeholder (Clean Material Symbols Rounded) */
+.library-item-thumb-placeholder {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  color: #1DB954 !important;
+}
+
+.library-item-thumb-placeholder .material-symbols-rounded {
+  font-size: 1.4rem !important;
+  color: #1DB954 !important;
+}
+
+/* 9. Expressive MD3 Touch Haptics Across All Buttons & Interactive Items */
+button:active,
+.btn:active,
+.icon-btn:active,
+.control-btn:active,
+.fs-pill-btn:active,
+.you-stat-card:active,
+.you-hub-tile:active,
+.library-list-item:active,
+.song-row:active,
+.home-compact-card:active,
+.home-scroll-card:active,
+.search-tab-pill:active,
+.mobile-nav-item:active {
+  transform: scale(0.96) !important;
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1) !important;
 }
 
 

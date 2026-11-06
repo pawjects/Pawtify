@@ -1,6 +1,6 @@
 import { state, LOGO_URL } from '../config/config.js';
 import { overlayRoot } from '../config/dom.js';
-import { escapeHTML } from '../utils/utils.js';
+import { escapeHTML, formatTime, getOptimizedArtwork } from '../utils/utils.js';
 import { getSongById } from '../core/details.js';
 import { getExactAudioQuality } from '../services/youtube.js';
 
@@ -17,28 +17,69 @@ export function renderOverlay() {
       overlayRoot.innerHTML = '';
       return;
     }
+    const audioQuality = getExactAudioQuality() || '256kbps AAC (Opus)';
+    const uploadDate = song.uploadedAt || song.uploadDate || song.publishedText || 'Official Release';
+    const videoId = song.id || 'N/A';
+    const duration = song.duration || (state.duration ? formatTime(state.duration) : '0:00');
+
     overlayRoot.innerHTML = `
        <section class="overlay" data-action="dismiss-overlay">
-         <article class="modal">
+         <article class="modal modal-source-details">
            <header class="modal-head">
-             <h2 class="modal-title">Song Details</h2>
+             <div style="display:flex; align-items:center; gap:8px;">
+               <span class="material-symbols-rounded" style="color:var(--green, #1db954); font-size:1.3rem;">tune</span>
+               <h2 class="modal-title">Track Details & Source</h2>
+             </div>
              <button class="icon-btn" data-action="close-modal" type="button" aria-label="Close" style="width:32px; height:32px; border-radius:999px;">
                <span class="material-symbols-rounded">close</span>
              </button>
            </header>
-           <div class="modal-body">
-             <div style="display:flex; gap:16px; align-items:center;">
-               <img src="${escapeHTML(song.coverUrl)}" style="width:80px; height:80px; border-radius:var(--radius-sm); object-fit:cover;" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-               <div>
-                 <h3 style="font-size:1.25rem; font-weight:700;">${escapeHTML(song.title)}</h3>
-                 <p style="color:var(--muted); margin-top:4px;">${escapeHTML(song.artist)}</p>
+           <div class="modal-body" style="display:flex; flex-direction:column; gap:16px;">
+             <div class="source-track-banner" style="display:flex; gap:14px; align-items:center; background:rgba(255,255,255,0.04); padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.06);">
+               <img src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" style="width:64px; height:64px; border-radius:8px; object-fit:cover; flex-shrink:0;" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+               <div style="min-width:0; flex:1;">
+                 <h3 style="font-size:1.05rem; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0 0 4px;">${escapeHTML(song.title)}</h3>
+                 <p style="color:var(--muted); font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0;">${escapeHTML(song.artist || song.uploaderName || 'Unknown')}</p>
                </div>
              </div>
-             <div class="meta-list">
-               <p class="meta-item"><b>Quality:</b> <span id="modal-quality-label">${escapeHTML(getExactAudioQuality())}</span></p>
-               <p class="meta-item"><b>Duration:</b> ${escapeHTML(song.duration || '0:00')}</p>
+
+             <div class="source-metadata-table" style="background:#121212; border-radius:12px; padding:12px 14px; border:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:10px;">
+               <div class="source-meta-row" style="display:flex; justify-content:space-between; align-items:center; font-size:0.875rem;">
+                 <span style="color:var(--muted);">Track Name</span>
+                 <span style="color:#fff; font-weight:600; text-align:right; max-width:65%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(song.title)}</span>
+               </div>
+               <div class="source-meta-row" style="display:flex; justify-content:space-between; align-items:center; font-size:0.875rem;">
+                 <span style="color:var(--muted);">Artist / Channel</span>
+                 <span style="color:#fff; font-weight:600; text-align:right; max-width:65%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(song.artist || song.uploaderName || 'Unknown')}</span>
+               </div>
+               <div class="source-meta-row" style="display:flex; justify-content:space-between; align-items:center; font-size:0.875rem;">
+                 <span style="color:var(--muted);">Duration</span>
+                 <span style="color:#fff; font-weight:600;">${escapeHTML(duration)}</span>
+               </div>
+               <div class="source-meta-row" style="display:flex; justify-content:space-between; align-items:center; font-size:0.875rem;">
+                 <span style="color:var(--muted);">Upload Date</span>
+                 <span style="color:#fff; font-weight:600;">${escapeHTML(uploadDate)}</span>
+               </div>
+               <div class="source-meta-row" style="display:flex; justify-content:space-between; align-items:center; font-size:0.875rem;">
+                 <span style="color:var(--muted);">Video ID</span>
+                 <div style="display:flex; align-items:center; gap:6px;">
+                   <span class="mono" style="color:var(--green, #1db954); font-family:monospace; font-weight:600;">${escapeHTML(videoId)}</span>
+                   <button class="source-copy-btn" data-action="copy-video-id" data-id="${escapeHTML(videoId)}" type="button" aria-label="Copy Video ID" title="Copy ID" style="background:none; border:none; color:var(--muted); cursor:pointer; padding:2px; display:inline-flex; align-items:center;">
+                     <span class="material-symbols-rounded" style="font-size:1rem;">content_copy</span>
+                   </button>
+                 </div>
+               </div>
+               <div class="source-meta-row" style="display:flex; justify-content:space-between; align-items:center; font-size:0.875rem;">
+                 <span style="color:var(--muted);">Audio Quality</span>
+                 <span style="color:var(--green, #1db954); font-weight:600;">${escapeHTML(audioQuality)}</span>
+               </div>
+               <div class="source-meta-row" style="display:flex; justify-content:space-between; align-items:center; font-size:0.875rem;">
+                 <span style="color:var(--muted);">Stream Source</span>
+                 <span style="color:#fff; font-weight:500;">YouTube Music Direct</span>
+               </div>
              </div>
-             <div style="display:flex; gap:10px; margin-top:16px;">
+
+             <div style="display:flex; gap:10px; margin-top:4px;">
                <button class="btn btn-primary" data-action="download-song" type="button" style="flex:1;">
                  <span class="material-symbols-rounded">download</span> Download
                </button>

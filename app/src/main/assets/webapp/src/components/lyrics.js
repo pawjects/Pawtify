@@ -9,21 +9,21 @@ import {
 
 let scrollListenerAttached = false;
 
-export function renderLyricsPanel() {
-  if (!lyricsPanel) return;
-  if (!state.lyricsPanel) {
-    lyricsPanel.classList.remove('active');
-    lyricsPanel.innerHTML = '';
-    return;
+export function attachLyricsScrollerListeners() {
+  const scroller = document.getElementById('lyrics-body-scroller');
+  if (scroller && !scrollListenerAttached) {
+    scrollListenerAttached = true;
+    scroller.addEventListener('scroll', () => {
+      recordUserLyricsScroll();
+    }, { passive: true });
+    scroller.addEventListener('touchstart', () => {
+      recordUserLyricsScroll();
+    }, { passive: true });
   }
+}
 
-  lyricsPanel.classList.add('active');
-  const song = state.currentSong;
-
-  // If lyricsData is missing for current song, trigger fetch
-  if (song && (!state.lyricsData || state.lyricsData.songId !== song.id) && !state.lyricsLoading) {
-    fetchLyricsForSong(song);
-  }
+export function renderLyricsViewHTML(song) {
+  if (!song) return '';
 
   const isLoading = Boolean(state.lyricsLoading);
   const data = state.lyricsData;
@@ -34,23 +34,23 @@ export function renderLyricsPanel() {
   let statusBadge = '';
   if (isLoading) {
     statusBadge = `
-      <div class="lyrics-badge lyrics-badge-loading">
-        <span class="material-symbols-rounded lyrics-badge-icon">sync</span>
-        <span>Fetching LRCLIB...</span>
+      <div class="fs-lyrics-badge loading">
+        <span class="material-symbols-rounded" style="font-size:0.95rem; animation: spin 1s linear infinite;">sync</span>
+        <span>Fetching</span>
       </div>
     `;
   } else if (hasSynced) {
     statusBadge = `
-      <div class="lyrics-badge lyrics-badge-synced">
-        <span class="material-symbols-rounded lyrics-badge-icon">graphic_eq</span>
-        <span>Synced Lyrics</span>
+      <div class="fs-lyrics-badge synced">
+        <span class="material-symbols-rounded" style="font-size:0.95rem;">graphic_eq</span>
+        <span>Synced</span>
       </div>
     `;
   } else if (hasPlain) {
     statusBadge = `
-      <div class="lyrics-badge lyrics-badge-plain">
-        <span class="material-symbols-rounded lyrics-badge-icon">subject</span>
-        <span>Plain Lyrics</span>
+      <div class="fs-lyrics-badge plain">
+        <span class="material-symbols-rounded" style="font-size:0.95rem;">subject</span>
+        <span>Plain</span>
       </div>
     `;
   }
@@ -122,29 +122,26 @@ export function renderLyricsPanel() {
       <div class="lyrics-empty-container">
         <div class="lyrics-empty-icon"><span class="material-symbols-rounded">mic_off</span></div>
         <h3 class="lyrics-empty-title">No Lyrics Found</h3>
-        <p class="lyrics-empty-desc">We couldn't locate synchronized lyrics for "${song ? escapeHTML(song.title) : 'this track'}" on LRCLIB.</p>
-        <button class="btn btn-soft btn-sm" data-action="retry-lyrics" type="button" style="margin-top: 16px; border-radius: 9999px;">
+        <p class="lyrics-empty-desc">We couldn't locate synchronized lyrics for "${escapeHTML(song.title)}" on LRCLIB.</p>
+        <button class="btn btn-soft btn-sm" data-action="retry-lyrics" type="button" style="margin-top: 14px; border-radius: 9999px;">
           <span class="material-symbols-rounded">refresh</span> Try Again
         </button>
       </div>
     `;
   }
 
-  lyricsPanel.innerHTML = `
-    <div class="lyrics-panel-inner">
-      <div class="lyrics-header">
-        <div class="lyrics-header-left">
-          <img class="lyrics-track-thumb" src="${escapeHTML(getOptimizedArtwork(song?.coverUrl, 120))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-          <div class="lyrics-track-info-text">
-            <div class="lyrics-track-title">${song ? escapeHTML(song.title) : 'Lyrics'}</div>
-            <div class="lyrics-track-artist">${song ? escapeHTML(song.artist || song.uploaderName || '') : ''}</div>
+  return `
+    <div class="fs-lyrics-view">
+      <div class="fs-lyrics-header">
+        <div class="fs-lyrics-header-left">
+          <img class="fs-lyrics-thumb" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 120))}" alt="" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+          <div class="fs-lyrics-track-info">
+            <div class="fs-lyrics-track-title">${escapeHTML(song.title)}</div>
+            <div class="fs-lyrics-track-artist">${escapeHTML(song.artist || song.uploaderName || '')}</div>
           </div>
         </div>
-        <div class="lyrics-header-actions">
+        <div class="fs-lyrics-header-actions">
           ${statusBadge}
-          <button class="lyrics-close-btn" data-action="close-lyrics" type="button" aria-label="Close Lyrics" title="Close">
-            <span class="material-symbols-rounded">close</span>
-          </button>
         </div>
       </div>
       <div class="lyrics-body" id="lyrics-body-scroller">
@@ -152,21 +149,40 @@ export function renderLyricsPanel() {
       </div>
     </div>
   `;
+}
 
-  // Attach scroll tracker to respect user manual scrolling
-  const scroller = document.getElementById('lyrics-body-scroller');
-  if (scroller && !scrollListenerAttached) {
-    scrollListenerAttached = true;
-    scroller.addEventListener('scroll', () => {
-      recordUserLyricsScroll();
-    }, { passive: true });
-    scroller.addEventListener('touchstart', () => {
-      recordUserLyricsScroll();
-    }, { passive: true });
+export function renderLyricsPanel() {
+  if (!lyricsPanel) return;
+  if (!state.lyricsPanel) {
+    lyricsPanel.classList.remove('active');
+    lyricsPanel.innerHTML = '';
+    return;
   }
 
-  // If synced lyrics are ready, immediately align active line
-  if (hasSynced) {
+  // When fullscreen player is open, lyrics are rendered in-place within the player container
+  if (state.fullscreenPlayer) {
+    lyricsPanel.classList.remove('active');
+    lyricsPanel.innerHTML = '';
+    return;
+  }
+
+  lyricsPanel.classList.add('active');
+  const song = state.currentSong;
+
+  // If lyricsData is missing for current song, trigger fetch
+  if (song && (!state.lyricsData || state.lyricsData.songId !== song.id) && !state.lyricsLoading) {
+    fetchLyricsForSong(song);
+  }
+
+  lyricsPanel.innerHTML = `
+    <div class="lyrics-panel-inner">
+      ${renderLyricsViewHTML(song)}
+    </div>
+  `;
+
+  attachLyricsScrollerListeners();
+
+  if (state.lyricsData?.hasSynced) {
     setTimeout(() => {
       syncLyricsWithPlayback();
     }, 50);

@@ -2,15 +2,17 @@ import { state, STORAGE, showToast, globals } from '../config/config.js';
 import { fullscreenPlayer } from '../config/dom.js';
 import { escapeHTML, formatTime, saveJSON, getOptimizedArtwork } from '../utils/utils.js';
 import { renderCurrentRoute } from './master.js';
-import { play, pause, togglePlay, previousTrack, nextTrack, toggleShuffle, toggleRepeat } from './player.js';
+import { play, pause, togglePlay, previousTrack, nextTrack, toggleShuffle, toggleRepeat, setVolume } from './player.js';
 import {
   initWavyProgress,
   teardownWavyProgress,
   updateWavyProgress,
 } from './wavyProgress.js';
-import { getExactAudioQuality } from '../services/youtube.js';
+import { getExactAudioQuality, getNativeAudio } from '../services/youtube.js';
 import { closeFullscreenPlayer, openLyricsPanel, openQueuePanel } from '../core/navigationHistory.js';
 import { refreshPlaybackUI } from './playerBar.js';
+import { renderLyricsViewHTML, attachLyricsScrollerListeners } from './lyrics.js';
+import { fetchLyricsForSong, syncLyricsWithPlayback } from '../services/lyricsService.js';
 
 let gesturesInitialized = false;
 let touchStartY = 0;
@@ -37,9 +39,15 @@ function initFullscreenGestures() {
       const target = e.target;
       if (
         target.closest(
-          'button, input, select, textarea, .fs-seekbar, .player-more-sheet, .player-more-backdrop, [role="button"], a'
+          'button, input, select, textarea, .fs-seekbar, .player-more-sheet, .player-more-backdrop, a'
         )
       ) {
+        isTrackingSwipe = false;
+        return;
+      }
+
+      const lyricsScroller = target.closest('#lyrics-body-scroller');
+      if (lyricsScroller && lyricsScroller.scrollTop > 4) {
         isTrackingSwipe = false;
         return;
       }
@@ -161,8 +169,11 @@ export function renderFullscreenPlayer(force = false) {
   document.body.classList.add('has-fullscreen-open');
   const song = state.currentSong;
 
+  const isLyricsActive = Boolean(state.lyricsPanel);
+  const isLyricsModeMatch = fullscreenPlayer.dataset.lyricsActive === String(isLyricsActive);
   if (
     !force &&
+    isLyricsModeMatch &&
     fullscreenPlayer.dataset.renderedTrackId === String(song.id) &&
     fullscreenPlayer.querySelector('.fs-title')
   ) {
@@ -174,14 +185,14 @@ export function renderFullscreenPlayer(force = false) {
     return;
   }
   fullscreenPlayer.dataset.renderedTrackId = String(song.id);
+  fullscreenPlayer.dataset.lyricsActive = String(isLyricsActive);
 
   const isFav = state.favorites.some((item) => item.id === song.id);
   const fsMax = Math.max(1, Math.floor(state.duration || song.durationSec || 1));
   const curProgress = Math.max(0, Math.min(fsMax, state.progress || 0));
+  const curVolume = typeof state.volume === 'number' ? Math.max(0, Math.min(1, state.volume)) : 0.7;
+  const volPct = Math.round(curVolume * 100);
   const speedLabel = state.playbackRate ? `${state.playbackRate}x` : '1x';
-  const showInfo = Boolean(state.showSongInfoOverlay);
-  const audioQuality = getExactAudioQuality() || '256kbps AAC (Opus)';
-  const uploadDate = song.uploadedAt || song.uploadDate || song.publishedText || 'Official Release';
 
   const repeatIcon =
     state.repeatMode === 'one'
@@ -190,54 +201,22 @@ export function renderFullscreenPlayer(force = false) {
   const repeatActive = state.repeatMode !== 'none' ? 'active' : '';
   const shuffleActive = state.shuffleMode ? 'active' : '';
 
+  const displayCoverOrLyricsHTML = isLyricsActive
+    ? `<div class="fs-cover-wrap fs-lyrics-mode" id="fs-cover-area">${renderLyricsViewHTML(song)}</div>`
+    : `<div class="fs-cover-wrap" id="fs-cover-area">
+         <img class="fs-cover" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 720))}" alt="${escapeHTML(song.title)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+       </div>`;
+
   fullscreenPlayer.innerHTML = `
      <div class="fs-content">
        <div class="fs-header">
-         <button class="fs-close-btn" data-action="close-fullscreen-player" type="button" aria-label="Collapse player" title="Collapse">
-           <span class="material-symbols-rounded">keyboard_arrow_down</span>
-         </button>
          <button class="fs-extra-btn fs-kebab-btn" data-action="open-player-more-sheet" type="button" aria-label="More options" title="More options">
            <span class="material-symbols-rounded">more_vert</span>
          </button>
        </div>
 
        <div class="fs-body">
-         <div class="fs-cover-wrap" data-action="toggle-song-info-overlay" role="button" tabindex="0" title="Click to view track info">
-           <img class="fs-cover" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 720))}" alt="${escapeHTML(song.title)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-           <div class="fs-song-info-overlay ${showInfo ? 'active' : ''}" id="fs-song-info-overlay">
-             <div class="fs-info-overlay-header">
-               <span class="material-symbols-rounded" style="color: var(--green, #1db954); font-size: 1.15rem;">info</span>
-               <span class="fs-info-overlay-title">Track Metadata</span>
-             </div>
-             <div class="fs-info-overlay-body">
-               <div class="fs-info-overlay-row">
-                 <span class="fs-info-label">Name</span>
-                 <span class="fs-info-value">${escapeHTML(song.title || 'Unknown')}</span>
-               </div>
-               <div class="fs-info-overlay-row">
-                 <span class="fs-info-label">Artist</span>
-                 <span class="fs-info-value">${escapeHTML(song.artist || song.uploaderName || 'Unknown')}</span>
-               </div>
-               <div class="fs-info-overlay-row">
-                 <span class="fs-info-label">Duration</span>
-                 <span class="fs-info-value">${formatTime(fsMax)}</span>
-               </div>
-               <div class="fs-info-overlay-row">
-                 <span class="fs-info-label">Upload Date</span>
-                 <span class="fs-info-value">${escapeHTML(uploadDate)}</span>
-               </div>
-               <div class="fs-info-overlay-row">
-                 <span class="fs-info-label">Video ID</span>
-                 <span class="fs-info-value mono">${escapeHTML(song.id || 'N/A')}</span>
-               </div>
-               <div class="fs-info-overlay-row">
-                 <span class="fs-info-label">Quality</span>
-                 <span class="fs-info-value">${escapeHTML(audioQuality)}</span>
-               </div>
-             </div>
-             <div class="fs-info-overlay-hint">Tap again to view artwork</div>
-           </div>
-         </div>
+         ${displayCoverOrLyricsHTML}
 
          <div class="fs-info">
            <div class="fs-text">
@@ -294,6 +273,27 @@ export function renderFullscreenPlayer(force = false) {
              <span>Queue</span>
            </button>
          </div>
+
+         <!-- Compact MD3 Volume Control Slider -->
+         <div class="fs-volume-row">
+           <button class="fs-volume-btn" data-action="fs-volume-down" type="button" aria-label="Lower volume" title="Mute / Lower volume">
+             <span class="material-symbols-rounded">volume_down</span>
+           </button>
+           <input
+             id="fs-volume-slider"
+             class="fs-volume-slider"
+             type="range"
+             min="0"
+             max="1"
+             step="0.01"
+             value="${curVolume}"
+             style="background: linear-gradient(90deg, #1DB954 0%, #1DB954 ${volPct}%, #1E1E1E ${volPct}%);"
+             aria-label="Volume slider"
+           />
+           <button class="fs-volume-btn" data-action="fs-volume-up" type="button" aria-label="Increase volume" title="Increase volume">
+             <span class="material-symbols-rounded">volume_up</span>
+           </button>
+         </div>
        </div>
      </div>
    `;
@@ -301,6 +301,34 @@ export function renderFullscreenPlayer(force = false) {
   const waveContainer = fullscreenPlayer.querySelector('#fs-wave-container');
   if (waveContainer) {
     initWavyProgress(waveContainer);
+  }
+
+  if (isLyricsActive) {
+    if ((!state.lyricsData || state.lyricsData.songId !== song.id) && !state.lyricsLoading) {
+      fetchLyricsForSong(song);
+    }
+    attachLyricsScrollerListeners();
+    if (state.lyricsData?.hasSynced) {
+      setTimeout(() => {
+        syncLyricsWithPlayback();
+      }, 50);
+    }
+  }
+
+  const fsVolSlider = fullscreenPlayer.querySelector('#fs-volume-slider');
+  if (fsVolSlider) {
+    const handleVolumeInput = (e) => {
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val)) {
+        setVolume(val);
+        const audio = getNativeAudio();
+        if (audio) audio.volume = val;
+        const pct = Math.round(val * 100);
+        fsVolSlider.style.background = `linear-gradient(90deg, #1DB954 0%, #1DB954 ${pct}%, #1E1E1E ${pct}%)`;
+      }
+    };
+    fsVolSlider.addEventListener('input', handleVolumeInput);
+    fsVolSlider.addEventListener('change', handleVolumeInput);
   }
 }
 
