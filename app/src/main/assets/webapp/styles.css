@@ -11,9 +11,22 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
-/* ============ MATERIAL SYMBOLS ROUNDED ============ */
+/* ============ NATIVE JETPACK COMPOSE SCROLLBARS (HIDDEN EVERYWHERE) ============ */
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* ============ MATERIAL SYMBOLS ROUNDED STANDARDIZATION ============ */
 .material-symbols-rounded {
   font-family: 'Material Symbols Rounded' !important;
   font-weight: normal;
@@ -29,13 +42,20 @@
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-  user-select: none;
+  user-select: none !important;
+  -webkit-user-select: none !important;
   vertical-align: middle;
+  transition: font-variation-settings 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), color 0.2s ease !important;
 }
 
 .active .material-symbols-rounded,
 .material-symbols-rounded.active,
-.material-symbols-rounded.filled {
+.material-symbols-rounded.filled,
+.mobile-nav-item.active .material-symbols-rounded,
+.nav-link.active .material-symbols-rounded,
+.fs-heart.active .material-symbols-rounded,
+.fs-extra-btn.active .material-symbols-rounded,
+[aria-selected="true"] .material-symbols-rounded {
   font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
 }
 
@@ -203,8 +223,9 @@ body {
   max-width: 100vw;
   width: 100%;
   touch-action: manipulation;
-  user-select: none;
-  -webkit-user-select: none;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
 }
 
 body.theme-active-playback {
@@ -212,14 +233,18 @@ body.theme-active-playback {
   background-image: none !important;
 }
 
-/* Material Design 3 Interactive Touch & Scale Feedback across all clickable elements */
+/* ============ JETPACK COMPOSE MD3 MOTION & UNIVERSAL ACTIVE STATES ============ */
 button,
+a,
+[role="button"],
 .nav-link,
 .mobile-nav-item,
+.mobile-nav-pill,
 .card,
 .home-compact-card,
 .home-scroll-card,
 .station-card,
+.category-card,
 .song-row,
 .library-list-item,
 .sidebar-playlist-item,
@@ -230,63 +255,47 @@ button,
 .home-filter-chip,
 .search-tab-pill,
 .md3-chip,
-[role="button"],
-.interactive-item {
-  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-  touch-action: manipulation;
-}
-
-/* Global MD3 Tonal Shifts & Ripple-like Fade Feedback (Jetpack Compose Feel) */
-.card:hover,
-.home-compact-card:hover,
-.home-scroll-card:hover,
-.song-row:hover,
-.library-list-item:hover,
-.sidebar-playlist-item:hover,
-.track-menu-item:hover,
-.menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-button,
-.nav-link,
-.mobile-nav-item,
-.card,
-.home-compact-card,
-.home-scroll-card,
-.station-card,
-.song-row,
-.library-list-item,
-.sidebar-playlist-item,
-.btn,
-.icon-btn,
-.control-btn,
-.lib-filter-chip,
-.home-filter-chip,
-.search-tab-pill,
-.md3-chip,
-[role="button"],
 .interactive-item,
 .player-more-card,
 .player-more-grid-btn,
 .player-more-item,
 .player-more-icon-btn,
+.fs-pill-btn,
 .fs-ctrl-btn,
 .fs-play-btn-accent,
 .fs-play-btn-cyan,
+.fs-nav-circle-btn,
 .fs-extra-btn,
+.fs-heart,
 .fs-heart-btn,
-.fs-kebab-btn {
-  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease, background-color 0.15s ease !important;
+.fs-kebab-btn,
+.track-menu-item,
+.queue-item,
+.queue-btn,
+.search-pill-container,
+.search-clear-btn,
+.search-dropdown-item,
+.you-stat-card,
+.you-hub-tile,
+.you-setting-row,
+.modal-close-btn,
+.dialog-btn,
+.tab-btn {
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-radius 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 button:active,
+a:active,
+[role="button"]:active,
 .nav-link:active,
 .mobile-nav-item:active,
 .card:active,
 .home-compact-card:active,
 .home-scroll-card:active,
 .station-card:active,
+.category-card:active,
 .song-row:active,
 .library-list-item:active,
 .sidebar-playlist-item:active,
@@ -297,24 +306,34 @@ button:active,
 .home-filter-chip:active,
 .search-tab-pill:active,
 .md3-chip:active,
-[role="button"]:active,
 .interactive-item:active,
 .player-more-card:active,
 .player-more-grid-btn:active,
 .player-more-item:active,
 .player-more-icon-btn:active,
+.fs-pill-btn:active,
 .fs-ctrl-btn:active,
-.fs-play-btn-accent:active,
-.fs-play-btn-cyan:active,
 .fs-extra-btn:active,
+.fs-heart:active,
 .fs-heart-btn:active,
-.fs-kebab-btn:active {
+.fs-kebab-btn:active,
+.track-menu-item:active,
+.queue-item:active,
+.queue-btn:active,
+.search-clear-btn:active,
+.search-dropdown-item:active,
+.you-stat-card:active,
+.you-hub-tile:active,
+.you-setting-row:active,
+.modal-close-btn:active,
+.dialog-btn:active,
+.tab-btn:active {
   transform: scale(0.96) !important;
   opacity: 0.88 !important;
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-/* MD3 Shape-Shifting Haptic Animations for Circular Buttons (Circle to Squircle on active) */
+/* MD3 Shape-Shifting Haptic Animations for Circular Buttons (Circle to Squircle 16px on active/hover) */
 .btn-circle,
 .fab,
 .player-play,
@@ -327,10 +346,11 @@ button:active,
 .mini-player-btn,
 .mini-player-play-btn,
 .search-top-play-btn,
+.home-play-btn,
 .icon-btn.circle,
 .circle-btn {
-  border-radius: 50%;
-  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
+  border-radius: 50% !important;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), border-radius 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.15s ease !important;
 }
 
 .btn-circle:hover,
@@ -357,13 +377,14 @@ button:active,
 .mini-player-play-btn:active,
 .search-top-play-btn:hover,
 .search-top-play-btn:active,
+.home-play-btn:hover,
+.home-play-btn:active,
 .icon-btn.circle:hover,
 .icon-btn.circle:active,
 .circle-btn:hover,
 .circle-btn:active {
   border-radius: 16px !important;
-  transform: scale(0.96) !important;
-  opacity: 0.85 !important;
+  transform: scale(0.95) !important;
 }
 
 /* ============ MD3 LIGHTWEIGHT MATERIAL RIPPLE EFFECT ============ */
@@ -403,7 +424,8 @@ textarea,
 select,
 [contenteditable="true"],
 .search-input,
-.text-input {
+.text-input,
+.search-pill-input {
   -webkit-user-select: text !important;
   user-select: text !important;
 }
@@ -415,7 +437,7 @@ input {
   border: none;
   background: none;
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 a {
@@ -429,20 +451,11 @@ img {
   display: block;
 }
 
-/* Compact Material 3 Scrollbar */
+/* ============ ALL SCROLLBARS HIDDEN (NATIVE COMPOSE TOUCH/MOUSE SCROLL ONLY) ============ */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
-  border-radius: var(--md-shape-full);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ============ APP SHELL ============ */
@@ -542,9 +555,10 @@ img {
   white-space: nowrap;
 }
 
+.nav-link .material-symbols-rounded,
 .nav-link i {
-  font-size: 1rem;
-  width: 20px;
+  font-size: 1.15rem;
+  width: 22px;
   text-align: center;
   color: inherit;
   transition: color 0.15s ease;
@@ -1340,10 +1354,11 @@ img {
   user-select: none;
 }
 
+.track-menu-item .material-symbols-rounded,
 .track-menu-item i {
-  width: 18px;
+  width: 20px;
   text-align: center;
-  font-size: 0.875rem;
+  font-size: 1.15rem;
   color: var(--md-sys-color-on-surface-variant);
   flex-shrink: 0;
 }
@@ -1361,6 +1376,7 @@ img {
   color: var(--danger);
 }
 
+.track-menu-item-danger .material-symbols-rounded,
 .track-menu-item-danger i {
   color: var(--danger);
 }
@@ -1378,7 +1394,7 @@ img {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  z-index: 50;
+  z-index: 110 !important;
   user-select: none;
 }
 
@@ -1574,7 +1590,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   width: 100%;
   max-width: 100%;
   margin: 0;
-  z-index: 55;
+  z-index: 110 !important;
   background-color: #121212 !important;
   background-image: none !important;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -1726,7 +1742,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   width: 100%;
   max-width: 100%;
   margin: 0;
-  z-index: 60;
+  z-index: 100 !important;
   background-color: #121212 !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -2215,7 +2231,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
 .fullscreen-player {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 200 !important;
   background-color: #000000 !important;
   background-image: none !important;
   display: flex;
@@ -2585,7 +2601,7 @@ body.has-fullscreen-open .mobile-nav {
 .player-more-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 170;
+  z-index: 290 !important;
   background-color: rgba(0, 0, 0, 0.75);
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -2606,7 +2622,7 @@ body.has-fullscreen-open .mobile-nav {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 175;
+  z-index: 300 !important;
   background-color: #121212;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 28px 28px 0 0;
@@ -2748,14 +2764,16 @@ body.has-fullscreen-open .mobile-nav {
   background-color: rgba(255, 255, 255, 0.08);
 }
 
+.player-more-item .material-symbols-rounded,
 .player-more-item i {
   width: 20px;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   color: rgba(255, 255, 255, 0.65);
   text-align: center;
   flex-shrink: 0;
 }
 
+.player-more-item.active .material-symbols-rounded,
 .player-more-item.active i {
   color: var(--md-sys-color-primary);
 }
@@ -2776,7 +2794,7 @@ body.has-fullscreen-open .mobile-nav {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 140;
+  z-index: 290 !important;
   background-color: rgba(0, 0, 0, 0.65);
   opacity: 0;
   transition: opacity 0.2s ease;
@@ -2794,7 +2812,7 @@ body.has-fullscreen-open .mobile-nav {
 .lyrics-panel {
   position: fixed;
   inset: 0;
-  z-index: 150;
+  z-index: 300 !important;
   background-color: var(--md-sys-color-surface-container);
   display: none;
   flex-direction: column;
@@ -2806,7 +2824,7 @@ body.has-fullscreen-open .mobile-nav {
 .artist-profile {
   position: fixed;
   inset: 0;
-  z-index: 160 !important;
+  z-index: 300 !important;
   background-color: var(--md-sys-color-surface-container);
   display: none;
   flex-direction: column;
@@ -3079,7 +3097,7 @@ body.has-fullscreen-open .mobile-nav {
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 180 !important;
+  z-index: 290 !important;
   background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
@@ -3088,6 +3106,7 @@ body.has-fullscreen-open .mobile-nav {
 }
 
 .modal {
+  z-index: 300 !important;
   background-color: var(--md-sys-color-surface-container);
   border: 1px solid var(--md-sys-color-outline);
   border-radius: var(--md-shape-lg);
@@ -3762,7 +3781,7 @@ body.has-fullscreen-open .yt-player-container {
   transform: translate(-50%, 32px);
   opacity: 0;
   pointer-events: none;
-  z-index: 200;
+  z-index: 400 !important;
   background-color: #333333 !important;
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -3804,8 +3823,9 @@ body.has-active-track #toast-container {
   color: var(--md-sys-color-on-surface-variant);
 }
 
+.empty-state .material-symbols-rounded,
 .empty-state i {
-  font-size: 2.5rem;
+  font-size: 2.75rem;
   margin-bottom: 12px;
   color: var(--md-sys-color-on-surface-muted);
 }
@@ -6091,6 +6111,24 @@ body.has-active-track #toast-container {
   white-space: nowrap !important;
 }
 
+/* Unified MD3 Secondary Text (Artist names, metadata, subtitles) */
+.song-artist,
+.library-item-sub,
+.player-bar-artist,
+.mini-player-artist,
+.queue-item-artist,
+.track-menu-artist,
+.scroll-card-artist,
+.feed-card-artist,
+.station-subtitle,
+.card-meta,
+.md3-list-sub {
+  color: #a0a0a0 !important;
+  font-weight: 400 !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.3 !important;
+}
+
 /* ==========================================================================
    CSS SKELETON LOADERS (MD3 SWEEPING LINEAR GRADIENT SHIMMER)
    ========================================================================== */
@@ -6783,11 +6821,12 @@ body.is-standalone [data-action="open-install-guide"] {
   text-overflow: ellipsis !important;
 }
 
-/* Toast Container High Z-Index */
+/* Toast Container Z-Index (Top Tier) */
 #toast-container,
 .toast-container,
-.toast {
-  z-index: 9999 !important;
+.toast,
+.snackbar {
+  z-index: 400 !important;
 }
 
 /* ==========================================================================
@@ -6979,7 +7018,7 @@ body.is-standalone [data-action="open-install-guide"] {
 .lyrics-panel {
   position: fixed !important;
   inset: 0 !important;
-  z-index: 150 !important;
+  z-index: 300 !important;
   background-color: #000000 !important;
   display: none;
   flex-direction: column !important;
@@ -7388,7 +7427,9 @@ body.is-standalone [data-action="open-install-guide"] {
 .lyrics-panel.active,
 .player-more-sheet.active,
 .track-menu-sheet.active,
-.bottom-sheet.active {
+.track-menu-popup.active,
+.bottom-sheet.active,
+.modal {
   animation: md3SlideUp 0.32s cubic-bezier(0.2, 0, 0, 1) forwards !important;
   will-change: transform, opacity !important;
 }
