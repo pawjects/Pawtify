@@ -128,6 +128,14 @@ export function bindGlobalEvents() {
       if (routeButton && routeButton.dataset.route) {
         hapticNavTap();
         markActiveNav(routeButton.dataset.route);
+        return;
+      }
+
+      const interactive = event.target.closest(
+        'button, [role="button"], .song-row, .card, .home-scroll-card, .home-compact-card, .category-card, .queue-item, .list-item, .search-dropdown-item, .you-stat-card, .you-hub-tile, .library-list-item, .control-btn, .icon-btn, .fs-pill-btn, .fs-extra-btn, .fs-play-btn-accent, .fs-nav-circle-btn, .search-tab-pill, .track-menu-item, [data-action]'
+      );
+      if (interactive && !interactive.closest('input, textarea, select')) {
+        hapticSelection();
       }
     },
     { passive: true }
