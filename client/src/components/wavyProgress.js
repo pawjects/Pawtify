@@ -144,7 +144,8 @@ function drawFrame() {
 
   const fsTotalLabel = document.getElementById('fs-time-total');
   if (fsTotalLabel && !state.isSeeking) {
-    fsTotalLabel.textContent = formatTime(maxSec);
+    const remainingSec = Math.max(0, maxSec - curSec);
+    fsTotalLabel.textContent = `-${formatTime(remainingSec)}`;
   }
 
   const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -195,7 +196,7 @@ function drawFrame() {
 
   // 3. Vertical Scrubber Bar (Solid Green Accent #1DB954)
   const barW = 4;
-  const barH = 16;
+  const barH = 22;
   const barRadius = 2;
   waveCtx.beginPath();
   if (typeof waveCtx.roundRect === 'function') {

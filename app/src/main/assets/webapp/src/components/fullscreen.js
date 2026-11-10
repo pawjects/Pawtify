@@ -11,7 +11,7 @@ import {
 import { getExactAudioQuality } from '../services/youtube.js';
 import { closeFullscreenPlayer, openLyricsPanel, openQueuePanel } from '../core/navigationHistory.js';
 import { refreshPlaybackUI } from './playerBar.js';
-import { renderLyricsViewHTML, attachLyricsScrollerListeners } from './lyrics.js';
+import { renderLyricsViewHTML, renderLyricsBodyContent, attachLyricsScrollerListeners } from './lyrics.js';
 import { fetchLyricsForSong, syncLyricsWithPlayback } from '../services/lyricsService.js';
 import { extractDominantColor } from '../utils/colorExtractor.js';
 
@@ -176,7 +176,7 @@ export function renderFullscreenPlayer(force = false) {
     !force &&
     isLyricsModeMatch &&
     fullscreenPlayer.dataset.renderedTrackId === String(song.id) &&
-    fullscreenPlayer.querySelector('.fs-title')
+    (fullscreenPlayer.querySelector('.fs-title') || fullscreenPlayer.querySelector('.fs-lyrics-mini-title'))
   ) {
     const waveContainer = fullscreenPlayer.querySelector('#fs-wave-container');
     if (waveContainer) {
@@ -191,6 +191,7 @@ export function renderFullscreenPlayer(force = false) {
   const isFav = state.favorites.some((item) => item.id === song.id);
   const fsMax = Math.max(1, Math.floor(state.duration || song.durationSec || 1));
   const curProgress = Math.max(0, Math.min(fsMax, state.progress || 0));
+  const remainingSec = Math.max(0, fsMax - curProgress);
   const speedLabel = state.playbackRate ? `${state.playbackRate}x` : '1x';
 
   const repeatIcon =
@@ -202,35 +203,60 @@ export function renderFullscreenPlayer(force = false) {
 
   const coverUrl = getOptimizedArtwork(song.coverUrl, 720);
   const glowCol = state.dominantGlowColor || { r: 29, g: 185, b: 84 };
-  const shadowGlow = `box-shadow: 0 8px 40px rgba(${glowCol.r}, ${glowCol.g}, ${glowCol.b}, 0.4);`;
+  const shadowGlow = `box-shadow: 0 10px 48px rgba(${glowCol.r}, ${glowCol.g}, ${glowCol.b}, 0.38);`;
 
-  const displayCoverOrLyricsHTML = `
-    <div class="fs-cover-wrap ${isLyricsActive ? 'fs-lyrics-mode' : ''}" id="fs-cover-area" style="${shadowGlow}">
-      <img class="fs-cover ${isLyricsActive ? 'lyrics-blurred' : ''}" id="fs-cover-img" src="${escapeHTML(coverUrl)}" alt="${escapeHTML(song.title)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
-      ${isLyricsActive ? `<div class="fs-lyrics-overlay" id="fs-lyrics-overlay">${renderLyricsViewHTML(song)}</div>` : ''}
-    </div>
-  `;
+  let mainBodyContentHTML = '';
+
+  if (!isLyricsActive) {
+    // 1:1 Match with Screenshot 1 (Main Fullscreen Player)
+    mainBodyContentHTML = `
+      <div class="fs-cover-wrap" id="fs-cover-area" style="${shadowGlow}">
+        <img class="fs-cover" id="fs-cover-img" src="${escapeHTML(coverUrl)}" alt="${escapeHTML(song.title)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+      </div>
+
+      <div class="fs-info">
+        <div class="fs-text">
+          <div class="fs-title" title="${escapeHTML(song.title)}">${escapeHTML(song.title)}</div>
+          <div class="fs-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
+        </div>
+        <button class="fs-heart ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Favorite">
+          <span class="material-symbols-rounded ${isFav ? 'filled' : ''}">${isFav ? 'favorite' : 'favorite'}</span>
+        </button>
+      </div>
+    `;
+  } else {
+    // 1:1 Match with Screenshot 2 (Full-Screen Lyrics View)
+    mainBodyContentHTML = `
+      <div class="fs-lyrics-mini-header">
+        <img class="fs-lyrics-mini-thumb" src="${escapeHTML(getOptimizedArtwork(song.coverUrl, 160))}" alt="${escapeHTML(song.title)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
+        <div class="fs-lyrics-mini-text">
+          <div class="fs-lyrics-mini-title" title="${escapeHTML(song.title)}">${escapeHTML(song.title)}</div>
+          <div class="fs-lyrics-mini-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
+        </div>
+      </div>
+
+      <div class="fs-lyrics-view-container">
+        <div class="lyrics-body" id="lyrics-body-scroller">
+          ${renderLyricsBodyContent(song)}
+        </div>
+        <div class="fs-lyrics-provider">Synced lyrics · LRCLIB</div>
+      </div>
+    `;
+  }
 
   fullscreenPlayer.innerHTML = `
      <div class="fs-content">
        <div class="fs-header">
+         <button class="fs-extra-btn fs-back-btn" data-action="close-fullscreen-player" type="button" aria-label="Minimize player" title="Minimize player">
+           <span class="material-symbols-rounded">keyboard_arrow_down</span>
+         </button>
          <button class="fs-extra-btn fs-kebab-btn" data-action="open-player-more-sheet" type="button" aria-label="More options" title="More options">
            <span class="material-symbols-rounded">more_vert</span>
          </button>
        </div>
 
        <div class="fs-body">
-         ${displayCoverOrLyricsHTML}
-
-         <div class="fs-info">
-           <div class="fs-text">
-             <div class="fs-title">${escapeHTML(song.title)}</div>
-             <div class="fs-artist" data-action="open-artist-profile" data-artist="${escapeHTML(song.artist)}">${escapeHTML(song.artist)}</div>
-           </div>
-           <button class="fs-heart ${isFav ? 'active' : ''}" data-action="toggle-favorite" data-song-id="${escapeHTML(song.id)}" type="button" aria-label="Favorite">
-             <span class="material-symbols-rounded ${isFav ? 'filled' : ''}">${isFav ? 'favorite' : 'favorite'}</span>
-           </button>
-         </div>
+         ${mainBodyContentHTML}
 
          <div class="fs-progress">
            <div class="fs-wave-container" id="fs-wave-container">
@@ -239,7 +265,7 @@ export function renderFullscreenPlayer(force = false) {
            </div>
            <div class="fs-time">
              <span id="fs-time-current">${formatTime(curProgress)}</span>
-             <span id="fs-time-total">${formatTime(fsMax)}</span>
+             <span id="fs-time-total">-${formatTime(remainingSec)}</span>
            </div>
          </div>
 
@@ -268,8 +294,8 @@ export function renderFullscreenPlayer(force = false) {
              <span class="material-symbols-rounded">speed</span>
              <span id="fs-speed-label">${speedLabel}</span>
            </button>
-           <button class="fs-pill-btn ${state.lyricsPanel ? 'active' : ''}" data-action="open-lyrics" type="button" aria-label="Lyrics">
-             <span class="material-symbols-rounded">lyrics</span>
+           <button class="fs-pill-btn ${isLyricsActive ? 'active' : ''}" data-action="open-lyrics" type="button" aria-label="Lyrics">
+             <span class="material-symbols-rounded">format_align_left</span>
              <span>Lyrics</span>
            </button>
            <button class="fs-pill-btn ${state.queuePanel ? 'active' : ''}" data-action="open-queue" type="button" aria-label="Queue">

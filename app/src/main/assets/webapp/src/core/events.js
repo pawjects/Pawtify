@@ -435,7 +435,7 @@ export function bindGlobalEvents() {
         openFullscreenPlayer();
         return;
       }
-      if (action === 'close-fullscreen-player') {
+      if (action === 'close-fullscreen-player' || action === 'close-fullscreen') {
         event.preventDefault();
         closeFullscreenPlayer();
         return;
