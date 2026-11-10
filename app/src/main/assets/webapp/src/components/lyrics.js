@@ -22,7 +22,7 @@ export function attachLyricsScrollerListeners() {
   }
 }
 
-export function renderLyricsViewHTML(song) {
+export function renderLyricsBodyContent(song) {
   if (!song) return '';
 
   const isLoading = Boolean(state.lyricsLoading);
@@ -31,34 +31,8 @@ export function renderLyricsViewHTML(song) {
   const hasPlain = Boolean(data?.plain && data.plain.trim().length > 0);
   const isInstrumental = Boolean(data?.isInstrumental);
 
-  let statusBadge = '';
   if (isLoading) {
-    statusBadge = `
-      <div class="fs-lyrics-badge loading">
-        <span class="material-symbols-rounded" style="font-size:0.95rem; animation: spin 1s linear infinite;">sync</span>
-        <span>Fetching</span>
-      </div>
-    `;
-  } else if (hasSynced) {
-    statusBadge = `
-      <div class="fs-lyrics-badge synced">
-        <span class="material-symbols-rounded" style="font-size:0.95rem;">graphic_eq</span>
-        <span>Synced</span>
-      </div>
-    `;
-  } else if (hasPlain) {
-    statusBadge = `
-      <div class="fs-lyrics-badge plain">
-        <span class="material-symbols-rounded" style="font-size:0.95rem;">subject</span>
-        <span>Plain</span>
-      </div>
-    `;
-  }
-
-  let bodyContent = '';
-
-  if (isLoading) {
-    bodyContent = `
+    return `
       <div class="lyrics-loading-container">
         <div class="lyrics-skeleton-line" style="width: 45%;"></div>
         <div class="lyrics-skeleton-line" style="width: 75%;"></div>
@@ -69,15 +43,19 @@ export function renderLyricsViewHTML(song) {
         <div class="lyrics-skeleton-line" style="width: 40%;"></div>
       </div>
     `;
-  } else if (isInstrumental) {
-    bodyContent = `
+  }
+  
+  if (isInstrumental) {
+    return `
       <div class="lyrics-empty-container">
         <div class="lyrics-empty-icon"><span class="material-symbols-rounded">piano</span></div>
         <h3 class="lyrics-empty-title">Instrumental Track</h3>
         <p class="lyrics-empty-desc">This song does not contain recorded vocal lyrics.</p>
       </div>
     `;
-  } else if (hasSynced) {
+  }
+  
+  if (hasSynced) {
     const curSec = Number(state.progress || 0);
     let activeIdx = 0;
     for (let i = 0; i < data.synced.length; i++) {
@@ -85,7 +63,7 @@ export function renderLyricsViewHTML(song) {
       else break;
     }
 
-    bodyContent = `
+    return `
       <div class="lyrics-synced-list">
         ${data.synced
           .map((line, idx) => {
@@ -105,9 +83,11 @@ export function renderLyricsViewHTML(song) {
           .join('')}
       </div>
     `;
-  } else if (hasPlain) {
+  }
+  
+  if (hasPlain) {
     const lines = data.plain.split('\n');
-    bodyContent = `
+    return `
       <div class="lyrics-plain-text">
         ${lines
           .map((line) => {
@@ -117,23 +97,26 @@ export function renderLyricsViewHTML(song) {
           .join('')}
       </div>
     `;
-  } else {
-    bodyContent = `
-      <div class="lyrics-empty-container">
-        <div class="lyrics-empty-icon"><span class="material-symbols-rounded">mic_off</span></div>
-        <h3 class="lyrics-empty-title">No Lyrics Found</h3>
-        <p class="lyrics-empty-desc">We couldn't locate synchronized lyrics for "${escapeHTML(song.title)}" on LRCLIB.</p>
-        <button class="btn btn-soft btn-sm" data-action="retry-lyrics" type="button" style="margin-top: 14px; border-radius: 9999px;">
-          <span class="material-symbols-rounded">refresh</span> Try Again
-        </button>
-      </div>
-    `;
   }
+  
+  return `
+    <div class="lyrics-empty-container">
+      <div class="lyrics-empty-icon"><span class="material-symbols-rounded">mic_off</span></div>
+      <h3 class="lyrics-empty-title">No Lyrics Found</h3>
+      <p class="lyrics-empty-desc">We couldn't locate synchronized lyrics for "${escapeHTML(song.title)}" on LRCLIB.</p>
+      <button class="btn btn-soft btn-sm" data-action="retry-lyrics" type="button" style="margin-top: 14px; border-radius: 9999px;">
+        <span class="material-symbols-rounded">refresh</span> Try Again
+      </button>
+    </div>
+  `;
+}
 
+export function renderLyricsViewHTML(song) {
+  if (!song) return '';
   return `
     <div class="fs-lyrics-view">
       <div class="lyrics-body" id="lyrics-body-scroller">
-        ${bodyContent}
+        ${renderLyricsBodyContent(song)}
       </div>
     </div>
   `;
