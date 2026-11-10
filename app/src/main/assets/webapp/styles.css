@@ -12,6 +12,21 @@
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html,
+body {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 /* ============ NATIVE JETPACK COMPOSE SCROLLBARS (HIDDEN EVERYWHERE) ============ */
@@ -168,6 +183,12 @@
   --md-elevation-1: var(--elevation-1);
   --md-elevation-2: var(--elevation-2);
   --md-elevation-3: var(--elevation-3);
+
+  /* MD3 Flagship Native Motion Tokens */
+  --md-sys-motion-easing: cubic-bezier(0.2, 0.0, 0, 1.0);
+  --md-sys-motion-duration: 0.3s;
+  --md-transition-standard: all 0.3s cubic-bezier(0.2, 0.0, 0, 1.0);
+  --md-transition-fast: all 0.15s cubic-bezier(0.2, 0.0, 0, 1.0);
 
   /* Typography */
   --font-family-base: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -2361,13 +2382,13 @@ body.has-fullscreen-open .mobile-nav {
 }
 
 .fs-cover-wrap {
-  width: min(86vw, 320px, 42vh) !important;
-  height: min(86vw, 320px, 42vh) !important;
+  width: 100% !important;
+  max-width: 360px !important;
   aspect-ratio: 1 / 1 !important;
   margin: 6px auto 10px !important;
-  border-radius: 28px !important;
+  border-radius: 24px !important;
   overflow: hidden !important;
-  box-shadow: 0 10px 48px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: none !important;
   background-color: var(--md-sys-color-surface-container, #121212) !important;
   border: 1px solid rgba(255, 255, 255, 0.06) !important;
   flex-shrink: 0 !important;
@@ -2375,7 +2396,7 @@ body.has-fullscreen-open .mobile-nav {
   align-items: center !important;
   justify-content: center !important;
   position: relative !important;
-  transition: box-shadow 0.4s ease, border-color 0.4s ease !important;
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), border-color 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
 }
 
 .fs-cover {
@@ -4782,18 +4803,25 @@ body.has-active-track #toast-container {
 }
 
 /* ==========================================================================
-   MD3 SEGMENTED BUTTON GROUP (Speed, Lyrics, Queue)
-   Matching Reference Screenshots 1 & 2: 3 Separate Rounded Pills
+   PHASE 1: DYNAMIC MD3 SEGMENTED BUTTONS (Speed, Lyrics, Queue)
+   - Default State (Grouped Segment): 2px gap, 32px-8px-8px-32px / 8px / 8px-32px-32px-8px
+   - Active State (Lyrics Toggled On): Middle button morphs to full pill (32px) in #1DB954
+   - Fluid MD3 Morphing: transition all 0.3s cubic-bezier(0.2, 0.0, 0, 1.0)
    ========================================================================== */
 .fs-pills-row {
   display: flex !important;
-  gap: 10px !important;
-  justify-content: space-between !important;
+  gap: 2px !important;
+  justify-content: center !important;
   align-items: center !important;
   margin-top: 10px !important;
   margin-bottom: 2px !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  transition: gap 0.3s cubic-bezier(0.2, 0.0, 0, 1.0) !important;
+}
+
+.fs-pills-row.lyrics-active {
+  gap: 4px !important;
 }
 
 .fs-pill-btn {
@@ -4801,20 +4829,19 @@ body.has-active-track #toast-container {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
+  gap: 6px !important;
   height: 48px !important;
   min-height: 48px !important;
-  border-radius: 24px !important;
   box-sizing: border-box !important;
-  background: #1e1e1e !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background: #1E1E1E !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
   color: #ffffff !important;
   font-size: 0.875rem !important;
   font-weight: 600 !important;
   cursor: pointer !important;
-  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, color 0.15s ease !important;
   user-select: none !important;
   -webkit-tap-highlight-color: transparent !important;
+  transition: all 0.3s cubic-bezier(0.2, 0.0, 0, 1.0) !important;
 }
 
 .fs-pill-btn .material-symbols-rounded {
@@ -4824,36 +4851,73 @@ body.has-active-track #toast-container {
   justify-content: center !important;
   color: inherit !important;
   vertical-align: middle !important;
+  transition: color 0.3s cubic-bezier(0.2, 0.0, 0, 1.0) !important;
 }
 
-.fs-pill-btn:hover {
-  background: #252525 !important;
+/* Left Button (Speed/1x): Asymmetric Left Pill */
+.fs-pill-btn:first-child,
+.fs-pill-btn[data-action="toggle-speed"],
+.fs-pill-btn.fs-pill-speed {
+  border-radius: 32px 8px 8px 32px !important;
+  padding-left: 14px !important;
+}
+
+/* Middle Button (Lyrics) Default State: Slightly rounded 8px */
+.fs-pill-btn:nth-child(2),
+.fs-pill-btn[data-action="open-lyrics"],
+.fs-pill-btn.fs-pill-lyrics {
+  border-radius: 8px !important;
+}
+
+/* Right Button (Queue): Asymmetric Right Pill */
+.fs-pill-btn:last-child,
+.fs-pill-btn[data-action="open-queue"],
+.fs-pill-btn.fs-pill-queue {
+  border-radius: 8px 32px 32px 8px !important;
+  padding-right: 14px !important;
+}
+
+/* Hover & Active Feedback */
+.fs-pill-btn:hover:not(.active) {
+  background: #262626 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 .fs-pill-btn:active {
-  transform: scale(0.95) !important;
-  background: #2b2b2b !important;
+  transform: scale(0.96) !important;
+  transition: transform 0.1s cubic-bezier(0.2, 0.0, 0, 1.0) !important;
 }
 
-/* Active Selected State: High-Contrast Solid Monet Green (#1DB954) & Black Text */
-.fs-pill-btn.active {
+/* Active State (Lyrics Toggled On):
+   Middle Button visually breaks out of the flat segment:
+   - border-radius: 32px; (full pill shape)
+   - Background: Monet Green (#1DB954) with dark/black text and icon
+   - Fluid cubic-bezier morphing */
+.fs-pill-btn.active,
+.fs-pill-btn.fs-pill-lyrics.active,
+.fs-pill-btn[data-action="open-lyrics"].active {
+  border-radius: 32px !important;
   background: #1DB954 !important;
   color: #000000 !important;
   border-color: #1DB954 !important;
   font-weight: 700 !important;
+  box-shadow: 0 2px 14px rgba(29, 185, 84, 0.35) !important;
 }
 
-.fs-pill-btn.active .material-symbols-rounded {
+.fs-pill-btn.active .material-symbols-rounded,
+.fs-pill-btn.fs-pill-lyrics.active .material-symbols-rounded,
+.fs-pill-btn[data-action="open-lyrics"].active .material-symbols-rounded {
   color: #000000 !important;
 }
 
 .fs-pill-btn.active:hover {
   background: #1ed760 !important;
+  border-color: #1ed760 !important;
 }
 
 .fs-pill-btn.active:active {
-  transform: scale(0.95) !important;
-  background: #199e46 !important;
+  transform: scale(0.96) !important;
+  background: #1aa34a !important;
 }
 
 /* ==========================================================================
@@ -7679,7 +7743,34 @@ body.is-standalone [data-action="open-install-guide"] {
   color: #1DB954 !important;
 }
 
-/* 9. Expressive MD3 Touch Haptics Across All Buttons & Interactive Items */
+/* ==========================================================================
+   PHASE 3: GLOBAL MD3 TRANSITIONS & NATIVE ARCHITECTURE
+   - Universal cubic-bezier(0.2, 0.0, 0, 1.0) motion curve
+   - Eradicate web quirks & tap highlight
+   - Native Jetpack Compose physics across tabs, sheets, buttons, and cards
+   ========================================================================== */
+
+/* Universal Native MD3 Touch Haptics */
+button,
+.btn,
+.icon-btn,
+.control-btn,
+.fs-pill-btn,
+.you-stat-card,
+.you-hub-tile,
+.library-list-item,
+.song-row,
+.home-compact-card,
+.home-scroll-card,
+.search-tab-pill,
+.mobile-nav-item,
+.nav-link {
+  transition: transform 0.2s cubic-bezier(0.2, 0.0, 0, 1.0),
+              background-color 0.2s cubic-bezier(0.2, 0.0, 0, 1.0),
+              color 0.2s cubic-bezier(0.2, 0.0, 0, 1.0),
+              border-color 0.2s cubic-bezier(0.2, 0.0, 0, 1.0) !important;
+}
+
 button:active,
 .btn:active,
 .icon-btn:active,
@@ -7694,7 +7785,28 @@ button:active,
 .search-tab-pill:active,
 .mobile-nav-item:active {
   transform: scale(0.96) !important;
-  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1) !important;
+  transition: transform 0.1s cubic-bezier(0.2, 0.0, 0, 1.0) !important;
+}
+
+/* Global Tab Switching & View Transitions */
+.tab-content,
+.main-view,
+.view-container,
+.tab-pane {
+  transition: opacity 0.25s cubic-bezier(0.2, 0.0, 0, 1.0),
+              transform 0.25s cubic-bezier(0.2, 0.0, 0, 1.0) !important;
+}
+
+/* Modal, Popups & Bottom Sheet Morphing */
+.bottom-sheet,
+.player-more-sheet,
+.track-menu-sheet,
+.queue-panel,
+.lyrics-panel,
+.artist-profile,
+.modal-content {
+  transition: transform 0.3s cubic-bezier(0.2, 0.0, 0, 1.0),
+              opacity 0.25s cubic-bezier(0.2, 0.0, 0, 1.0) !important;
 }
 
 

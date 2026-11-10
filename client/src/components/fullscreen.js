@@ -202,15 +202,13 @@ export function renderFullscreenPlayer(force = false) {
   const shuffleActive = state.shuffleMode ? 'active' : '';
 
   const coverUrl = getOptimizedArtwork(song.coverUrl, 720);
-  const glowCol = state.dominantGlowColor || { r: 29, g: 185, b: 84 };
-  const shadowGlow = `box-shadow: 0 10px 48px rgba(${glowCol.r}, ${glowCol.g}, ${glowCol.b}, 0.38);`;
 
   let mainBodyContentHTML = '';
 
   if (!isLyricsActive) {
-    // 1:1 Match with Screenshot 1 (Main Fullscreen Player)
+    // Flagship MD3 Fullscreen Player (Flat against AMOLED Black, no shadow glow)
     mainBodyContentHTML = `
-      <div class="fs-cover-wrap" id="fs-cover-area" style="${shadowGlow}">
+      <div class="fs-cover-wrap" id="fs-cover-area">
         <img class="fs-cover" id="fs-cover-img" src="${escapeHTML(coverUrl)}" alt="${escapeHTML(song.title)}" draggable="false" onerror="this.onerror=null;this.src='/assets/pawtify.png'" />
       </div>
 
@@ -288,17 +286,17 @@ export function renderFullscreenPlayer(force = false) {
            </button>
          </div>
 
-         <!-- Pill-shaped Toggle Row: Speed, Lyrics, Queue -->
-         <div class="fs-pills-row">
-           <button class="fs-pill-btn" data-action="toggle-speed" type="button" aria-label="Playback speed">
+         <!-- Dynamic MD3 Morphing Segmented Button Row: Speed, Lyrics, Queue -->
+         <div class="fs-pills-row ${isLyricsActive ? 'lyrics-active' : ''}">
+           <button class="fs-pill-btn fs-pill-speed" data-action="toggle-speed" type="button" aria-label="Playback speed">
              <span class="material-symbols-rounded">speed</span>
              <span id="fs-speed-label">${speedLabel}</span>
            </button>
-           <button class="fs-pill-btn ${isLyricsActive ? 'active' : ''}" data-action="open-lyrics" type="button" aria-label="Lyrics">
+           <button class="fs-pill-btn fs-pill-lyrics ${isLyricsActive ? 'active' : ''}" data-action="open-lyrics" type="button" aria-label="Lyrics">
              <span class="material-symbols-rounded">format_align_left</span>
              <span>Lyrics</span>
            </button>
-           <button class="fs-pill-btn ${state.queuePanel ? 'active' : ''}" data-action="open-queue" type="button" aria-label="Queue">
+           <button class="fs-pill-btn fs-pill-queue ${state.queuePanel ? 'active' : ''}" data-action="open-queue" type="button" aria-label="Queue">
              <span class="material-symbols-rounded">queue_music</span>
              <span>Queue</span>
            </button>
@@ -312,15 +310,6 @@ export function renderFullscreenPlayer(force = false) {
   if (waveContainer) {
     initWavyProgress(waveContainer);
   }
-
-  // Dynamic dominant color extraction for thumbnail glow drop-shadow
-  extractDominantColor(coverUrl, (color) => {
-    state.dominantGlowColor = color;
-    const coverArea = document.getElementById('fs-cover-area');
-    if (coverArea) {
-      coverArea.style.boxShadow = `0 8px 40px rgba(${color.r}, ${color.g}, ${color.b}, 0.4)`;
-    }
-  });
 
   if (isLyricsActive) {
     if ((!state.lyricsData || state.lyricsData.songId !== song.id) && !state.lyricsLoading) {
