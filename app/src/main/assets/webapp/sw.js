@@ -1,8 +1,8 @@
 /* =============================================
-   Pawtify Service Worker v2.6
+   Pawtify Service Worker v3.0.0-md3
    Seamless Lifecycle & Network-First Scripts & HTML Caching
    ============================================= */
-const CACHE_VERSION = 'v2.6';
+const CACHE_VERSION = 'v3.0.0-md3';
 const CACHE_NAME = `pawtify-app-shell-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `pawtify-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `pawtify-api-${CACHE_VERSION}`;
@@ -13,8 +13,8 @@ const CURRENT_CACHES = [CACHE_NAME, DYNAMIC_CACHE, API_CACHE, MEDIA_CACHE];
 const ASSETS = [
   '/',
   '/index.html',
-  '/styles.css?v=2.6',
-  '/src/main.js?v=2.6',
+  '/styles.css?v=3.0.0-md3',
+  '/src/main.js?v=3.0.0-md3',
   '/manifest.webmanifest',
   '/assets/pawtify.png',
   '/assets/icon-192.png',
